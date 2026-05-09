@@ -1,0 +1,26 @@
+.env
+.env.local
+*.pyc
+__pycache__/
+.venv/
+node_modules/
+dist/
+build/
+
+# runtime data
+data/
+mailstore/
+postgres-data/
+redis-data/
+rspamd-data/
+
+# secrets / certs
+nginx/certs/
+postfix/opendkim/keys/
+*.pem
+*.key
+*.crt
+!*.example.*
+
+.DS_Store
+Thumbs.db

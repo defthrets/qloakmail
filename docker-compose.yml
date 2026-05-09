@@ -1,0 +1,141 @@
+version: "3.9"
+
+# VoidMail - zero-access encrypted email
+# Single-host stack. All services on internal "voidnet" network;
+# only nginx, postfix and dovecot expose ports to the host.
+
+networks:
+  voidnet:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  mailstore:
+  rspamd-data:
+  certs:
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    networks: [voidnet]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    networks: [voidnet]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build: ./api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [voidnet]
+    # Exposed via nginx; uncomment the next line for direct dev access.
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  encrypt-pipe:
+    build:
+      context: ./postfix
+      dockerfile: Dockerfile.pipe
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      - api
+    networks: [voidnet]
+
+  postfix:
+    build: ./postfix
+    restart: unless-stopped
+    hostname: ${VOIDMAIL_HOSTNAME}
+    env_file: .env
+    depends_on:
+      - encrypt-pipe
+      - rspamd
+    volumes:
+      - ./postfix/opendkim/keys:/etc/opendkim/keys
+    ports:
+      - "25:25"
+      - "587:587"
+    networks: [voidnet]
+
+  dovecot:
+    build: ./dovecot
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - mailstore:/var/mail
+    ports:
+      - "143:143"
+      - "993:993"
+    networks: [voidnet]
+
+  rspamd:
+    build: ./rspamd
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - rspamd-data:/var/lib/rspamd
+    networks: [voidnet]
+
+  web:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    volumes:
+      - ./web:/usr/share/nginx/html:ro
+    networks: [voidnet]
+
+  nginx:
+    build: ./nginx
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      - api
+      - web
+    volumes:
+      - certs:/etc/letsencrypt
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"      # plain HTTP dev port
+    networks: [voidnet]
+
+  # Optional: certbot for Let's Encrypt issuance/renewal.
+  # Run on demand with `docker compose run --rm certbot ...`
+  certbot:
+    image: certbot/certbot:latest
+    profiles: ["tools"]
+    volumes:
+      - certs:/etc/letsencrypt
+    entrypoint: ["sh", "-c"]
+    command: ["echo 'use: docker compose run --rm certbot certonly --webroot -w /var/www/certbot -d $${VOIDMAIL_DOMAIN}'"]

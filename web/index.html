@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
+  <title>VoidMail</title>
+  <link rel="stylesheet" href="/style.css">
+
+  <!-- Vendored libraries — see web/lib/README for fetch instructions. -->
+  <script src="/lib/openpgp.min.js"></script>
+  <script src="/lib/hash-wasm.umd.min.js"></script>
+</head>
+<body>
+  <div id="app">
+    <!-- Auth view -->
+    <section id="auth-view" class="view active">
+      <header class="brand">
+        <h1>VoidMail</h1>
+        <p class="tagline">Zero-access encrypted email.</p>
+      </header>
+
+      <div class="auth-tabs">
+        <button class="tab active" data-tab="login">Sign in</button>
+        <button class="tab" data-tab="signup">Create account</button>
+        <button class="tab" data-tab="recovery">Use recovery code</button>
+      </div>
+
+      <form id="login-form" class="auth-form active">
+        <label>Email
+          <input type="email" name="email" autocomplete="username" required>
+        </label>
+        <label>Password
+          <input type="password" name="password" autocomplete="current-password" required>
+        </label>
+        <button type="submit">Sign in</button>
+        <p class="status" id="login-status"></p>
+      </form>
+
+      <form id="signup-form" class="auth-form">
+        <label>Email
+          <input type="email" name="email" required>
+          <small id="signup-domain-hint"></small>
+        </label>
+        <label>Password (12+ chars)
+          <input type="password" name="password" minlength="12" required>
+        </label>
+        <label>Confirm password
+          <input type="password" name="password2" minlength="12" required>
+        </label>
+        <label id="invite-row" hidden>Invite code
+          <input type="text" name="invite">
+        </label>
+        <button type="submit">Create account</button>
+        <p class="status" id="signup-status"></p>
+      </form>
+
+      <form id="recovery-form" class="auth-form">
+        <label>Email
+          <input type="email" name="email" required>
+        </label>
+        <label>Recovery code
+          <input type="text" name="recovery" required spellcheck="false">
+        </label>
+        <label>New password (12+ chars)
+          <input type="password" name="password" minlength="12" required>
+        </label>
+        <button type="submit">Recover account</button>
+        <p class="status" id="recovery-status"></p>
+      </form>
+    </section>
+
+    <!-- Recovery code shown once at signup -->
+    <section id="recovery-shown-view" class="view">
+      <h2>Save your recovery code</h2>
+      <p class="warn">
+        This is the <strong>only</strong> way to recover your account if you forget
+        your password. We cannot regenerate it. Write it down and store it offline.
+      </p>
+      <pre id="recovery-shown-code"></pre>
+      <label class="confirm">
+        <input type="checkbox" id="recovery-shown-confirm">
+        I have saved my recovery code in a safe place.
+      </label>
+      <button id="recovery-shown-continue" disabled>Continue</button>
+    </section>
+
+    <!-- Mail view -->
+    <section id="mail-view" class="view">
+      <aside class="sidebar">
+        <div class="account-line">
+          <span id="who"></span>
+          <button id="compose-btn">Compose</button>
+          <button id="logout-btn" class="link">Sign out</button>
+        </div>
+        <ul id="folder-list"></ul>
+      </aside>
+      <main class="mail-main">
+        <div class="msg-pane">
+          <div class="search-bar">
+            <input id="search-input" type="search" placeholder="Search decrypted mail..." autocomplete="off" spellcheck="false">
+            <span id="search-stats" class="search-stats"></span>
+          </div>
+          <ul id="message-list"></ul>
+        </div>
+        <article id="message-view"></article>
+      </main>
+
+      <!-- Compose modal -->
+      <div id="compose-modal" hidden>
+        <form id="compose-form">
+          <header>
+            <h3>New message</h3>
+            <button type="button" id="compose-close" class="link">close</button>
+          </header>
+          <label>To
+            <input type="text" name="to" required placeholder="alice@voidmail.local, ...">
+          </label>
+          <label>Subject
+            <input type="text" name="subject">
+          </label>
+          <textarea name="body" rows="14" placeholder="Message"></textarea>
+          <footer>
+            <p class="status" id="compose-status"></p>
+            <button type="submit">Send</button>
+          </footer>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+# Dovecot SQL backend — looks up VoidMail accounts in the API's database.
+#
+# IMAP password auth is intentionally limited: VoidMail's primary auth
+# path is the SRP webmail. We expose IMAP for power users via app-passwords
+# (not yet implemented — see TODO). For now this config authenticates
+# nobody and only provides the userdb (UID/GID + mail location).
+
+driver = pgsql
+connect = host=postgres dbname=__POSTGRES_DB__ user=__POSTGRES_USER__ password=__POSTGRES_PASSWORD__
+
+default_pass_scheme = ARGON2ID
+
+# IMAP password lookup — disabled until app-passwords land.
+# Returns no rows so plaintext IMAP login fails.
+password_query = \
+  SELECT email AS user, '' AS password FROM accounts WHERE 1 = 0
+
+# User lookup — used by LMTP for "does this mailbox exist".
+user_query = \
+  SELECT 5000 AS uid, 5000 AS gid, \
+         '/var/mail/' || split_part(email, '@', 2) || '/' || split_part(email, '@', 1) || '/Maildir' AS home, \
+         email AS user \
+  FROM accounts WHERE email = '%u' AND status = 'active'
+
+iterate_query = SELECT email AS user FROM accounts WHERE status = 'active'

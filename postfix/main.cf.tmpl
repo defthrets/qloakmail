@@ -1,0 +1,78 @@
+# VoidMail Postfix main.cf — templated, rendered by entrypoint.sh.
+# ${VAR} placeholders are replaced from the environment at container start.
+
+myhostname = ${VOIDMAIL_HOSTNAME}
+mydomain   = ${VOIDMAIL_DOMAIN}
+myorigin   = $mydomain
+
+# Listen on all interfaces inside the container; nginx/iptables on the
+# host control external exposure.
+inet_interfaces = all
+inet_protocols  = all
+
+# We are a content gateway: accept mail for our virtual domains, hand
+# everything to Rspamd then to the encrypt-pipe LMTP, and never deliver
+# locally via /var/spool/mail.
+mydestination =
+local_recipient_maps =
+local_transport = error:local delivery is disabled
+
+# Virtual domains — one entry per domain we accept mail for.
+virtual_mailbox_domains = pcre:/etc/postfix/virtual-domains
+# Recipients are validated dynamically by the encrypt-pipe (which calls
+# the API). Accept anything @ourdomains here; the pipe rejects unknown
+# users with 550.
+virtual_mailbox_maps = pcre:/etc/postfix/virtual-accept
+virtual_transport = lmtp:encrypt-pipe:10025
+
+# Limits.
+message_size_limit = 26214400        # 25 MiB
+mailbox_size_limit = 0
+recipient_delimiter = +
+
+# TLS — terminated locally for inbound 25/587. Certs are mounted from
+# the shared `certs` volume populated by certbot.
+smtpd_tls_chain_files = /etc/letsencrypt/live/${VOIDMAIL_DOMAIN}/privkey.pem,
+                        /etc/letsencrypt/live/${VOIDMAIL_DOMAIN}/fullchain.pem
+smtpd_tls_security_level = may
+smtp_tls_security_level  = may
+smtpd_tls_loglevel = 1
+
+# Anti-spoof / sane SMTP hardening for inbound port 25.
+smtpd_helo_required = yes
+smtpd_recipient_restrictions =
+    permit_mynetworks
+    reject_non_fqdn_recipient
+    reject_unknown_recipient_domain
+    reject_unauth_destination
+    permit
+smtpd_sender_restrictions =
+    reject_non_fqdn_sender
+    reject_unknown_sender_domain
+    permit
+
+# Hand inbound mail to Rspamd via milter, then deliver via the virtual
+# transport which is the LMTP encrypt-pipe.
+smtpd_milters     = inet:rspamd:11332
+non_smtpd_milters = $smtpd_milters
+milter_default_action = accept
+milter_protocol = 6
+milter_mail_macros = i {auth_type} {auth_authen} {auth_author} {client_addr} {client_name} {mail_addr} {mail_host} {mail_mailer}
+
+# OpenDKIM for outbound signing — runs as a second milter only on the
+# submission service (master.cf).
+non_smtpd_milters = $smtpd_milters
+
+# Trust the docker network so the API container can submit on 587 without
+# auth. Production should require sasl auth on submission.
+mynetworks = 127.0.0.0/8 [::1]/128 172.16.0.0/12 10.0.0.0/8 192.168.0.0/16
+
+# Outbound from this MTA — direct to MX of recipients.
+relayhost =
+
+queue_directory = /var/spool/postfix
+data_directory  = /var/lib/postfix
+mail_owner = postfix
+setgid_group = postdrop
+
+compatibility_level = 3.6

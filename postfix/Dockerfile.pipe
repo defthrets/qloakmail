@@ -1,0 +1,15 @@
+# Build only the Python encryption pipe (a tiny LMTP server).
+FROM python:3.12-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /srv
+COPY pipe-requirements.txt .
+RUN pip install --no-cache-dir -r pipe-requirements.txt
+
+COPY encrypt-pipe.py .
+
+EXPOSE 10025
+CMD ["python", "/srv/encrypt-pipe.py"]

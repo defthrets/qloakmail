@@ -1,0 +1,3 @@
+# Catch-all: every recipient on a virtual domain goes to the LMTP pipe.
+# main.cf already sets virtual_transport=lmtp:encrypt-pipe:10025 so this
+# file is intentionally empty/permissive — left for future per-rcpt rules.

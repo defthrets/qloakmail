@@ -1,0 +1,24 @@
+# Force LF line endings for files that are executed inside Linux
+# containers — autocrlf on Windows would otherwise inject \r and break
+# shebangs / shell parsing.
+
+*.sh             text eol=lf
+*.py             text eol=lf
+*.conf           text eol=lf
+*.cf             text eol=lf
+*.cf.tmpl        text eol=lf
+*.tmpl           text eol=lf
+*.template       text eol=lf
+*.inc            text eol=lf
+*.ext            text eol=lf
+*.pcre           text eol=lf
+*.sql            text eol=lf
+*.yml            text eol=lf
+*.yaml           text eol=lf
+Dockerfile       text eol=lf
+Dockerfile.*     text eol=lf
+.env.example     text eol=lf
+.gitignore       text eol=lf
+
+# Vendored web libs (binary-ish minified blobs) — never line-ending-translate.
+web/lib/*.js     -text

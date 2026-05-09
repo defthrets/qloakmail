@@ -1,0 +1,25 @@
+Syslog                  yes
+SyslogSuccess           yes
+LogWhy                  yes
+UMask                   002
+
+# Sign + verify.
+Mode                    sv
+Canonicalization        relaxed/simple
+SubDomains              no
+AutoRestart             yes
+AutoRestartRate         10/1h
+Background              no
+DNSTimeout              5
+
+# Where to find which key to use.
+KeyTable                file:/etc/opendkim/KeyTable
+SigningTable            refile:/etc/opendkim/SigningTable
+ExternalIgnoreList      refile:/etc/opendkim/TrustedHosts
+InternalHosts           refile:/etc/opendkim/TrustedHosts
+
+# Listen on the milter port for postfix.
+Socket                  inet:8891@0.0.0.0
+
+UserID                  opendkim:opendkim
+PidFile                 /var/run/opendkim/opendkim.pid

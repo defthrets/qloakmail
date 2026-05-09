@@ -1,0 +1,5 @@
+filters = "chartable,dkim,spf,fuzzy,regexp";
+local_addrs = [127.0.0.0/8, ::1/128, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16];
+dns {
+    nameserver = ["1.1.1.1", "9.9.9.9"];
+}
