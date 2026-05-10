@@ -8,9 +8,19 @@ sed -i \
     -e "s|__POSTGRES_PASSWORD__|${POSTGRES_PASSWORD}|g" \
     /etc/dovecot/conf.d/dovecot-sql.conf.ext
 
-# Self-signed cert for IMAPS in dev. Production uses certs from the
-# `certs` volume populated by certbot — replace these on first start.
-if [ ! -f /etc/dovecot/ssl/cert.pem ]; then
+# TLS cert wiring.
+#   * Production (certs volume mounted at /etc/letsencrypt): point
+#     dovecot.conf at the LE fullchain + privkey directly.
+#   * Dev (no LE): generate a self-signed cert under /etc/dovecot/ssl
+#     so IMAPS at least starts.
+LE_CERT="/etc/letsencrypt/live/${VOIDMAIL_DOMAIN}/fullchain.pem"
+LE_KEY="/etc/letsencrypt/live/${VOIDMAIL_DOMAIN}/privkey.pem"
+if [ -f "$LE_CERT" ] && [ -f "$LE_KEY" ]; then
+    sed -i \
+        -e "s|^ssl_cert = .*|ssl_cert = <${LE_CERT}|" \
+        -e "s|^ssl_key  = .*|ssl_key  = <${LE_KEY}|" \
+        /etc/dovecot/dovecot.conf
+elif [ ! -f /etc/dovecot/ssl/cert.pem ]; then
     mkdir -p /etc/dovecot/ssl
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
         -keyout /etc/dovecot/ssl/key.pem \

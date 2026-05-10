@@ -31,14 +31,41 @@ message_size_limit = 26214400
 mailbox_size_limit = 0
 recipient_delimiter = +
 
-# TLS — terminated locally for inbound 25/587. Production should mount
-# the `certs` volume (populated by certbot) and uncomment the chain lines.
-# In dev we leave TLS off so `postfix check` doesn't fail on missing certs.
-# smtpd_tls_chain_files = /etc/letsencrypt/live/${VOIDMAIL_DOMAIN}/privkey.pem,
-#                         /etc/letsencrypt/live/${VOIDMAIL_DOMAIN}/fullchain.pem
-smtpd_tls_security_level = none
-smtp_tls_security_level  = may
+# TLS — terminated locally for inbound 25/587. The `certs` volume from
+# certbot is mounted read-only at /etc/letsencrypt; the cert covers
+# qloak.me + mta-sts.qloak.me + mx.qloak.me.
+smtpd_tls_chain_files = /etc/letsencrypt/live/${VOIDMAIL_DOMAIN}/privkey.pem,
+                        /etc/letsencrypt/live/${VOIDMAIL_DOMAIN}/fullchain.pem
+
+# Inbound: advertise STARTTLS, accept clear if the sender doesn't use
+# it. RFC-compliant — port 25 is opportunistic-TLS by spec. The
+# submission port (587) tightens this to "encrypt" via master.cf.
+smtpd_tls_security_level = may
+
+# Outbound: prefer DANE when the destination has TLSA records, fall
+# back to opportunistic TLS otherwise. `dane` is the strongest
+# downgrade-resistant policy that still talks to non-DANE destinations.
+smtp_tls_security_level  = dane
+
+# Modern protocol + cipher floor. TLS 1.0/1.1 + RC4/SHA1 are off.
+smtpd_tls_protocols = !SSLv2, !SSLv3, !TLSv1, !TLSv1.1
+smtp_tls_protocols  = !SSLv2, !SSLv3, !TLSv1, !TLSv1.1
+smtpd_tls_mandatory_protocols = !SSLv2, !SSLv3, !TLSv1, !TLSv1.1
+smtp_tls_mandatory_protocols  = !SSLv2, !SSLv3, !TLSv1, !TLSv1.1
+smtpd_tls_ciphers = high
+smtp_tls_ciphers  = high
+smtpd_tls_mandatory_ciphers = high
+smtp_tls_mandatory_ciphers  = high
+smtpd_tls_eecdh_grade = ultra
+tls_preempt_cipherlist = no
+
+# Session cache so repeat connections from the same sender don't
+# re-handshake every time.
+smtpd_tls_session_cache_database = btree:$data_directory/smtpd_scache
+smtp_tls_session_cache_database  = btree:$data_directory/smtp_scache
+
 smtpd_tls_loglevel = 1
+smtp_tls_loglevel  = 1
 
 # Anti-spoof / sane SMTP hardening for inbound port 25.
 smtpd_helo_required = yes

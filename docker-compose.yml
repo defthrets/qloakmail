@@ -105,6 +105,7 @@ services:
       - rspamd
     volumes:
       - ./postfix/opendkim/keys:/etc/opendkim/keys
+      - certs:/etc/letsencrypt:ro
     ports:
       - "25:25"
       - "587:587"
@@ -117,6 +118,7 @@ services:
     env_file: .env
     volumes:
       - mailstore:/var/mail
+      - certs:/etc/letsencrypt:ro
     ports:
       - "143:143"
       - "993:993"
