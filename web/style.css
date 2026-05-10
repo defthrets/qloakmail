@@ -1,19 +1,20 @@
 /* QloakMail webmail — modern dark theme. Self-contained, no external assets. */
 
 :root {
-    --bg:           #0b0c0e;
-    --bg-2:         #0f1115;
-    --panel:        #15171b;
-    --panel-2:      #1c1f24;
-    --panel-3:      #23272d;
-    --border:       #25282e;
-    --border-2:     #2f333b;
+    --bg:           #050807;
+    --bg-2:         #0a0f0d;
+    --panel:        #0f1614;
+    --panel-2:      #141d1a;
+    --panel-3:      #1b2622;
+    --border:       #1c2a25;
+    --border-2:     #29403a;
     --fg:           #e6e8ea;
     --fg-dim:       #8b9098;
     --fg-muted:     #5d6168;
-    --accent:       #c2b280;
-    --accent-2:     #f0d977;
-    --accent-soft:  rgba(194, 178, 128, 0.12);
+    --accent:       #4dff85;
+    --accent-2:     #a5ffba;
+    --accent-soft:  rgba(77, 255, 133, 0.12);
+    --accent-glow:  rgba(77, 255, 133, 0.45);
     --warn:         #d2786b;
     --warn-soft:    rgba(210, 120, 107, 0.12);
     --ok:           #7faf72;
@@ -138,17 +139,34 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     align-items: center;
     gap: 0.65rem;
 }
-.brand-logo h1 {
+.brand-mark {
     margin: 0;
-    font-size: 1.6em;
-    font-weight: 600;
-    letter-spacing: -0.01em;
+    font-family: var(--mono);
+    font-size: 2em;
+    font-weight: 700;
+    letter-spacing: 0.06em;
     color: var(--accent);
+    text-shadow:
+        0 0 8px var(--accent-glow),
+        0 0 18px rgba(77, 255, 133, 0.25);
+    line-height: 1;
 }
-.logo-mark { color: var(--accent); flex-shrink: 0; }
+/* Subtle scanline shimmer (optional). Renders behind the wordmark. */
+.brand-mark::after {
+    content: "";
+    display: block;
+    height: 1px;
+    margin-top: 0.3em;
+    background: linear-gradient(90deg,
+        transparent, var(--accent-soft), transparent);
+}
+.brand-logo .brand-mark { font-size: 2.4em; }
+.logo-mark { color: var(--accent); flex-shrink: 0;
+    filter: drop-shadow(0 0 6px var(--accent-glow));
+}
 .brand .tagline {
     color: var(--fg-dim);
-    margin: 0.6rem 0 0;
+    margin: 0.7rem 0 0;
     font-size: 0.9em;
 }
 .brand .tagline .who { color: var(--fg); font-weight: 500; }
@@ -286,14 +304,15 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 }
 .brand-mini {
     color: var(--accent);
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    font-size: 1.05em;
+    font-family: var(--mono);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    font-size: 1.1em;
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    text-shadow: 0 0 6px var(--accent-glow);
 }
-.brand-mini .logo-mark { color: var(--accent); }
 .search-bar {
     display: flex;
     align-items: center;
