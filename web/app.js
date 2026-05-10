@@ -691,6 +691,32 @@ function bindCompose() {
     });
 }
 
+// ----------------------------------------------------------------- ripple effect
+//
+// Material-style click ripple on every primary button (and re-applies to
+// any .primary added after boot). Pure visual; pointer-events:none on
+// the spawned span keeps it from interfering with the actual click.
+function bindRipples() {
+    document.body.addEventListener("click", (e) => {
+        const btn = e.target.closest(".primary, .compose-btn");
+        if (!btn || btn.disabled) return;
+        const rect = btn.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const ripple = document.createElement("span");
+        ripple.className = "ripple";
+        ripple.style.left = x + "px";
+        ripple.style.top = y + "px";
+        // Width matches the longest dimension of the button so the
+        // ripple covers it fully when scaled.
+        const size = Math.max(rect.width, rect.height) * 0.04;
+        ripple.style.width = size + "px";
+        ripple.style.height = size + "px";
+        btn.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 600);
+    }, { capture: false });
+}
+
 // ----------------------------------------------------------------- onion notice
 function _truncateOnion(addr) {
     // v3 .onion addresses are 62 chars (56 hash + ".onion"). They don't
@@ -775,6 +801,7 @@ async function boot() {
     bindCompose();
     bindSearch();
     bindUnlock();
+    bindRipples();
 
     state.config = await api.config().catch(() => ({
         domain: "qloak.me", domains: ["qloak.me"],
