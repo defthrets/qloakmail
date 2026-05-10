@@ -443,10 +443,17 @@ function scorePassword(pw, email) {
     if (/01234|12345|23456|34567|45678|56789|abcde|bcdef|cdefg|defgh|qwert|werty/i.test(pw)) s -= 15;
     s = Math.max(0, Math.min(100, s));
 
+    // Lenient thresholds: each tier shifts down so passwords feel
+    // achievable without being permissive of the well-known patterns
+    // the penalties already strip out.
+    //   weak   < 20  -- red
+    //   fair   20-39 -- orange
+    //   good   40-54 -- yellow
+    //   strong 55+   -- green
     let tier, label;
-    if      (s < 30)  { tier = "weak";   label = "Weak"; }
-    else if (s < 55)  { tier = "fair";   label = "Fair"; }
-    else if (s < 80)  { tier = "good";   label = "Good"; }
+    if      (s < 20)  { tier = "weak";   label = "Weak"; }
+    else if (s < 40)  { tier = "fair";   label = "Fair"; }
+    else if (s < 55)  { tier = "good";   label = "Good"; }
     else              { tier = "strong"; label = "Strong"; }
     return { score: s, tier, label };
 }
