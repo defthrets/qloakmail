@@ -227,14 +227,14 @@ services:
     networks: [voidnet]
 
   nginx:
+    # read_only intentionally NOT set: the entrypoint renders the
+    # config template into /etc/nginx/conf.d/voidmail.conf and creates
+    # /var/www/certbot at startup. Refactoring to render into /tmp
+    # with an include would let us turn this on; tracked as a future
+    # cleanup. cap_drop + no-new-privileges still apply.
     <<: *default-security
     build: ./nginx
     restart: unless-stopped
-    read_only: true
-    tmpfs:
-      - /tmp
-      - /var/cache/nginx
-      - /var/run
     cap_drop: [ALL]
     cap_add:
       - CHOWN
