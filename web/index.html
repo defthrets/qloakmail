@@ -73,6 +73,11 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
           <span class="meta"><span class="meta-dot">●</span>online</span>
         </nav>
 
+        <nav class="auth-tabs">
+          <button class="tab active" data-tab="login">Sign in</button>
+          <button class="tab" data-tab="signup">Create account</button>
+        </nav>
+
         <form id="login-form" class="auth-form active" autocomplete="on">
           <label>Email
             <input type="email" name="email" autocomplete="username" required>
@@ -95,6 +100,24 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
           </div>
           <button type="submit" class="primary">Sign in</button>
           <p class="status" id="login-status"></p>
+        </form>
+
+        <form id="signup-form" class="auth-form" autocomplete="off">
+          <label>Email
+            <input type="email" name="email" required>
+            <small id="signup-domain-hint"></small>
+          </label>
+          <label>Password (12+ chars)
+            <input type="password" name="password" minlength="12" required>
+          </label>
+          <label>Confirm password
+            <input type="password" name="password2" minlength="12" required>
+          </label>
+          <label id="invite-row" hidden>Invite code
+            <input type="text" name="invite">
+          </label>
+          <button type="submit" class="primary">Create account</button>
+          <p class="status" id="signup-status"></p>
         </form>
 
         <form id="recovery-form" class="auth-form" autocomplete="off">
@@ -632,6 +655,24 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
         <button type="button" id="unlock-signout" class="link unlock-signout">
           Sign out and use a different account
         </button>
+      </div>
+    </section>
+
+    <!-- ============== Recovery code reveal ============== -->
+    <section id="recovery-shown-view" class="view">
+      <div class="auth-card recovery-card">
+        <h2>Save your recovery code</h2>
+        <p class="warn">
+          This is the <strong>only</strong> way to recover your account if you forget
+          your password. We can't regenerate it. Write it down and store it offline.
+        </p>
+        <pre id="recovery-shown-code"></pre>
+        <label class="confirm">
+          <input type="checkbox" id="recovery-shown-confirm">
+          <span>I have saved my recovery code in a safe place.</span>
+        </label>
+        <button id="recovery-shown-continue" class="primary" disabled>Continue to inbox</button>
+        <p class="status" id="recovery-shown-status"></p>
       </div>
     </section>
 

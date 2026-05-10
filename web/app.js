@@ -187,7 +187,7 @@ function classifyStoredSession() {
 const MATRIX_VIEWS = new Set([
     "auth-view", "unlock-view",
     "about-view", "privacy-view", "terms-view",
-    "mail-view",
+    "mail-view", "recovery-shown-view",
 ]);
 function show(viewId) {
     $$(".view").forEach(v => v.classList.toggle("active", v.id === viewId));
@@ -357,9 +357,92 @@ async function unlockSession(password) {
     await enterMailbox();
 }
 
-// (Signup flow intentionally removed — public registration is closed.
-// The /auth/register endpoint is also gated server-side via
-// REGISTRATION_ENABLED. New accounts have to be created out-of-band.)
+// ----------------------------------------------------------------- signup
+async function handleSignup(form) {
+    const status = $("#signup-status");
+    setStatus(status, "Generating keypair (this can take a few seconds)...");
+
+    const fd = new FormData(form);
+    const email = fd.get("email").trim();
+    const password = fd.get("password");
+    const password2 = fd.get("password2");
+    const invite = (fd.get("invite") || "").trim();
+
+    if (password !== password2) {
+        setStatus(status, "Passwords do not match.", "err");
+        return;
+    }
+
+    try {
+        const { privateKey, publicKey } = await openpgp.generateKey({
+            type: "ecc",
+            curve: "ed25519",
+            userIDs: [{ email }],
+            format: "armored",
+        });
+        const pubObj = await openpgp.readKey({ armoredKey: publicKey });
+        const fpr = pubObj.getFingerprint();
+
+        const recoveryCode = generateRecoveryCode();
+
+        const wrappedPwd = await wrapPrivateKey(privateKey, password);
+        const wrappedRec = await wrapPrivateKey(privateKey, recoveryCode, {
+            ...wrappedPwd.argon2_params,
+            salt_b64: b64encode(_internals.randomBytes(16)),
+        });
+
+        const { saltHex, verifierHex } = await SRP.generateVerifier(email, password);
+
+        setStatus(status, "Submitting registration...");
+        await api.post("/auth/register", {
+            email,
+            srp_salt: saltHex,
+            srp_verifier: verifierHex,
+            pubkey_armored: publicKey,
+            pubkey_fpr: fpr,
+            encrypted_privkey_password: wrappedPwd.blobB64,
+            encrypted_privkey_recovery: wrappedRec.blobB64,
+            argon2_params: wrappedPwd.argon2_params,
+            invite_code: invite || null,
+            captcha_token: null,
+        });
+
+        // Show recovery code, then auto-login on confirm.
+        const codeEl = $("#recovery-shown-code");
+        codeEl.textContent = recoveryCode;
+        // Auto-clear the clipboard 30s after the user copies the
+        // recovery code, so it doesn't sit in the OS paste buffer.
+        codeEl.addEventListener("copy", scheduleClipboardClear, { once: true });
+        show("recovery-shown-view");
+
+        const confirmBox = $("#recovery-shown-confirm");
+        const continueBtn = $("#recovery-shown-continue");
+        const recoveryStatus = $("#recovery-shown-status");
+
+        confirmBox.checked = false;
+        continueBtn.disabled = true;
+        setStatus(recoveryStatus, "");
+
+        confirmBox.onchange = e => { continueBtn.disabled = !e.target.checked; };
+        continueBtn.onclick = async () => {
+            continueBtn.disabled = true;
+            setStatus(recoveryStatus, "Signing you in...");
+            try {
+                // Just-created accounts default to remember-on-this-device.
+                await performLogin(email, password, "1mo");
+            } catch (e) {
+                console.error("[QloakMail] auto-login after signup failed:", e);
+                setStatus(recoveryStatus, "Auto sign-in failed. Use the form below.", "err");
+                show("auth-view");
+                $("#login-form input[name=email]").value = email;
+                $("#login-form input[name=password]").focus();
+            }
+        };
+    } catch (e) {
+        console.error(e);
+        setStatus(status, "Failed: " + (e.message || e), "err");
+    }
+}
 
 // ----------------------------------------------------------------- recovery
 async function handleRecovery(form) {
@@ -2996,10 +3079,16 @@ async function boot() {
         invite_required: false, captcha_provider: "none",
         onion_address: "",
     }));
+    $("#signup-domain-hint").textContent =
+        "Domain: " + state.config.domains.join(", ");
+    if (state.config.invite_required) $("#invite-row").hidden = false;
     bindOnionNotice(state.config.onion_address);
 
     $("#login-form").addEventListener("submit", e => {
         e.preventDefault(); handleLogin(e.target);
+    });
+    $("#signup-form").addEventListener("submit", e => {
+        e.preventDefault(); handleSignup(e.target);
     });
     $("#recovery-form").addEventListener("submit", e => {
         e.preventDefault(); handleRecovery(e.target);

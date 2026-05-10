@@ -310,7 +310,8 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 #unlock-view.active,
 #about-view.active,
 #privacy-view.active,
-#terms-view.active {
+#terms-view.active,
+#recovery-shown-view.active {
     display: flex;
     flex-direction: column;
     align-items: center;
