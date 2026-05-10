@@ -153,16 +153,18 @@ function classifyStoredSession() {
     return { kind: "unlock", session: sess };
 }
 
-const PRELOGIN_VIEWS = new Set([
+const MATRIX_VIEWS = new Set([
     "auth-view", "unlock-view",
     "about-view", "privacy-view", "terms-view",
+    "mail-view", "recovery-shown-view",
 ]);
 function show(viewId) {
     $$(".view").forEach(v => v.classList.toggle("active", v.id === viewId));
-    // Matrix rain stays on for the entire pre-login experience —
-    // auth, unlock, and the static info pages — so those pages share
-    // the landing aesthetic. Drops once the user is in their inbox.
-    document.body.classList.toggle("matrix-on", PRELOGIN_VIEWS.has(viewId));
+    // Matrix rain stays on across every view so the cyberpunk
+    // backdrop is consistent. Mail-view tones it down via .in-mail
+    // so it doesn't compete with the actual content.
+    document.body.classList.toggle("matrix-on", MATRIX_VIEWS.has(viewId));
+    document.body.classList.toggle("in-mail", viewId === "mail-view");
 }
 
 function setStatus(el, text, kind = "") {
