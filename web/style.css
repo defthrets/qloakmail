@@ -382,6 +382,15 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     padding-bottom: 0.7rem;
     border-bottom: 1px dashed rgba(255, 122, 31, 0.18);
 }
+/* Variant for the auth view: nav sits BELOW the brand/tagline rather
+   than above the card, so it gets dashed borders top + bottom to read
+   as its own bracketed strip between the brand and the tabs. */
+.brand-nav--under {
+    margin: 0.4rem 0 1rem;
+    padding: 0.55rem 0;
+    border-top: 1px dashed rgba(255, 122, 31, 0.18);
+    border-bottom: 1px dashed rgba(255, 122, 31, 0.18);
+}
 .brand-nav a {
     color: var(--fg-dim);
     text-decoration: none;
