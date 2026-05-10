@@ -24,6 +24,8 @@
     --warn-soft:    rgba(255, 100, 100, 0.12);
     --ok:           #ff7a1f;
     --ok-soft:      rgba(255, 122, 31, 0.10);
+    --ok-green:     #4dff85;
+    --ok-green-glow: rgba(77, 255, 133, 0.6);
     --shadow-1:     0 1px 2px rgba(0, 0, 0, 0.5);
     --shadow-2:     0 8px 24px rgba(0, 0, 0, 0.6);
     --radius:       0px;        /* no rounded corners — terminal aesthetic */
@@ -590,8 +592,8 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 /* Compact variant for the mail-view topbar — same FIGlet at ~half scale
    so it fits inside the 64px topbar without truncating any rows. */
 .brand-ascii--mini {
-    font-size: 3.4px;
-    line-height: 3.8px;
+    font-size: 5px;
+    line-height: 5.6px;
     margin: 0;
     padding: 0;
 }
@@ -1428,11 +1430,19 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 }
 .topbar-status .bracket { color: var(--orange); text-shadow: 0 0 4px var(--orange-glow); }
 .topbar-status .dot {
-    color: var(--accent);
+    /* Green LED indicator -- shares the erratic online-flicker keyframe
+       used by the brand-nav status dot so both "live" lights pulse in
+       the same broken-LED rhythm rather than a smooth heartbeat. */
+    color: var(--ok-green);
     margin-right: 0.3em;
-    text-shadow: 0 0 6px var(--accent-glow);
-    animation: pulse-dot 2.4s ease-in-out infinite;
+    text-shadow:
+        0 0 4px var(--ok-green-glow),
+        0 0 10px rgba(77, 255, 133, 0.45);
+    animation: online-flicker 5.4s infinite steps(1, end);
     font-size: 0.85em;
+}
+@media (prefers-reduced-motion: reduce) {
+    .topbar-status .dot { animation: none; }
 }
 
 .topbar-sep { color: var(--fg-muted); margin: 0 0.15rem; }
@@ -1761,6 +1771,11 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 }
 
 .empty-state {
+    /* Opt out of #message-list li's 4-column grid -- otherwise the
+       title and paragraph get jammed into the checkbox + star cells
+       and visually overlap. */
+    display: block !important;
+    grid-template-columns: none !important;
     padding: 3rem 1.5rem;
     text-align: center;
     color: var(--fg-muted);
@@ -2121,7 +2136,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
         grid-template-columns: 56px 1fr auto;
         gap: 0.55rem;
     }
-    .brand-ascii--mini { font-size: 2.2px; line-height: 2.6px; }
+    .brand-ascii--mini { font-size: 2.8px; line-height: 3.2px; }
     .topbar-status {
         font-size: 0.55em;
         padding: 0.1em 0.3em;
