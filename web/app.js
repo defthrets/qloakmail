@@ -52,7 +52,6 @@ const DEFAULT_PREFS = {
     signature: "",
     density: "comfortable",   // "comfortable" | "compact"
     notifications: false,
-    confirmExternalLinks: true,
     avatar: "",               // base64 data URL of user-set display picture
 };
 function loadPrefs() {
@@ -1290,9 +1289,6 @@ function openSettings() {
     if (densEl) densEl.value = p.density;
     const notifEl = $("#settings-notifications");
     if (notifEl) notifEl.checked = p.notifications;
-    const linksEl = $("#settings-confirm-links");
-    if (linksEl) linksEl.checked = p.confirmExternalLinks;
-
     _renderAvatarPreview();
 
     $("#settings-modal").hidden = false;
@@ -1372,8 +1368,6 @@ function bindSettings() {
         }
         writeBack({ notifications: e.target.checked });
     });
-    $("#settings-confirm-links")?.addEventListener("change", e =>
-        writeBack({ confirmExternalLinks: e.target.checked }));
     $("#settings-clear-drafts")?.addEventListener("click", () => {
         clearDraft();
         toast("Draft cleared.", "ok");
@@ -1475,8 +1469,6 @@ function bindShortcuts() {
             case "j":
             case "k":
                 e.preventDefault(); _navigateList(e.key === "j" ? +1 : -1); break;
-            case "?":
-                e.preventDefault(); openSettings(); document.getElementById("settings-shortcuts")?.scrollIntoView({behavior:"smooth"}); break;
         }
     });
 }
