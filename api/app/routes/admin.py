@@ -26,8 +26,6 @@ UI so the block list exists for use.)
 """
 from __future__ import annotations
 
-import hashlib
-import hmac
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -40,8 +38,12 @@ from ..config import get_settings
 from ..db import get_session
 from ..deps import current_admin, get_redis
 from ..models import Account, AdminAction, IPBlock, Message
+from ..utils.ip_blocks import hmac_ip, is_ip_blocked  # noqa: F401 (re-export)
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+# include_in_schema=False keeps the admin surface out of /api/openapi.json
+# and /api/docs so the existence of an admin panel isn't discoverable
+# without prior knowledge of the path. Audit v2 (M2).
+router = APIRouter(prefix="/admin", tags=["admin"], include_in_schema=False)
 _settings = get_settings()
 
 
@@ -105,11 +107,6 @@ class IPBlockOut(BaseModel):
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
-
-
-def hmac_ip(ip: str) -> str:
-    secret = _settings.effective_ip_ban_secret.encode()
-    return hmac.new(secret, ip.encode(), hashlib.sha256).hexdigest()
 
 
 async def _audit(
@@ -543,17 +540,3 @@ async def audit_log(
     ]
 
 
-# Used by auth/signup paths to check if a request IP is blocked. Wiring
-# left for a follow-up; the function is here so callers can adopt it.
-async def is_ip_blocked(session: AsyncSession, ip: str) -> bool:
-    if not ip:
-        return False
-    fp = hmac_ip(ip)
-    now = _now()
-    r = await session.execute(
-        select(IPBlock).where(
-            IPBlock.ip_hmac == fp,
-            (IPBlock.expires_at.is_(None)) | (IPBlock.expires_at > now),
-        )
-    )
-    return r.scalar_one_or_none() is not None

@@ -17,6 +17,7 @@ from ..db import get_session
 from ..deps import current_account, get_redis
 from ..models import Account, Folder
 from ..utils.captcha import verify_captcha
+from ..utils.ip_blocks import is_ip_blocked
 from ..utils.privacy import rate_limit_key
 from ..utils.rate_limit import hit as rl_hit
 
@@ -59,6 +60,12 @@ async def register(
             status.HTTP_403_FORBIDDEN,
             "registration is closed; accounts are provisioned by invitation only",
         )
+
+    client_ip = request.client.host if request.client else ""
+    if await is_ip_blocked(session, client_ip):
+        # Match the rate-limit response so we don't confirm the IP is
+        # the reason we refused.
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "registration rate limit")
 
     allowed, _ = await rl_hit(
         redis_client, rate_limit_key(request, "register"),
@@ -125,9 +132,16 @@ async def login_init(
     session: AsyncSession = Depends(get_session),
     redis_client: aioredis.Redis = Depends(get_redis),
 ):
+    # Audit v2 (M6) tightening: per-IP login_init halved from 20/10m to
+    # 10/10m. Also rejects banned IPs up front so they can't burn the
+    # per-IP bucket reset window.
+    client_ip = request.client.host if request.client else ""
+    if await is_ip_blocked(session, client_ip):
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "rate limit")
+
     allowed, _ = await rl_hit(
         redis_client, rate_limit_key(request, "loginit"),
-        limit=20, window_seconds=600,
+        limit=10, window_seconds=600,
     )
     if not allowed:
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "rate limit")
@@ -181,9 +195,14 @@ async def login_verify(
     session: AsyncSession = Depends(get_session),
     redis_client: aioredis.Redis = Depends(get_redis),
 ):
+    # Audit v2 (M6): per-IP login_verify tightened from 30/10m to 10/10m.
+    # Plus a second bucket keyed by the *target* account-id hash so that
+    # cycling proxies/Tor exits doesn't bypass the cost: 15 verify hits
+    # per email per hour. The email-bucket key derives from the redis
+    # session blob below.
     allowed, _ = await rl_hit(
         redis_client, rate_limit_key(request, "loginv"),
-        limit=30, window_seconds=600,
+        limit=10, window_seconds=600,
     )
     if not allowed:
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "rate limit")
@@ -195,6 +214,16 @@ async def login_verify(
     state = json.loads(blob)
     if state.get("fake"):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "authentication failed")
+
+    # Per-target throttle: 15 verify hits per real account per hour.
+    # Wraps the SRP M1 comparison so an attacker with rotating IPs still
+    # gets globally rate-limited on the victim's account.
+    target_key = f"rl:lver-acct:{state['account_id']}"
+    allowed, _ = await rl_hit(
+        redis_client, target_key, limit=15, window_seconds=3600,
+    )
+    if not allowed:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "rate limit")
 
     res = await session.execute(select(Account).where(Account.id == uuid.UUID(state["account_id"])))
     account = res.scalar_one_or_none()
@@ -253,6 +282,10 @@ async def recovery_login(
     """Hands back the recovery-code-encrypted privkey blob. The client
     proves possession of the recovery code by successfully decrypting it
     locally; then calls /auth/reset-password to rewrap with a new password."""
+    client_ip = request.client.host if request.client else ""
+    if await is_ip_blocked(session, client_ip):
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "rate limit")
+
     allowed, _ = await rl_hit(
         redis_client, rate_limit_key(request, "recover"),
         limit=5, window_seconds=3600,

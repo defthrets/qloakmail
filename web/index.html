@@ -1019,6 +1019,16 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
     <div id="toast" class="toast" hidden></div>
   </div>
 
-  <script type="module" src="/app.js"></script>
+  <!--
+    SRI on app.js. Audit v2 (M7) flagged the lack of integrity= here.
+    The hash must be regenerated whenever app.js changes; see
+    scripts/compute-sri.sh (extended for app.js) or run:
+      openssl dgst -sha384 -binary web/app.js | openssl base64 -A
+    crossorigin="anonymous" is required for SRI to be enforced.
+  -->
+  <script type="module"
+          src="/app.js"
+          integrity="sha384-rVTvmccTYxEAeOfNBrPTKMTm6l52WAUsQnWcBtPoWJGnOpte+YzAV/FJglO16UaJ"
+          crossorigin="anonymous"></script>
 </body>
 </html>

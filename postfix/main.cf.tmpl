@@ -82,6 +82,15 @@ header_checks = pcre:/etc/postfix/header_checks.pcre
 
 # Anti-spoof / sane SMTP hardening for inbound port 25.
 smtpd_helo_required = yes
+
+# Disable the SMTP VRFY command — audit v2 (M4) flagged it as a user-
+# enumeration vector. EXPN never enabled in stock postfix; VRFY ships
+# enabled by default. With this off, "VRFY user@domain" answers 502.
+disable_vrfy_command = yes
+
+# Hide the local SMTP banner version string. Default banner leaks
+# Postfix version + OS hint to anyone connecting on :25/:587.
+smtpd_banner = $myhostname ESMTP
 smtpd_recipient_restrictions =
     permit_mynetworks
     reject_non_fqdn_recipient

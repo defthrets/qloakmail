@@ -2,6 +2,11 @@
 # Local dev: HTTP only on :8080.
 # Production: ports 80/443, with cert from /etc/letsencrypt/live/${VOIDMAIL_DOMAIN}/.
 
+# Suppress nginx version in Server: header and default error pages.
+# Audit v2 flagged this as a fingerprinting leak (M3). Applies http-wide
+# because conf.d/*.conf is included inside nginx's main http {} block.
+server_tokens off;
+
 upstream voidmail_api {
     server api:8000;
     keepalive 32;
@@ -96,6 +101,22 @@ server {
     }
     location / {
         return 301 https://$host$request_uri;
+    }
+}
+
+# ---- www -> apex (HTTP only) ----
+# Audit v2 flagged that hitting http://www.qloak.me would 301 to
+# https://www.qloak.me, but the LE cert covers only the apex — users
+# saw a TLS error instead of content. We handle www at the HTTP layer
+# and redirect to the apex URL on HTTPS so no www-prefixed hostname is
+# ever presented over TLS with this cert. (If we ever issue a SAN cert
+# covering www, this block can be deleted.)
+server {
+    listen 80;
+    server_name www.${VOIDMAIL_DOMAIN};
+    location /.well-known/acme-challenge/ { root /var/www/certbot; }
+    location / {
+        return 301 https://${VOIDMAIL_DOMAIN}$request_uri;
     }
 }
 

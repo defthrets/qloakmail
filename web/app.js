@@ -357,6 +357,43 @@ async function unlockSession(password) {
     await enterMailbox();
 }
 
+// ----------------------------------------------------------------- password rules
+// Cheap client-side strength check for signups + password reset. Server
+// can't reasonably enforce this because we never see the plaintext (SRP
+// verifier only), so this is the only gate. Audit v2 (M5).
+const WEAK_PASSWORDS = new Set([
+    "password1234", "qwerty123456", "letmein12345!", "welcome12345",
+    "123456789012", "qloakmail2026", "ChangeMe1234!", "Password1234",
+    "passwordpassword", "iloveyou1234", "111111111111", "abcdefghijkl",
+]);
+
+function validatePasswordStrength(pw, email) {
+    if (typeof pw !== "string" || pw.length < 12) {
+        return "Password must be at least 12 characters.";
+    }
+    if (pw.length > 256) {
+        return "Password is unreasonably long (max 256 chars).";
+    }
+    const classes =
+        (/[a-z]/.test(pw) ? 1 : 0) +
+        (/[A-Z]/.test(pw) ? 1 : 0) +
+        (/[0-9]/.test(pw) ? 1 : 0) +
+        (/[^A-Za-z0-9]/.test(pw) ? 1 : 0);
+    if (classes < 3) {
+        return "Use at least 3 of: lower, upper, digit, symbol.";
+    }
+    if (WEAK_PASSWORDS.has(pw.toLowerCase())) {
+        return "Password is on a well-known weak list. Pick another.";
+    }
+    if (email) {
+        const local = String(email).split("@")[0].toLowerCase();
+        if (local && local.length >= 4 && pw.toLowerCase().includes(local)) {
+            return "Password must not contain your email.";
+        }
+    }
+    return null;
+}
+
 // ----------------------------------------------------------------- signup
 async function handleSignup(form) {
     const status = $("#signup-status");
@@ -372,6 +409,15 @@ async function handleSignup(form) {
         setStatus(status, "Passwords do not match.", "err");
         return;
     }
+
+    // Password complexity — audit v2 (M5). Floor of 12 chars is also
+    // enforced by minlength= on the input, but we re-check here so
+    // pasted whitespace + variety rules can't be bypassed. Rules:
+    //   1. >= 12 characters
+    //   2. >= 3 of: lowercase, uppercase, digit, symbol
+    //   3. not in the small in-memory list of well-known weak passwords
+    const pwIssue = validatePasswordStrength(password, email);
+    if (pwIssue) { setStatus(status, pwIssue, "err"); return; }
 
     try {
         const { privateKey, publicKey } = await openpgp.generateKey({
@@ -451,6 +497,9 @@ async function handleRecovery(form) {
     const email = fd.get("email").trim();
     const recoveryCode = fd.get("recovery").trim();
     const newPassword = fd.get("password");
+
+    const pwIssue = validatePasswordStrength(newPassword, email);
+    if (pwIssue) { setStatus(status, pwIssue, "err"); return; }
 
     setStatus(status, "Verifying recovery code...");
     try {

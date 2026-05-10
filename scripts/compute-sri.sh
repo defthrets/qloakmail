@@ -1,20 +1,25 @@
 #!/usr/bin/env bash
-# Recompute SRI sha384 hashes for the bundled crypto libs.
-# Print pasteable integrity= attributes for index.html.
+# Recompute SRI sha384 hashes for the SPA bundle.
+# Prints pasteable integrity= attributes for web/index.html.
 #
-# Run after upgrading openpgp.js or hash-wasm. Update both the file
-# in web/lib AND the corresponding integrity= attribute in
-# web/index.html in the same commit, otherwise the browser refuses to
-# run the script and the SPA breaks.
+# Run any time app.js or one of the bundled libs changes. Update both
+# the file AND the corresponding integrity= attribute in index.html in
+# the same commit — otherwise the browser refuses to run the script and
+# the SPA breaks.
 
 set -euo pipefail
-cd "$(dirname "$0")/../web/lib"
+WEB="$(cd "$(dirname "$0")/../web" && pwd)"
 
-for f in openpgp.min.js hash-wasm.umd.min.js; do
-    if [ ! -f "$f" ]; then
-        echo "missing: $f" >&2
-        exit 1
-    fi
-    h=$(openssl dgst -sha384 -binary "$f" | openssl base64 -A)
-    printf '  %s\n    integrity="sha384-%s"\n' "$f" "$h"
+hash_of() { openssl dgst -sha384 -binary "$1" | openssl base64 -A; }
+
+# Bundled vendor libs.
+for f in lib/openpgp.min.js lib/hash-wasm.umd.min.js; do
+    p="$WEB/$f"
+    [ -f "$p" ] || { echo "missing: $f" >&2; exit 1; }
+    printf '  %s\n    integrity="sha384-%s"\n' "$f" "$(hash_of "$p")"
 done
+
+# App bundle.
+p="$WEB/app.js"
+[ -f "$p" ] || { echo "missing: app.js" >&2; exit 1; }
+printf '  %s\n    integrity="sha384-%s"\n' "app.js" "$(hash_of "$p")"

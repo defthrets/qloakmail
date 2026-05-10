@@ -53,16 +53,42 @@ async def require_internal_token(
 
 
 async def current_admin(
-    account: Account = Depends(current_account),
+    authorization: str | None = Header(default=None),
+    redis_client: aioredis.Redis = Depends(get_redis),
+    session: AsyncSession = Depends(get_session),
 ) -> Account:
-    """Gate admin endpoints. Requires:
-      1. A normal authenticated session (current_account passed).
-      2. The account email matches an entry in ADMIN_EMAILS.
-    Returns 404 (not 403) when not an admin so the existence of admin
-    endpoints isn't enumerable to a regular signed-in user — they'll
-    see the same response as if the path didn't exist.
+    """Gate admin endpoints — every failure path returns the same 404.
+
+    Audit v2 (M2) noted that mixing 401 (unauth) and 404 (non-admin)
+    let an attacker distinguish "admin path exists, you're just not
+    one" from "path doesn't exist". We now resolve the session inline
+    and *swallow* any auth failure into the same 404 response a
+    signed-in non-admin would get. The admin surface is therefore
+    indistinguishable from a 404 typo to anyone outside the allow-list.
+
+    Requirements (all enforced silently):
+      1. Bearer header present + valid session in Redis.
+      2. Session points at an active account.
+      3. That account's email is in ADMIN_EMAILS.
+    Any failure → HTTP 404 "not found".
     """
+    not_found = HTTPException(status.HTTP_404_NOT_FOUND, "not found")
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise not_found
+    token = authorization.split(None, 1)[1].strip()
+    th = hash_token(token).hex()
+    account_id = await redis_client.get(f"sess:{th}")
+    if not account_id:
+        raise not_found
+    try:
+        aid = uuid.UUID(account_id.decode())
+    except ValueError:
+        raise not_found
+    res = await session.execute(select(Account).where(Account.id == aid))
+    account = res.scalar_one_or_none()
+    if not account or account.status != "active":
+        raise not_found
     admins = _settings.admin_email_set
     if not admins or account.email.lower() not in admins:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "not found")
+        raise not_found
     return account
