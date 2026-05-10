@@ -15,7 +15,7 @@ from .. import schemas, srp
 from ..config import get_settings
 from ..db import get_session
 from ..deps import current_account, get_redis
-from ..models import Account, Folder, InviteCode
+from ..models import Account, Folder
 from ..utils.captcha import verify_captcha
 from ..utils.privacy import rate_limit_key
 from ..utils.rate_limit import hit as rl_hit
@@ -75,21 +75,11 @@ async def register(
     if domain.lower() not in {d.lower() for d in settings.all_domains}:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "email domain not served")
 
-    # Invite code (if any are configured).
+    # Invite codes intentionally not enforced — open registration.
+    # We still RECORD whatever was passed (req.invite_code) on the
+    # account row for accounting, but no validation. To re-close
+    # registration entirely set REGISTRATION_ENABLED=false in .env.
     invite = req.invite_code.strip() if req.invite_code else ""
-    env_codes = settings.invite_code_set
-    db_code: InviteCode | None = None
-    if env_codes or True:    # always check DB invites
-        if invite:
-            res = await session.execute(select(InviteCode).where(InviteCode.code == invite))
-            db_code = res.scalar_one_or_none()
-        if env_codes and invite not in env_codes and not db_code:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "invalid invite code")
-        if db_code:
-            if db_code.uses >= db_code.max_uses:
-                raise HTTPException(status.HTTP_400_BAD_REQUEST, "invite code exhausted")
-            if db_code.expires_at and db_code.expires_at < datetime.now(timezone.utc):
-                raise HTTPException(status.HTTP_400_BAD_REQUEST, "invite code expired")
 
     # Uniqueness.
     res = await session.execute(select(Account).where(Account.email == req.email))
@@ -123,13 +113,6 @@ async def register(
             system_kind=SIGNUP_BASE_FOLDER_KIND[name],
             created_at=datetime.now(timezone.utc),
         ))
-
-    if db_code:
-        await session.execute(
-            update(InviteCode)
-            .where(InviteCode.code == db_code.code)
-            .values(uses=InviteCode.uses + 1)
-        )
 
     await session.commit()
     return schemas.RegisterResponse(account_id=account.id, email=account.email)

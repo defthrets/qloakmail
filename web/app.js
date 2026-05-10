@@ -3081,7 +3081,6 @@ async function boot() {
     }));
     $("#signup-domain-hint").textContent =
         "Domain: " + state.config.domains.join(", ");
-    if (state.config.invite_required) $("#invite-row").hidden = false;
     bindOnionNotice(state.config.onion_address);
 
     $("#login-form").addEventListener("submit", e => {

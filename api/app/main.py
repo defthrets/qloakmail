@@ -66,7 +66,9 @@ async def public_config():
         "domain": settings.voidmail_domain,
         "domains": settings.all_domains,
         "captcha_provider": settings.captcha_provider,
-        "invite_required": bool(settings.invite_code_set),
+        # Invite-code gating retired — left in the response as `false`
+        # so older bundles still receive the key.
+        "invite_required": False,
         "onion_address": _read_onion_address(),
     }
 
