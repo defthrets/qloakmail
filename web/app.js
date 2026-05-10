@@ -35,7 +35,38 @@ const state = {
     selectedMessageId: null,
     searchActive: false,
     searchTimer: null,
+    // Multi-select & filtering ------------------------------------
+    selectedIds: new Set(),  // bulk-action selection
+    sortBy: "date-desc",     // "date-desc" | "date-asc" | "from" | "subject" | "unread-first"
+    filterBy: "all",         // "all" | "unread" | "starred"
+    // Reader view mode --------------------------------------------
+    readerMode: "decoded",   // "decoded" | "raw"
+    readerRaw: "",           // raw decrypted RFC822 (for raw view)
+    readerParsed: null,      // parsed object (for re-render on toggle)
+    readerMsgId: null,
 };
+
+// User preferences live in localStorage so they survive logout/reload.
+const PREFS_KEY = "qloakmail.prefs";
+const DEFAULT_PREFS = {
+    signature: "",
+    density: "comfortable",   // "comfortable" | "compact"
+    notifications: false,
+    confirmExternalLinks: true,
+};
+function loadPrefs() {
+    try {
+        return { ...DEFAULT_PREFS, ...JSON.parse(localStorage.getItem(PREFS_KEY) || "{}") };
+    } catch { return { ...DEFAULT_PREFS }; }
+}
+function savePrefs(p) {
+    localStorage.setItem(PREFS_KEY, JSON.stringify(p));
+    applyPrefsToDom();
+}
+function applyPrefsToDom() {
+    const p = loadPrefs();
+    document.body.classList.toggle("density-compact", p.density === "compact");
+}
 
 // ----------------------------------------------------------------- helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -670,15 +701,38 @@ function renderEmptyReader() {
     `;
 }
 
+function applyListSortFilter(messages) {
+    let out = messages.slice();
+    if (state.filterBy === "unread")  out = out.filter(m => !m.flags.includes("\\Seen"));
+    if (state.filterBy === "starred") out = out.filter(m =>  m.flags.includes("\\Flagged"));
+    const cmp = {
+        "date-desc":    (a, b) => new Date(b.received_at) - new Date(a.received_at),
+        "date-asc":     (a, b) => new Date(a.received_at) - new Date(b.received_at),
+        "unread-first": (a, b) => {
+            const ua = a.flags.includes("\\Seen") ? 1 : 0;
+            const ub = b.flags.includes("\\Seen") ? 1 : 0;
+            return ua - ub || (new Date(b.received_at) - new Date(a.received_at));
+        },
+    }[state.sortBy] || ((a, b) => new Date(b.received_at) - new Date(a.received_at));
+    out.sort(cmp);
+    return out;
+}
+
 async function renderMessageList() {
     const ul = $("#message-list");
     ul.innerHTML = "";
+    refreshBulkBar();
 
-    if (!state.messages.length) {
+    const messages = applyListSortFilter(state.messages);
+
+    if (!messages.length) {
         const folder = state.folders.find(f => f.id === state.activeFolderId);
         const isInbox = folder?.system_kind === "inbox";
         const userEmail = state.account?.email || "";
-        ul.innerHTML = isInbox ? `
+        const filterNote = state.filterBy !== "all"
+            ? `<p>No <strong>${state.filterBy}</strong> messages in this folder.</p>`
+            : "";
+        ul.innerHTML = isInbox && state.filterBy === "all" ? `
             <li class="empty-state">
                 <h4>Your inbox is empty</h4>
                 <p>Have a friend send a test to <code>${escapeHtml(userEmail)}</code> — it'll show up here, decrypted in your browser.</p>
@@ -686,50 +740,144 @@ async function renderMessageList() {
         ` : `
             <li class="empty-state">
                 <h4>Empty folder</h4>
-                <p>No messages here yet.</p>
+                ${filterNote || "<p>No messages here yet.</p>"}
             </li>
         `;
         return;
     }
 
-    // Pull cached previews for every visible message in one IndexedDB
-    // pass. Cached records come from past openMessage() decrypts.
     let cached = new Map();
-    try {
-        cached = await Search.getCachedBatch(state.messages.map(m => m.id));
-    } catch (e) {
-        console.warn("[QloakMail] preview cache unavailable:", e);
-    }
+    try { cached = await Search.getCachedBatch(messages.map(m => m.id)); }
+    catch (e) { console.warn("[QloakMail] preview cache unavailable:", e); }
 
-    for (const m of state.messages) {
+    for (const m of messages) {
         const li = document.createElement("li");
-        if (!m.flags.includes("\\Seen")) li.classList.add("unread");
-        if (m.id === state.selectedMessageId) li.classList.add("active");
+        const isUnread  = !m.flags.includes("\\Seen");
+        const isStarred =  m.flags.includes("\\Flagged");
+        if (isUnread)  li.classList.add("unread");
+        if (isStarred) li.classList.add("starred");
+        if (state.selectedIds.has(m.id))         li.classList.add("checked");
+        if (m.id === state.selectedMessageId)    li.classList.add("active");
 
         const c = cached.get(m.id);
-        if (c) {
-            // Decrypted preview available — show real from / subject / snippet.
-            const when = c.date ? fmtRelative(c.date) : fmtRelative(m.received_at);
-            li.innerHTML = `
-                <span class="when">${escapeHtml(when)}</span>
-                <div class="from">${escapeHtml(c.from || "(unknown sender)")}</div>
-                <div class="subject">${escapeHtml(c.subject || "(no subject)")}</div>
-                <div class="snippet">${escapeHtml(c.snippet || "")}</div>
-            `;
-        } else {
-            // Not yet decrypted on this device — render an encrypted
-            // placeholder. The lock dot is the "still encrypted" status
-            // light, the row stays clickable to decrypt on demand.
-            li.classList.add("locked");
-            li.innerHTML = `
-                <span class="when">${escapeHtml(fmtRelative(m.received_at))}</span>
-                <div class="from"><span class="lock-dot" title="encrypted — click to decrypt">●</span> <span class="enc-tag">[ENCRYPTED]</span></div>
-                <div class="subject muted">${m.size_bytes}b · tap to decrypt</div>
-            `;
-        }
-        li.addEventListener("click", () => openMessage(m.id));
+        const fromStr     = c?.from    || "(encrypted)";
+        const subjectStr  = c?.subject || (c ? "(no subject)" : `${m.size_bytes}b · tap to decrypt`);
+        const snippetStr  = c?.snippet || "";
+        const when        = c?.date ? fmtRelative(c.date) : fmtRelative(m.received_at);
+
+        li.innerHTML = `
+            <label class="row-check" aria-label="Select message">
+                <input type="checkbox" data-msg-id="${m.id}" ${state.selectedIds.has(m.id) ? "checked" : ""}>
+            </label>
+            <button class="row-star ${isStarred ? "is-starred" : ""}"
+                    data-msg-id="${m.id}"
+                    aria-label="${isStarred ? "Unstar" : "Star"}"
+                    title="${isStarred ? "Unstar" : "Star"}">${isStarred ? "★" : "☆"}</button>
+            <div class="row-body">
+                <div class="row-top">
+                    <span class="from">${c ? escapeHtml(fromStr) : `<span class="lock-dot" title="encrypted — click to decrypt">●</span> <span class="enc-tag">[ENCRYPTED]</span>`}</span>
+                    <span class="when">${escapeHtml(when)}</span>
+                </div>
+                <div class="subject ${c ? "" : "muted"}">${escapeHtml(subjectStr)}</div>
+                ${c ? `<div class="snippet">${escapeHtml(snippetStr)}</div>` : ""}
+            </div>
+        `;
+        if (!c) li.classList.add("locked");
+
+        // Body click opens the message; checkbox + star don't bubble.
+        li.querySelector(".row-body").addEventListener("click", () => openMessage(m.id));
+        li.querySelector(".row-check input").addEventListener("change", (e) => {
+            e.stopPropagation();
+            toggleSelected(m.id, e.target.checked);
+        });
+        li.querySelector(".row-star").addEventListener("click", (e) => {
+            e.stopPropagation();
+            toggleStar(m.id);
+        });
+
         ul.appendChild(li);
     }
+}
+
+// ----------------------------------------------------------------- list controls
+//
+// Sort/filter chips above the list, plus the bulk-action bar that
+// appears once any rows are checked. Both purely client-side; the
+// underlying messages list stays as-is.
+
+function bindListControls() {
+    document.querySelectorAll("[data-sort]").forEach(b =>
+        b.addEventListener("click", () => {
+            state.sortBy = b.dataset.sort;
+            document.querySelectorAll("[data-sort]").forEach(o =>
+                o.classList.toggle("active", o.dataset.sort === state.sortBy));
+            renderMessageList();
+        }));
+    document.querySelectorAll("[data-filter]").forEach(b =>
+        b.addEventListener("click", () => {
+            state.filterBy = b.dataset.filter;
+            document.querySelectorAll("[data-filter]").forEach(o =>
+                o.classList.toggle("active", o.dataset.filter === state.filterBy));
+            renderMessageList();
+        }));
+    $("#select-all")?.addEventListener("change", (e) => {
+        const checked = e.target.checked;
+        if (checked) {
+            applyListSortFilter(state.messages).forEach(m => state.selectedIds.add(m.id));
+        } else {
+            state.selectedIds.clear();
+        }
+        renderMessageList();
+    });
+    $$("[data-bulk]").forEach(b =>
+        b.addEventListener("click", () => doBulkAction(b.dataset.bulk)));
+}
+
+function toggleSelected(id, on) {
+    if (on) state.selectedIds.add(id); else state.selectedIds.delete(id);
+    refreshBulkBar();
+}
+
+function refreshBulkBar() {
+    const bar = $("#bulk-bar");
+    if (!bar) return;
+    const n = state.selectedIds.size;
+    bar.hidden = n === 0;
+    const counter = $("#bulk-count");
+    if (counter) counter.textContent = String(n);
+    const all = $("#select-all");
+    if (all) all.checked = n > 0 && n === applyListSortFilter(state.messages).length;
+}
+
+async function doBulkAction(action) {
+    const ids = [...state.selectedIds];
+    if (!ids.length) return;
+    let ok = 0, fail = 0;
+    setStatus($("#compose-status") || document.createElement("div"), ""); // no-op safety
+    for (const id of ids) {
+        try {
+            if (action === "delete" || action === "spam") {
+                if (action === "spam") {
+                    try { await api.post(`/mail/messages/${id}/flags`, { add: ["\\Junk"], remove: [] }); }
+                    catch {}
+                }
+                await api.del(`/mail/messages/${id}`);
+                try { await Search.forget(id); } catch {}
+                state.messages = state.messages.filter(m => m.id !== id);
+            } else if (action === "read")    await setSeen(id, true);
+            else if (action === "unread")    await setSeen(id, false);
+            else if (action === "star")      await setStar(id, true);
+            else if (action === "unstar")    await setStar(id, false);
+            ok++;
+        } catch (e) {
+            console.warn("[QloakMail] bulk", action, id, e);
+            fail++;
+        }
+    }
+    state.selectedIds.clear();
+    await renderMessageList();
+    await loadFolders();
+    toast(`${action}: ${ok} done${fail ? `, ${fail} failed` : ""}`, fail ? "err" : "ok");
 }
 
 async function openMessage(id) {
@@ -768,12 +916,18 @@ async function openMessage(id) {
         const bodyToRender = parsed.body && parsed.body.trim()
             ? parsed.body
             : plaintextRfc822;
+        const liveMsg = state.messages.find(x => x.id === id);
+        const isStarred = liveMsg?.flags.includes("\\Flagged");
         view.innerHTML = `
             <button class="reader-close" aria-label="Close" type="button">×</button>
             <div class="reader-actions">
                 <button class="reader-action" data-action="reply">[ REPLY ]</button>
                 <button class="reader-action" data-action="reply-all">[ REPLY ALL ]</button>
                 <button class="reader-action" data-action="forward">[ FORWARD ]</button>
+                <button class="reader-action" data-action="star" data-starred="${isStarred ? "1" : "0"}">${isStarred ? "[ ★ STARRED ]" : "[ ☆ STAR ]"}</button>
+                <button class="reader-action" data-action="unread">[ UNREAD ]</button>
+                <button class="reader-action" data-action="print">[ PRINT ]</button>
+                <button class="reader-action" data-action="raw">[ RAW ]</button>
                 <button class="reader-action" data-action="delete">[ DELETE ]</button>
                 <button class="reader-action danger" data-action="spam">[ SPAM ]</button>
                 <button class="reader-action danger" data-action="block">[ BLOCK ]</button>
@@ -790,6 +944,11 @@ async function openMessage(id) {
             <pre class="body-content"></pre>
         `;
         view.querySelector("pre").textContent = bodyToRender;
+        // Stash for raw-toggle (no need to re-decrypt on toggle).
+        state.readerRaw = plaintextRfc822;
+        state.readerParsed = parsed;
+        state.readerMsgId = id;
+        state.readerMode = "decoded";
         // Wire the action toolbar — fresh closure per render so the
         // current `parsed` and `id` are captured.
         bindReaderActions(view, id, parsed);
@@ -817,6 +976,58 @@ async function openMessage(id) {
     }
 }
 
+// ----------------------------------------------------------------- flag helpers
+//
+// Thin wrappers over POST /mail/messages/:id/flags that update the
+// in-memory state.messages so the UI reflects the change without
+// re-fetching the list. Standard IMAP flags:
+//   \Seen     — read/unread
+//   \Flagged  — starred
+//   \Junk     — spam (we tag then delete)
+//   \Answered — replied (set after a successful reply)
+
+function _updateLocalFlags(id, add = [], remove = []) {
+    const m = state.messages.find(x => x.id === id);
+    if (!m) return;
+    const set = new Set(m.flags || []);
+    add.forEach(f => set.add(f));
+    remove.forEach(f => set.delete(f));
+    m.flags = [...set];
+}
+
+async function setSeen(id, seen) {
+    const action = seen
+        ? { add: ["\\Seen"], remove: [] }
+        : { add: [],          remove: ["\\Seen"] };
+    await api.post(`/mail/messages/${id}/flags`, action);
+    _updateLocalFlags(id, action.add, action.remove);
+}
+
+async function setStar(id, star) {
+    const action = star
+        ? { add: ["\\Flagged"], remove: [] }
+        : { add: [],            remove: ["\\Flagged"] };
+    await api.post(`/mail/messages/${id}/flags`, action);
+    _updateLocalFlags(id, action.add, action.remove);
+}
+
+async function toggleStar(id) {
+    const m = state.messages.find(x => x.id === id);
+    if (!m) return;
+    const isStarred = m.flags.includes("\\Flagged");
+    await setStar(id, !isStarred);
+    await renderMessageList();
+}
+
+async function toggleSeen(id) {
+    const m = state.messages.find(x => x.id === id);
+    if (!m) return;
+    const isSeen = m.flags.includes("\\Seen");
+    await setSeen(id, !isSeen);
+    await renderMessageList();
+    await loadFolders();
+}
+
 // ----------------------------------------------------------------- reader actions
 //
 // Per-message actions: reply, reply-all, forward, delete, spam, block.
@@ -833,18 +1044,68 @@ function bindReaderActions(viewEl, msgId, parsed) {
         btn.addEventListener("click", async () => {
             const action = btn.dataset.action;
             try {
-                if (action === "reply")     openReplyCompose(parsed, false);
+                if (action === "reply")          openReplyCompose(parsed, false);
                 else if (action === "reply-all") openReplyCompose(parsed, true);
                 else if (action === "forward")   openForwardCompose(parsed);
                 else if (action === "delete")    await deleteMessage(msgId);
                 else if (action === "spam")      await markSpam(msgId, parsed);
                 else if (action === "block")     await blockSender(parsed);
+                else if (action === "star")      await readerToggleStar(viewEl, msgId);
+                else if (action === "unread")    await readerMarkUnread(msgId);
+                else if (action === "print")     printReader();
+                else if (action === "raw")       toggleRawView(viewEl);
             } catch (e) {
                 console.error("[QloakMail] reader action failed:", action, e);
                 toast(`${action} failed: ${e.message || e}`, "err");
             }
         });
     });
+}
+
+async function readerToggleStar(viewEl, id) {
+    const m = state.messages.find(x => x.id === id);
+    if (!m) return;
+    const isStarred = m.flags.includes("\\Flagged");
+    await setStar(id, !isStarred);
+    const btn = viewEl.querySelector('.reader-action[data-action="star"]');
+    if (btn) {
+        const now = !isStarred;
+        btn.dataset.starred = now ? "1" : "0";
+        btn.textContent = now ? "[ ★ STARRED ]" : "[ ☆ STAR ]";
+    }
+    await renderMessageList();
+}
+
+async function readerMarkUnread(id) {
+    await setSeen(id, false);
+    await renderMessageList();
+    await loadFolders();
+    toast("Marked unread.", "ok");
+    document.getElementById("message-view")?.classList.remove("open");
+    renderEmptyReader();
+    state.selectedMessageId = null;
+}
+
+function printReader() {
+    // The print stylesheet hides everything but the message body.
+    window.print();
+}
+
+function toggleRawView(viewEl) {
+    if (state.readerMode === "decoded") {
+        // Replace pre body with raw RFC822 (escaped).
+        const pre = viewEl.querySelector(".body-content");
+        if (!pre) return;
+        pre.dataset.decoded = pre.textContent;
+        pre.textContent = state.readerRaw || "";
+        state.readerMode = "raw";
+        viewEl.classList.add("raw-mode");
+    } else {
+        const pre = viewEl.querySelector(".body-content");
+        if (pre) pre.textContent = pre.dataset.decoded || "";
+        state.readerMode = "decoded";
+        viewEl.classList.remove("raw-mode");
+    }
 }
 
 function _stripReplyPrefix(s) {
@@ -978,6 +1239,7 @@ function _showCcBcc(showCc) {
 
 // ----------------------------------------------------------------- settings
 function openSettings() {
+    const p = loadPrefs();
     $("#settings-email").textContent = state.account?.email || "";
     $("#settings-onion").textContent = state.config?.onion_address || "—";
     Search.stats().then(s => {
@@ -985,6 +1247,17 @@ function openSettings() {
             ? `${s.messages} messages` : "empty";
     }).catch(() => { $("#settings-index-count").textContent = "—"; });
     _renderBlocklist();
+
+    // Reflect prefs back into the form controls.
+    const sigEl = $("#settings-signature");
+    if (sigEl) sigEl.value = p.signature || "";
+    const densEl = $("#settings-density");
+    if (densEl) densEl.value = p.density;
+    const notifEl = $("#settings-notifications");
+    if (notifEl) notifEl.checked = p.notifications;
+    const linksEl = $("#settings-confirm-links");
+    if (linksEl) linksEl.checked = p.confirmExternalLinks;
+
     $("#settings-modal").hidden = false;
 }
 function closeSettings() { $("#settings-modal").hidden = true; }
@@ -1019,20 +1292,197 @@ function bindSettings() {
         toast("Local search index cleared.", "ok");
     });
     $("#settings-signout-all")?.addEventListener("click", () => {
-        // Same flow as the topbar logout; "all devices" semantics
-        // require server-side support which doesn't exist yet, so for
-        // now this just logs out this device cleanly.
         $("#logout-btn")?.click();
         closeSettings();
     });
+
+    // Pref edits write back through savePrefs() so applyPrefsToDom
+    // runs (e.g. density toggles a body class).
+    const writeBack = (patch) => savePrefs({ ...loadPrefs(), ...patch });
+    $("#settings-signature")?.addEventListener("change", e =>
+        writeBack({ signature: e.target.value }));
+    $("#settings-density")?.addEventListener("change", e =>
+        writeBack({ density: e.target.value }));
+    $("#settings-notifications")?.addEventListener("change", async (e) => {
+        if (e.target.checked && "Notification" in window) {
+            try {
+                const perm = await Notification.requestPermission();
+                if (perm !== "granted") {
+                    e.target.checked = false;
+                    toast("Notifications denied by browser.", "err");
+                    return;
+                }
+            } catch { /* unsupported */ }
+        }
+        writeBack({ notifications: e.target.checked });
+    });
+    $("#settings-confirm-links")?.addEventListener("change", e =>
+        writeBack({ confirmExternalLinks: e.target.checked }));
+    $("#settings-clear-drafts")?.addEventListener("click", () => {
+        clearDraft();
+        toast("Draft cleared.", "ok");
+    });
+}
+
+// ----------------------------------------------------------------- keyboard shortcuts
+//
+// Global key handler — only triggers when no modal is open and no
+// editable input has focus. Mirrors the Gmail/Proton bindings users
+// already know:
+//   c = compose                   #/Delete = delete current message
+//   r/a/f = reply/reply-all/fwd   ! = spam
+//   e = toggle read/unread        s = star
+//   /  = focus search             j/k = next/prev message
+//   ?  = open shortcuts help (in settings)
+//   Esc = handled elsewhere (close overlays)
+
+function _isEditing(target) {
+    if (!target) return false;
+    const tag = target.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+    if (target.isContentEditable) return true;
+    return false;
+}
+function _modalOpen() {
+    return document.querySelector(".modal:not([hidden])") !== null;
+}
+function _readingMessage() {
+    return state.selectedMessageId !== null && state.readerParsed !== null;
+}
+
+function bindShortcuts() {
+    document.addEventListener("keydown", async (e) => {
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        if (_isEditing(e.target)) return;
+        if (_modalOpen()) return;
+        if (document.querySelector(".view.active")?.id !== "mail-view") return;
+
+        const id = state.selectedMessageId;
+        const parsed = state.readerParsed;
+
+        switch (e.key) {
+            case "c":
+                e.preventDefault(); openCompose(); break;
+            case "/":
+                e.preventDefault(); $("#search-input")?.focus(); break;
+            case "r":
+                if (_readingMessage()) { e.preventDefault(); openReplyCompose(parsed, false); }
+                break;
+            case "a":
+                if (_readingMessage()) { e.preventDefault(); openReplyCompose(parsed, true); }
+                break;
+            case "f":
+                if (_readingMessage()) { e.preventDefault(); openForwardCompose(parsed); }
+                break;
+            case "e":
+                if (_readingMessage()) { e.preventDefault(); await readerMarkUnread(id); }
+                break;
+            case "s":
+                if (_readingMessage()) { e.preventDefault(); await toggleStar(id); }
+                break;
+            case "#":
+            case "Delete":
+                if (_readingMessage()) { e.preventDefault(); await deleteMessage(id); }
+                break;
+            case "!":
+                if (_readingMessage()) { e.preventDefault(); await markSpam(id, parsed); }
+                break;
+            case "j":
+            case "k":
+                e.preventDefault(); _navigateList(e.key === "j" ? +1 : -1); break;
+            case "?":
+                e.preventDefault(); openSettings(); document.getElementById("settings-shortcuts")?.scrollIntoView({behavior:"smooth"}); break;
+        }
+    });
+}
+
+function _navigateList(delta) {
+    const visible = applyListSortFilter(state.messages);
+    if (!visible.length) return;
+    const idx = state.selectedMessageId
+        ? visible.findIndex(m => m.id === state.selectedMessageId)
+        : -1;
+    const next = (idx + delta + visible.length) % visible.length;
+    openMessage(visible[(idx === -1 ? (delta > 0 ? 0 : visible.length - 1) : next)].id);
 }
 
 // ----------------------------------------------------------------- compose extras
+//
+// Cc/Bcc toggle, signature insertion, and draft auto-save. Drafts
+// live in localStorage (DRAFT_KEY) so they survive accidental tab
+// closes — the server has no draft endpoint yet, and we wouldn't
+// want to send unencrypted drafts there anyway. Saved every 3s and
+// on input throttle.
+
+const DRAFT_KEY = "qloakmail.draft";
+const DRAFT_INTERVAL_MS = 3000;
+let _draftTimer = null;
+
 function bindComposeExtras() {
     $("#cc-toggle")?.addEventListener("click", () => {
         const showing = !$(".cc-row").hidden;
         _showCcBcc(!showing);
     });
+
+    const form = $("#compose-form");
+    if (!form) return;
+
+    // Auto-save every change (debounced 3s). Cleared when the message
+    // is sent or the modal is closed via the cancel/× actions.
+    form.addEventListener("input", () => {
+        clearTimeout(_draftTimer);
+        _draftTimer = setTimeout(saveDraft, DRAFT_INTERVAL_MS);
+    });
+}
+
+function saveDraft() {
+    const form = $("#compose-form");
+    if (!form) return;
+    const fd = new FormData(form);
+    const draft = {
+        to:      fd.get("to")      || "",
+        cc:      fd.get("cc")      || "",
+        bcc:     fd.get("bcc")     || "",
+        subject: fd.get("subject") || "",
+        body:    fd.get("body")    || "",
+        inReplyTo: form.dataset.inReplyTo || "",
+        savedAt: Date.now(),
+    };
+    // Don't save totally-empty drafts.
+    if (!draft.to && !draft.subject && !draft.body) return;
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); }
+    catch (e) { console.warn("[QloakMail] draft save failed:", e); }
+}
+
+function restoreDraft() {
+    let d;
+    try { d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); }
+    catch { return false; }
+    if (!d) return false;
+    const form = $("#compose-form");
+    if (!form) return false;
+    form.elements.to.value      = d.to      || "";
+    form.elements.cc.value      = d.cc      || "";
+    form.elements.bcc.value     = d.bcc     || "";
+    form.elements.subject.value = d.subject || "";
+    form.elements.body.value    = d.body    || "";
+    if (d.inReplyTo) form.dataset.inReplyTo = d.inReplyTo;
+    if (d.cc || d.bcc) _showCcBcc(true);
+    return true;
+}
+
+function clearDraft() {
+    try { localStorage.removeItem(DRAFT_KEY); } catch {}
+    clearTimeout(_draftTimer);
+}
+
+function appendSignature(form) {
+    const sig = (loadPrefs().signature || "").trim();
+    if (!sig) return;
+    const ta = form.elements.body;
+    if (!ta.value || !ta.value.includes(sig)) {
+        ta.value = (ta.value || "") + (ta.value ? "\n\n" : "") + "-- \n" + sig;
+    }
 }
 
 function extractPgpPart(rfc822) {
@@ -1239,11 +1689,20 @@ async function runSearch(query) {
 // ----------------------------------------------------------------- compose
 function openCompose() {
     $("#compose-modal").hidden = false;
-    setTimeout(() => $("#compose-form input[name=to]").focus(), 50);
+    const form = $("#compose-form");
+    // Restore draft if there is one and we're not pre-filling from a
+    // reply (data-in-reply-to set means the caller already populated).
+    if (!form.dataset.inReplyTo && !form.elements.to.value) {
+        if (restoreDraft()) toast("Restored draft.", "");
+        else                appendSignature(form);
+    }
+    setTimeout(() => form.elements.to.focus(), 50);
 }
 function closeCompose() {
     $("#compose-modal").hidden = true;
     setStatus($("#compose-status"), "");
+    // We KEEP the draft on close — it's restored next time. Only the
+    // submit handler clears it on a successful send.
 }
 
 function bindCompose() {
@@ -1306,6 +1765,7 @@ function bindCompose() {
             });
             setStatus(status, "Sent.", "ok");
             toast("Message sent", "ok");
+            clearDraft();
             setTimeout(() => {
                 closeCompose();
                 e.target.reset();
@@ -1764,6 +2224,9 @@ async function boot() {
     bindBrandNav();
     bindSettings();
     bindComposeExtras();
+    bindListControls();
+    bindShortcuts();
+    applyPrefsToDom();
     // Initial state is auth-view → matrix-on
     document.body.classList.add("matrix-on");
 

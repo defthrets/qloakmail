@@ -2454,3 +2454,249 @@ body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
 }
 .link.danger { color: var(--warn); }
 .link.danger:hover { color: var(--accent); }
+
+/* ---------------- list controls (sort/filter + bulk) ---------------- */
+.msg-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0.85rem;
+    border-bottom: 1px dashed rgba(255, 122, 31, 0.18);
+    background: rgba(8, 11, 10, 0.45);
+    flex-wrap: wrap;
+}
+.select-all-wrap {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+.select-all-wrap input { accent-color: var(--orange); cursor: pointer; }
+.filter-chips, .sort-chips {
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+}
+.filter-chips button, .sort-chips button {
+    background: transparent;
+    border: 1px solid rgba(255, 122, 31, 0.18);
+    color: var(--fg-dim);
+    font-family: var(--mono);
+    font-size: 0.7em;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.25rem 0.55rem;
+    cursor: pointer;
+    transition: color var(--t-fast), border-color var(--t-fast),
+        background var(--t-fast);
+}
+.filter-chips button:hover,
+.sort-chips button:hover {
+    color: var(--accent);
+    border-color: var(--orange);
+    background: rgba(255, 122, 31, 0.05);
+}
+.filter-chips button.active,
+.sort-chips button.active {
+    color: var(--accent);
+    border-color: var(--orange);
+    background: rgba(255, 138, 61, 0.12);
+}
+.sort-chips { margin-left: auto; }
+
+.bulk-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.85rem;
+    background: rgba(255, 122, 31, 0.08);
+    border-bottom: 1px solid rgba(255, 122, 31, 0.25);
+    font-family: var(--mono);
+    font-size: 0.78em;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    flex-wrap: wrap;
+    animation: pane-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.bulk-count strong { color: var(--accent); margin-right: 0.3em; }
+.bulk-actions { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-left: auto; }
+.bulk-actions button {
+    background: transparent;
+    border: 1px solid rgba(255, 122, 31, 0.25);
+    color: var(--fg);
+    font-family: var(--mono);
+    font-size: 0.95em;
+    letter-spacing: 0.1em;
+    padding: 0.25rem 0.55rem;
+    cursor: pointer;
+    transition: color var(--t-fast), border-color var(--t-fast);
+}
+.bulk-actions button:hover { color: var(--accent); border-color: var(--orange); }
+.bulk-actions button.danger:hover { color: var(--warn); border-color: var(--warn); }
+
+/* ---------------- list rows: checkbox + star ---------------- */
+#message-list li {
+    display: grid;
+    grid-template-columns: 22px 22px 1fr;
+    gap: 0.4rem;
+    align-items: start;
+}
+#message-list li .row-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 0.2rem;
+}
+#message-list li .row-check input {
+    accent-color: var(--orange);
+    cursor: pointer;
+    width: 14px; height: 14px;
+}
+#message-list li .row-star {
+    background: transparent;
+    border: 0;
+    color: var(--fg-muted);
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0.2rem 0;
+    transition: color var(--t-fast), transform var(--t-fast),
+        text-shadow var(--t-fast);
+}
+#message-list li .row-star:hover {
+    color: var(--orange);
+    transform: scale(1.15);
+}
+#message-list li .row-star.is-starred {
+    color: var(--orange);
+    text-shadow: 0 0 6px var(--orange-glow);
+}
+#message-list li.checked {
+    background: rgba(255, 122, 31, 0.06);
+    box-shadow: inset 2px 0 0 var(--orange);
+}
+#message-list li .row-body {
+    cursor: pointer;
+    min-width: 0;
+}
+#message-list li .row-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+#message-list li .row-top .when { font-size: 0.74em; color: var(--fg-muted); flex: 0 0 auto; }
+/* Density: compact halves vertical padding + drops the snippet */
+body.density-compact #message-list li { padding: 0.45rem 0.85rem; }
+body.density-compact #message-list li .snippet { display: none; }
+
+/* ---------------- settings extras ---------------- */
+.settings-card textarea {
+    width: 100%;
+    min-height: 90px;
+    background: var(--bg-2);
+    border: 1px solid rgba(255, 122, 31, 0.2);
+    color: var(--fg);
+    font-family: var(--mono);
+    font-size: 0.85em;
+    padding: 0.55rem 0.7rem;
+    resize: vertical;
+}
+.settings-select {
+    background: var(--bg-2);
+    border: 1px solid rgba(255, 122, 31, 0.2);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 0.78em;
+    letter-spacing: 0.1em;
+    padding: 0.25rem 0.5rem;
+    text-transform: uppercase;
+}
+.settings-check { accent-color: var(--orange); cursor: pointer; }
+.settings-hint {
+    color: var(--fg-muted);
+    font-size: 0.78em;
+    line-height: 1.5;
+    margin: 0.55rem 0 0;
+}
+.settings-hint code {
+    background: rgba(255, 122, 31, 0.08);
+    padding: 0 0.3em;
+    font-family: var(--mono);
+    font-size: 0.95em;
+    color: var(--accent-2);
+}
+
+/* Keyboard shortcuts grid */
+.shortcuts-grid {
+    display: grid;
+    grid-template-columns: 64px 1fr 64px 1fr;
+    gap: 0.45rem 0.7rem;
+    align-items: center;
+    font-size: 0.85em;
+}
+.shortcuts-grid kbd {
+    font-family: var(--mono);
+    background: var(--bg-2);
+    border: 1px solid rgba(255, 122, 31, 0.25);
+    color: var(--accent);
+    padding: 0.15rem 0.5rem;
+    text-align: center;
+    border-radius: 0;
+    font-size: 0.85em;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    box-shadow: 0 1px 0 rgba(255, 122, 31, 0.2);
+}
+.shortcuts-grid span { color: var(--fg-dim); }
+@media (max-width: 540px) {
+    .shortcuts-grid { grid-template-columns: 64px 1fr; }
+}
+
+/* ---------------- raw view ---------------- */
+.reader.raw-mode .body-content {
+    font-family: var(--mono);
+    font-size: 0.78em;
+    line-height: 1.5;
+    color: var(--fg-dim);
+}
+.reader.raw-mode .body-content::before {
+    content: "[ RAW · RFC 822 ] > showing decrypted source";
+    display: block;
+    color: var(--orange);
+    text-shadow: 0 0 5px var(--orange-glow);
+    font-family: var(--mono);
+    font-size: 0.85em;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 0.7rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px dashed rgba(255, 122, 31, 0.18);
+}
+
+/* ---------------- print stylesheet ---------------- */
+@media print {
+    /* Hide everything but the open reader. */
+    body * { visibility: hidden !important; }
+    body::before, body::after { display: none !important; }
+    #matrix-bg { display: none !important; }
+    .topbar, .sidebar, .msg-pane, .reader-actions,
+    .reader-close, .modal, .toast, .brand-nav,
+    .status-scroller, .auth-footer, #onion-notice {
+        display: none !important;
+    }
+    #message-view, #message-view * { visibility: visible !important; }
+    #message-view {
+        position: absolute;
+        inset: 0;
+        background: #fff !important;
+        color: #000 !important;
+        backdrop-filter: none !important;
+        padding: 1cm;
+    }
+    #message-view header h2 { color: #000 !important; }
+    #message-view .meta, #message-view .meta strong,
+    #message-view .field-tag { color: #000 !important; text-shadow: none !important; }
+    #message-view .body-content { color: #000 !important; }
+    .reader.open { position: absolute !important; }
+}

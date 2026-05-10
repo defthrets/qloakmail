@@ -730,6 +730,32 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
         </aside>
 
         <section class="msg-pane">
+          <div class="msg-controls">
+            <label class="select-all-wrap" title="Select all visible">
+              <input type="checkbox" id="select-all">
+            </label>
+            <div class="filter-chips" role="tablist" aria-label="Filter">
+              <button data-filter="all"     class="active" type="button">All</button>
+              <button data-filter="unread"                 type="button">Unread</button>
+              <button data-filter="starred"                type="button">Starred</button>
+            </div>
+            <div class="sort-chips">
+              <button data-sort="date-desc"    class="active" type="button" title="Newest first">↓ Date</button>
+              <button data-sort="date-asc"                    type="button" title="Oldest first">↑ Date</button>
+              <button data-sort="unread-first"                type="button" title="Unread first">●</button>
+            </div>
+          </div>
+          <div id="bulk-bar" class="bulk-bar" hidden>
+            <span class="bulk-count"><strong id="bulk-count">0</strong> selected</span>
+            <div class="bulk-actions">
+              <button data-bulk="read"   type="button">Read</button>
+              <button data-bulk="unread" type="button">Unread</button>
+              <button data-bulk="star"   type="button">Star</button>
+              <button data-bulk="unstar" type="button">Unstar</button>
+              <button data-bulk="delete" type="button" class="danger">Delete</button>
+              <button data-bulk="spam"   type="button" class="danger">Spam</button>
+            </div>
+          </div>
           <ul id="message-list"></ul>
         </section>
 
@@ -766,6 +792,37 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
           </section>
 
           <section class="settings-section">
+            <h4><span class="bracket">[</span>DISPLAY<span class="bracket">]</span></h4>
+            <div class="settings-row">
+              <span class="settings-key">Density</span>
+              <select id="settings-density" class="settings-select">
+                <option value="comfortable">Comfortable</option>
+                <option value="compact">Compact</option>
+              </select>
+            </div>
+            <div class="settings-row">
+              <span class="settings-key">Confirm external links</span>
+              <input type="checkbox" id="settings-confirm-links" class="settings-check">
+            </div>
+          </section>
+
+          <section class="settings-section">
+            <h4><span class="bracket">[</span>SIGNATURE<span class="bracket">]</span></h4>
+            <textarea id="settings-signature" rows="4"
+                      placeholder="Auto-appended to new messages..."></textarea>
+            <p class="settings-hint">Inserted with a "<code>-- </code>" delimiter when you start a new message. Replies and forwards skip the auto-insert.</p>
+          </section>
+
+          <section class="settings-section">
+            <h4><span class="bracket">[</span>NOTIFICATIONS<span class="bracket">]</span></h4>
+            <div class="settings-row">
+              <span class="settings-key">New-message notifications</span>
+              <input type="checkbox" id="settings-notifications" class="settings-check">
+            </div>
+            <p class="settings-hint">Browser notifications fire only for the subject line — never the body. Requires permission grant.</p>
+          </section>
+
+          <section class="settings-section">
             <h4><span class="bracket">[</span>SECURITY<span class="bracket">]</span></h4>
             <div class="settings-row">
               <span class="settings-key">Idle auto-lock</span>
@@ -777,6 +834,7 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
             </div>
             <div class="settings-actions">
               <button type="button" class="link" id="settings-clear-index">Clear local index</button>
+              <button type="button" class="link" id="settings-clear-drafts">Clear saved draft</button>
             </div>
           </section>
 
@@ -785,6 +843,25 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
             <ul class="settings-blocklist" id="settings-blocklist">
               <li class="empty"><em>No blocked senders.</em></li>
             </ul>
+          </section>
+
+          <section class="settings-section" id="settings-shortcuts">
+            <h4><span class="bracket">[</span>KEYBOARD SHORTCUTS<span class="bracket">]</span></h4>
+            <div class="shortcuts-grid">
+              <kbd>c</kbd><span>Compose</span>
+              <kbd>r</kbd><span>Reply</span>
+              <kbd>a</kbd><span>Reply all</span>
+              <kbd>f</kbd><span>Forward</span>
+              <kbd>e</kbd><span>Mark unread</span>
+              <kbd>s</kbd><span>Star / unstar</span>
+              <kbd>#</kbd><span>Delete</span>
+              <kbd>!</kbd><span>Spam</span>
+              <kbd>j</kbd><span>Next message</span>
+              <kbd>k</kbd><span>Previous message</span>
+              <kbd>/</kbd><span>Focus search</span>
+              <kbd>Esc</kbd><span>Close panel / overlay</span>
+              <kbd>?</kbd><span>This list</span>
+            </div>
           </section>
 
           <section class="settings-section danger">
