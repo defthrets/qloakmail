@@ -2128,4 +2128,138 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
         letter-spacing: 0.1em;
     }
     .account-info { font-size: 0.78em; }
+
+    /* ---- Mobile-only chrome: hamburger + reader overlay ---- */
+    /* Make the topbar grid include the toggle as its first column. */
+    .topbar {
+        grid-template-columns: 36px 56px 1fr auto;
+    }
+
+    /* Mail-shell becomes the positioning context for the sidebar
+       overlay and reader popup. */
+    .mail-shell { position: relative; }
+
+    /* Reader popup — fills the mail-shell area below the topbar.
+       Tap a message → openMessage() adds .open → reader appears. */
+    .reader { display: none; }
+    .reader.open {
+        display: block;
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+        background: rgba(8, 11, 10, 0.96);
+        backdrop-filter: blur(18px) saturate(140%);
+        overflow-y: auto;
+    }
+    .reader-close {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.6rem;
+        width: 36px;
+        height: 36px;
+        font-size: 1.4rem;
+        line-height: 1;
+        font-weight: 700;
+        color: var(--accent);
+        background: rgba(8, 11, 10, 0.7);
+        border: 1px solid rgba(255, 122, 31, 0.25);
+        z-index: 2;
+        padding: 0;
+    }
+    .reader-close:hover { color: var(--accent-2); border-color: var(--orange); }
+
+    /* Sidebar opened — absolutely positions over the mail-shell at
+       240px and restores all the full-text styles that the rail mode
+       above suppressed. */
+    body.sidebar-open .mail-shell::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        z-index: 11;
+        cursor: pointer;
+    }
+    body.sidebar-open .sidebar {
+        position: absolute;
+        top: 0; left: 0; bottom: 0;
+        width: 240px;
+        z-index: 12;
+        padding: 1rem 0.75rem;
+        background: rgba(15, 22, 20, 0.97);
+        backdrop-filter: blur(20px) saturate(140%);
+        animation: sidebar-slide-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    @keyframes sidebar-slide-in {
+        from { transform: translateX(-100%); }
+        to   { transform: translateX(0); }
+    }
+    /* Restore full content inside the open sidebar. */
+    body.sidebar-open .primary.compose-btn {
+        font-size: 0.85em;
+        padding: 0.7rem 1rem;
+        letter-spacing: 0.18em;
+    }
+    body.sidebar-open .primary.compose-btn::before { display: none; }
+    body.sidebar-open .compose-btn .compose-prompt { display: inline; }
+    body.sidebar-open .folder-list li {
+        padding: 0.55rem 0.75rem;
+        justify-content: space-between;
+        font-size: 0.85em;
+        letter-spacing: 0.12em;
+    }
+    body.sidebar-open .folder-list li > span:first-child { font-size: 1em; }
+    body.sidebar-open .folder-list li > span:first-child::before,
+    body.sidebar-open .folder-list li > span:first-child::after { display: inline; }
+    body.sidebar-open .folder-list .icon {
+        margin-right: 0.55rem;
+        width: 1.2em;
+        text-align: center;
+    }
+    body.sidebar-open .folder-list .count {
+        position: static;
+        font-size: 0.78em;
+        padding: 0.1rem 0.45rem;
+    }
+    body.sidebar-open .sidebar-foot { font-size: 0.78em; text-align: left; }
+    body.sidebar-open .onion-hint::before { font-size: 1em; margin-right: 0.4rem; }
+}
+
+/* ---- Hamburger toggle (hidden on desktop, shown <=640px) ---- */
+.sidebar-toggle {
+    display: none;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: 1px solid rgba(255, 122, 31, 0.25);
+    padding: 0;
+    cursor: pointer;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    border-radius: 0;
+}
+.sidebar-toggle .sidebar-toggle-bar {
+    display: block;
+    width: 16px;
+    height: 2px;
+    background: var(--accent);
+    box-shadow: 0 0 4px var(--accent-glow);
+    transition: transform 200ms ease, opacity 200ms ease;
+}
+body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(1) {
+    transform: translateY(6px) rotate(45deg);
+}
+body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(2) { opacity: 0; }
+body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
+    transform: translateY(-6px) rotate(-45deg);
+}
+@media (max-width: 640px) {
+    .sidebar-toggle { display: inline-flex; }
+}
+
+/* Reader-close button: hidden on desktop. Mobile rule above shows it. */
+.reader-close { display: none; }
+@media (max-width: 640px) {
+    .reader-close { display: inline-flex; align-items: center; justify-content: center; }
 }

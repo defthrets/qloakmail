@@ -464,11 +464,75 @@ async function handleRecovery(form) {
     }
 }
 
+// ----------------------------------------------------------------- mobile chrome
+//
+// Phone (≤640px) layout collapses the sidebar to a 56px icon rail and
+// hides the reader pane. This binds:
+//   * #sidebar-toggle -> body.sidebar-open    (hamburger pop-out)
+//   * tap on the scrim ::before               (close sidebar)
+//   * folder pick                             (auto-close sidebar)
+//   * .reader-close button                    (close the reader popup)
+//   * Escape key                              (close whichever is open)
+//
+// Idempotent: enterMailbox() may be called multiple times; we only
+// attach handlers once, gated by a flag.
+let _mailMobileBound = false;
+function bindMailMobile() {
+    if (_mailMobileBound) return;
+    _mailMobileBound = true;
+
+    const toggle = document.getElementById("sidebar-toggle");
+    if (toggle) {
+        toggle.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const open = document.body.classList.toggle("sidebar-open");
+            toggle.setAttribute("aria-expanded", open ? "true" : "false");
+        });
+    }
+
+    // Tapping the scrim (the ::before on .mail-shell) closes the
+    // sidebar. The pseudo-element catches clicks because of pointer-
+    // events default on positioned elements with content.
+    document.addEventListener("click", (e) => {
+        if (!document.body.classList.contains("sidebar-open")) return;
+        // Click was inside the sidebar or on the toggle? leave open.
+        if (e.target.closest(".sidebar")) return;
+        if (e.target.closest("#sidebar-toggle")) return;
+        document.body.classList.remove("sidebar-open");
+        toggle?.setAttribute("aria-expanded", "false");
+    });
+
+    // Reader popup close — listener delegated on #message-view because
+    // the close button is rendered fresh by openMessage() each time.
+    const view = document.getElementById("message-view");
+    if (view) {
+        view.addEventListener("click", (e) => {
+            if (e.target.closest(".reader-close")) {
+                view.classList.remove("open");
+            }
+        });
+    }
+
+    // Escape closes whichever overlay is on.
+    document.addEventListener("keydown", (e) => {
+        if (e.key !== "Escape") return;
+        if (document.body.classList.contains("sidebar-open")) {
+            document.body.classList.remove("sidebar-open");
+            toggle?.setAttribute("aria-expanded", "false");
+            return;
+        }
+        if (view?.classList.contains("open")) {
+            view.classList.remove("open");
+        }
+    });
+}
+
 // ----------------------------------------------------------------- mailbox
 async function enterMailbox() {
     show("mail-view");
     $("#who").textContent = state.account.email;
     armIdleLock();
+    bindMailMobile();
     try {
         await Search.open(state.account.account_id);
         await refreshSearchStats();
@@ -519,6 +583,10 @@ async function loadFolders() {
 }
 
 async function selectFolder(folderId) {
+    // On mobile: picking a folder dismisses the sidebar overlay.
+    document.body.classList.remove("sidebar-open");
+    document.getElementById("sidebar-toggle")?.setAttribute("aria-expanded", "false");
+
     state.activeFolderId = folderId;
     state.selectedMessageId = null;
     $$("#folder-list li").forEach((li, i) =>
@@ -670,7 +738,12 @@ async function openMessage(id) {
     if (!state.searchActive) renderMessageList();
 
     const view = $("#message-view");
+    // Pop the reader as a fullscreen overlay on mobile (CSS handles
+    // the actual layout via .reader.open). Harmless on desktop where
+    // the reader is always visible.
+    view.classList.add("open");
     view.innerHTML = `
+        <button class="reader-close" aria-label="Close" type="button">×</button>
         <div class="reader-empty">
             <p>Decrypting...</p>
         </div>
@@ -696,6 +769,7 @@ async function openMessage(id) {
             ? parsed.body
             : plaintextRfc822;
         view.innerHTML = `
+            <button class="reader-close" aria-label="Close" type="button">×</button>
             <header>
                 <h2>${escapeHtml(parsed.subject || "(no subject)")}</h2>
                 <div class="meta">
@@ -722,6 +796,7 @@ async function openMessage(id) {
     } catch (e) {
         console.error(e);
         view.innerHTML = `
+            <button class="reader-close" aria-label="Close" type="button">×</button>
             <div class="reader-empty">
                 <h3>Decryption failed</h3>
                 <p>${escapeHtml(e.message || String(e))}</p>
