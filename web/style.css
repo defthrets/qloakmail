@@ -427,13 +427,14 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     /* Pinned to the top-left of the auth-card. The card has
        position: relative, so this anchors to the card regardless of
        where in the card the nav sits. Removed from flex flow, so the
-       four nav links centre naturally. */
+       four nav links centre naturally. Sized to match the nav links
+       (font-size 1em inherits the .brand-nav base of 0.7em). */
     position: absolute;
     top: 0.55rem;
     left: 0.7rem;
     color: var(--fg-muted);
     letter-spacing: 0.12em;
-    font-size: 0.65em;
+    font-size: 1em;
     line-height: 1;
     z-index: 2;
 }
