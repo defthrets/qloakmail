@@ -67,6 +67,13 @@ smtp_tls_session_cache_database  = btree:$data_directory/smtp_scache
 smtpd_tls_loglevel = 1
 smtp_tls_loglevel  = 1
 
+# Outbound header scrubbing — strip identifying X-*-IP / User-Agent /
+# X-Mailer headers that webmail-composed mail or upstream sources
+# might add. Applies to BOTH inbound and outbound because the cleanup
+# service runs on every message; on inbound it usefully strips dodgy
+# headers from external senders too.
+header_checks = pcre:/etc/postfix/header_checks.pcre
+
 # Anti-spoof / sane SMTP hardening for inbound port 25.
 smtpd_helo_required = yes
 smtpd_recipient_restrictions =

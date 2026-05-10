@@ -1,0 +1,43 @@
+# QloakMail outbound header scrubbing.
+#
+# Postfix consults this file via header_checks = pcre:/etc/postfix/
+# header_checks.pcre. Every line that matches an outbound header
+# either IGNOREs it (drops the line entirely) or REPLACEs it with
+# something innocuous.
+#
+# Match syntax: /^Header-Name: pattern/ ACTION [text]
+# Actions used: IGNORE (drop), REPLACE <text> (substitute).
+#
+# Goal: strip any header that could correlate the message with the
+# user's IP, browser, or local OS. Webmail-composed mail is built
+# from a fixed set of headers (From, To, Subject, Date, Message-ID,
+# MIME-Version, Content-Type) — but defence in depth: we still
+# scrub anything an upstream relay or rogue plugin might inject.
+
+# IP-leaking headers — never ship these on any outbound mail.
+/^X-Originating-IP:/i              IGNORE
+/^X-Originating-Email:/i           IGNORE
+/^X-Sender-IP:/i                   IGNORE
+/^X-Source-IP:/i                   IGNORE
+/^X-Forwarded-For:/i               IGNORE
+/^X-Real-IP:/i                     IGNORE
+/^X-AuthUser-IP:/i                 IGNORE
+/^X-Originator-IP:/i               IGNORE
+
+# Client identification — replace with a generic identifier so the
+# header still exists (some MTAs treat its absence as a spam signal)
+# but reveals no version information.
+/^User-Agent:.*/                   REPLACE User-Agent: QloakMail
+/^X-Mailer:.*/                     REPLACE X-Mailer: QloakMail
+
+# Internal / debug headers that some clients leak.
+/^X-MS-Exchange-CrossTenant-/i     IGNORE
+/^X-Originating-Hostname:/i        IGNORE
+/^X-Mimecast-/i                    IGNORE
+/^X-Sieve:/i                       IGNORE
+
+# Mailing-list cruft we don't want on personal mail. (List-Unsubscribe
+# and friends are explicitly NOT scrubbed — they're useful and
+# privacy-neutral.)
+/^X-Trace:/i                       IGNORE
+/^X-Complaints-To:/i               IGNORE

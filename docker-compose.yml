@@ -1,5 +1,3 @@
-version: "3.9"
-
 # QloakMail - zero-access encrypted email
 # Single-host stack. All services on internal "voidnet" network;
 # only nginx, postfix and dovecot expose ports to the host.
@@ -12,6 +10,13 @@ x-logging: &default-logging
   options:
     max-size: "10m"
     max-file: "3"
+
+# Security defaults applied to every service. no-new-privileges blocks
+# setuid escalation post-exec — defence against an attacker who lands
+# RCE in any container trying to elevate to root.
+x-security: &default-security
+  security_opt:
+    - "no-new-privileges:true"
 
 networks:
   voidnet:
@@ -28,6 +33,7 @@ volumes:
 services:
 
   postgres:
+    <<: *default-security
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
@@ -46,9 +52,17 @@ services:
       retries: 5
 
   redis:
+    <<: *default-security
     image: redis:7-alpine
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    cap_add:
+      - SETGID
+      - SETUID
     volumes:
       - redis-data:/data
     logging: *default-logging
@@ -60,8 +74,13 @@ services:
       retries: 5
 
   api:
+    <<: *default-security
     build: ./api
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
     env_file: .env
     environment:
       PYTHONUNBUFFERED: "1"
@@ -83,10 +102,15 @@ services:
       - "127.0.0.1:8000:8000"
 
   encrypt-pipe:
+    <<: *default-security
     build:
       context: ./postfix
       dockerfile: Dockerfile.pipe
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
     env_file: .env
     depends_on:
       - api
@@ -96,8 +120,25 @@ services:
     networks: [voidnet]
 
   postfix:
+    # Postfix's master process model relies on a complex set of
+    # capabilities (NET_BIND_SERVICE for :25/:587, SETUID/SETGID for
+    # the per-component privilege drops, CHOWN/DAC_* for queue
+    # directories). Aggressive read_only / cap_drop ALL would break
+    # it. Keeping no-new-privileges and the cap allowlist; full
+    # filesystem read-only intentionally not enabled.
+    <<: *default-security
     build: ./postfix
     restart: unless-stopped
+    cap_drop: [ALL]
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - DAC_READ_SEARCH
+      - FOWNER
+      - SETGID
+      - SETUID
+      - NET_BIND_SERVICE
+      - SYS_RESOURCE
     hostname: ${VOIDMAIL_HOSTNAME}
     env_file: .env
     depends_on:
@@ -105,6 +146,7 @@ services:
       - rspamd
     volumes:
       - ./postfix/opendkim/keys:/etc/opendkim/keys
+      - ./postfix/header_checks.pcre:/etc/postfix/header_checks.pcre:ro
       - certs:/etc/letsencrypt:ro
     ports:
       - "25:25"
@@ -113,8 +155,18 @@ services:
     networks: [voidnet]
 
   dovecot:
+    # Same caveat as postfix — dovecot has its own setuid model.
+    <<: *default-security
     build: ./dovecot
     restart: unless-stopped
+    cap_drop: [ALL]
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+      - NET_BIND_SERVICE
     env_file: .env
     volumes:
       - mailstore:/var/mail
@@ -126,8 +178,13 @@ services:
     networks: [voidnet]
 
   rspamd:
+    <<: *default-security
     build: ./rspamd
     restart: unless-stopped
+    cap_drop: [ALL]
+    cap_add:
+      - SETGID
+      - SETUID
     env_file: .env
     volumes:
       - rspamd-data:/var/lib/rspamd
@@ -135,16 +192,41 @@ services:
     networks: [voidnet]
 
   web:
+    <<: *default-security
     image: nginx:1.27-alpine
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /var/run
+    cap_drop: [ALL]
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - NET_BIND_SERVICE
     volumes:
       - ./web:/usr/share/nginx/html:ro
     logging: *default-logging
     networks: [voidnet]
 
   nginx:
+    <<: *default-security
     build: ./nginx
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /var/run
+    cap_drop: [ALL]
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETGID
+      - SETUID
+      - NET_BIND_SERVICE
     env_file: .env
     depends_on:
       - api
@@ -163,8 +245,13 @@ services:
   # tor-keys volume so the address is stable across redeploys; back that
   # volume up if you want to keep the same .onion forever.
   tor:
+    <<: *default-security
     build: ./tor
     restart: unless-stopped
+    cap_drop: [ALL]
+    cap_add:
+      - SETGID
+      - SETUID
     depends_on:
       - nginx
     volumes:
@@ -175,6 +262,7 @@ services:
   # Optional: certbot for Let's Encrypt issuance/renewal.
   # Run on demand with `docker compose run --rm certbot ...`
   certbot:
+    <<: *default-security
     image: certbot/certbot:latest
     profiles: ["tools"]
     volumes:
