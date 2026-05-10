@@ -1,10 +1,12 @@
 # QloakMail reverse proxy.
-# Local dev: HTTP only on :8080.
-# Production: ports 80/443, with cert from /etc/letsencrypt/live/${VOIDMAIL_DOMAIN}/.
+# Production only: ports 80/443 (clearnet) + Tor hidden service on :80.
+# The 8080 plain-HTTP dev mirror was removed entirely after audit v2 --
+# production now has zero unencrypted HTTP listeners on the public side.
+# Local development uses `docker compose exec nginx curl localhost:80`.
 
 # Suppress nginx version in Server: header and default error pages.
-# Audit v2 flagged this as a fingerprinting leak (M3). Applies http-wide
-# because conf.d/*.conf is included inside nginx's main http {} block.
+# Audit v2 (M3) / v3 (M1). Applies http-wide because conf.d/*.conf is
+# included inside nginx's main http {} block.
 server_tokens off;
 
 upstream voidmail_api {
@@ -15,30 +17,6 @@ upstream voidmail_api {
 upstream voidmail_web {
     server web:80;
     keepalive 16;
-}
-
-# ---- Local dev (HTTP on :8080) ----
-server {
-    listen 8080 default_server;
-    server_name _;
-
-    client_max_body_size 30m;
-
-    location /api/ {
-        proxy_pass http://voidmail_api;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header Connection        "";
-    }
-
-    location / {
-        proxy_pass http://voidmail_web;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-    }
 }
 
 # ---- Tor hidden service (HTTP on :80, anything ending in .onion) ----
@@ -62,6 +40,10 @@ server {
     add_header X-Content-Type-Options nosniff always;
     add_header Referrer-Policy no-referrer always;
     add_header X-XSS-Protection "0" always;
+    # X-Permitted-Cross-Domain-Policies blocks legacy Flash/Silverlight
+    # crossdomain.xml lookups. Effectively dead tech in 2026, included
+    # for defence-in-depth (audit v3 L6).
+    add_header X-Permitted-Cross-Domain-Policies "none" always;
     add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; font-src 'self' data:; media-src 'self' data:; manifest-src 'self'; worker-src 'self'; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
     add_header Cross-Origin-Opener-Policy "same-origin" always;
     add_header Cross-Origin-Resource-Policy "same-origin" always;
@@ -192,6 +174,8 @@ server {
     # Modern guidance is to DISABLE the legacy XSS filter — its
     # heuristics created vulnerabilities of their own. CSP replaces it.
     add_header X-XSS-Protection "0" always;
+    # Block legacy Flash/Silverlight crossdomain.xml lookups (v3 L6).
+    add_header X-Permitted-Cross-Domain-Policies "none" always;
 
     # CSP — strict; SPA is self-hosted, OpenPGP.js is bundled, no inline scripts.
     # 'wasm-unsafe-eval' is needed for the Argon2id (hash-wasm) password-key

@@ -3,8 +3,10 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from .config import get_settings
 from .routes import abuse, admin, auth, internal, mail, users
@@ -52,6 +54,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Replace the default Pydantic 422 response with a single-line generic
+# "invalid request" string. The default body exposes Pydantic loc/type
+# internals + the offending input value, which audit v3 (L2) flagged
+# as a framework-fingerprinting + reflected-input leak.
+@app.exception_handler(RequestValidationError)
+async def _validation_exception_handler(
+    request: Request, exc: RequestValidationError
+):
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"detail": "invalid request"},
+    )
 
 
 @app.get("/api/v1/health", tags=["meta"])

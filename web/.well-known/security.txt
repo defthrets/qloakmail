@@ -1,0 +1,23 @@
+# QloakMail vulnerability disclosure policy.
+# Updated annually; the Expires field below indicates last update.
+
+Contact: mailto:security@qloak.me
+Encryption: https://qloak.me/about
+Preferred-Languages: en
+Canonical: https://qloak.me/.well-known/security.txt
+Policy: https://qloak.me/privacy
+
+# We accept reports of vulnerabilities affecting:
+#   - The webmail SPA (https://qloak.me)
+#   - The mail infrastructure (qloak.me, mx.qloak.me)
+#   - The Tor hidden service (published at /about)
+#   - Any subdomain we serve.
+#
+# Please give us reasonable time to remediate before any public disclosure
+# (typical industry norm: 90 days from initial report, sooner if a fix
+# ships earlier). Reports of active exploitation are triaged immediately.
+#
+# No bounty program at this time, but credit is gladly given in release
+# notes and on the security page for any researcher who requests it.
+
+Expires: 2027-05-10T00:00:00.000Z

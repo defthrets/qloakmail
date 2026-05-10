@@ -251,11 +251,9 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      # Plain-HTTP dev port: bound to loopback ONLY so it is not reachable
-      # from the public internet. Earlier audits flagged this as a header-
-      # less mirror of the production app; binding to 127.0.0.1 closes the
-      # exposure entirely while keeping local-VPS curl/debug usable.
-      - "127.0.0.1:8080:8080"
+      # The 8080 dev hatch is gone -- production has no plain-HTTP mirror.
+      # Local development can `docker compose exec nginx curl localhost:80`
+      # if the production cert/HSTS gets in the way of testing.
     logging: *default-logging
     networks: [voidnet]
 
