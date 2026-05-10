@@ -691,6 +691,53 @@ function bindCompose() {
     });
 }
 
+// ----------------------------------------------------------------- onion notice
+function _truncateOnion(addr) {
+    // v3 .onion addresses are 62 chars (56 hash + ".onion"). They don't
+    // fit nicely in a one-line auth card. Show first 14 + … + last 14
+    // (= 29 chars visible) — enough to recognise but compact. The full
+    // string is still copied to the clipboard on click and lives in the
+    // button's title attribute for hover.
+    if (!addr || addr.length <= 30) return addr;
+    return addr.slice(0, 14) + "…" + addr.slice(-14);
+}
+
+function bindOnionNotice(onion) {
+    const notice = $("#onion-notice");
+    if (!notice) return;
+    // Already on the onion — no point showing it.
+    const onOnion = location.hostname.endsWith(".onion");
+    if (!onion || onOnion) { notice.hidden = true; return; }
+
+    const btn = $("#onion-copy");
+    btn.dataset.onion = onion;
+    btn.title = onion + " — click to copy. Open in Tor Browser.";
+    $("#onion-text").textContent = _truncateOnion(onion);
+    notice.hidden = false;
+
+    let resetTimer;
+    btn.addEventListener("click", async () => {
+        try {
+            await navigator.clipboard.writeText(onion);
+            $("#onion-copy-hint").textContent = "copied";
+            notice.classList.add("copied");
+            clearTimeout(resetTimer);
+            resetTimer = setTimeout(() => {
+                $("#onion-copy-hint").textContent = "copy";
+                notice.classList.remove("copied");
+            }, 1800);
+        } catch (e) {
+            // Fallback: select the text so the user can ctrl+c
+            const range = document.createRange();
+            range.selectNodeContents($("#onion-text"));
+            const sel = getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+            toast("Copy with Ctrl+C", "");
+        }
+    });
+}
+
 // ----------------------------------------------------------------- unlock form
 function bindUnlock() {
     $("#unlock-form").addEventListener("submit", async (e) => {
@@ -732,10 +779,12 @@ async function boot() {
     state.config = await api.config().catch(() => ({
         domain: "qloak.me", domains: ["qloak.me"],
         invite_required: false, captcha_provider: "none",
+        onion_address: "",
     }));
     $("#signup-domain-hint").textContent =
         "Domain: " + state.config.domains.join(", ");
     if (state.config.invite_required) $("#invite-row").hidden = false;
+    bindOnionNotice(state.config.onion_address);
 
     $("#login-form").addEventListener("submit", e => {
         e.preventDefault(); handleLogin(e.target);

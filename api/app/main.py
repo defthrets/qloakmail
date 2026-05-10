@@ -1,12 +1,27 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .routes import abuse, auth, internal, mail, users
+
+# Tor publishes the hidden-service hostname here once it bootstraps.
+# Volume is mounted read-only via docker-compose. We re-read on each
+# /config call so the SPA picks it up as soon as Tor is ready, and any
+# future rotation (rare — keys persist in tor-keys volume) shows up
+# automatically.
+_ONION_HOSTNAME_FILE = Path("/var/lib/tor/voidmail/hostname")
+
+
+def _read_onion_address() -> str:
+    try:
+        return _ONION_HOSTNAME_FILE.read_text().strip()
+    except (FileNotFoundError, PermissionError, OSError):
+        return ""
 
 
 @asynccontextmanager
@@ -52,6 +67,7 @@ async def public_config():
         "domains": settings.all_domains,
         "captcha_provider": settings.captcha_provider,
         "invite_required": bool(settings.invite_code_set),
+        "onion_address": _read_onion_address(),
     }
 
 

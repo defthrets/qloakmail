@@ -72,6 +72,10 @@ services:
         condition: service_healthy
     volumes:
       - mailstore:/var/mail
+      # Read-only mount so the API can publish the .onion address to the
+      # SPA at /api/v1/config. Tor writes the hostname file here on first
+      # bootstrap; the API just reads it.
+      - tor-keys:/var/lib/tor:ro
     logging: *default-logging
     networks: [voidnet]
     # Exposed via nginx; uncomment the next line for direct dev access.

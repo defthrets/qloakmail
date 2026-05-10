@@ -90,6 +90,16 @@
           <p class="status" id="recovery-status"></p>
         </form>
       </div>
+      <div id="onion-notice" class="onion-notice" hidden>
+        <span class="onion-dot"></span>
+        <span class="onion-label">Tor users:</span>
+        <button type="button" id="onion-copy" class="onion-address" data-onion=""
+                title="Click to copy. Open in Tor Browser to use the hidden service.">
+          <span id="onion-text">loading...</span>
+          <span class="onion-copy-hint" id="onion-copy-hint">copy</span>
+        </button>
+      </div>
+
       <footer class="auth-footer">
         Zero-access. End-to-end encrypted. <a href="https://github.com/defthrets/qloakmail" target="_blank" rel="noopener">Open source</a>.
       </footer>
