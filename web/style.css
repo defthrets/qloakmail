@@ -1398,7 +1398,12 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     backdrop-filter: blur(10px) saturate(140%);
     -webkit-backdrop-filter: blur(10px) saturate(140%);
     border-bottom: 1px solid rgba(255, 122, 31, 0.08);
-    height: 80px;
+    /* Was 80px before the logo bump. The 5px-font ASCII art is ~73px
+       tall on its own and the .brand-mini column (ASCII + 0.25rem gap
+       + [● ENCRYPTED] status row) measures ~108px live -- 100px was
+       still 8px short and pushed status into the sidebar. 120px gives
+       both rows room plus a ~6px breathing margin top/bottom. */
+    height: 120px;
     position: relative;
     z-index: 5;
 }
