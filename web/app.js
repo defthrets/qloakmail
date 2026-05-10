@@ -933,19 +933,6 @@ async function openMessage(id) {
 
         view.innerHTML = `
             <button class="reader-close" aria-label="Close" type="button">×</button>
-            <div class="reader-actions">
-                <button class="reader-action" data-action="reply">[ REPLY ]</button>
-                <button class="reader-action" data-action="reply-all">[ REPLY ALL ]</button>
-                <button class="reader-action" data-action="forward">[ FORWARD ]</button>
-                <button class="reader-action" data-action="star" data-starred="${isStarred ? "1" : "0"}">${isStarred ? "[ ★ STARRED ]" : "[ ☆ STAR ]"}</button>
-                <button class="reader-action" data-action="unread">[ UNREAD ]</button>
-                <button class="reader-action" data-action="print">[ PRINT ]</button>
-                ${hasHtml && parsed.textBody ? `<button class="reader-action" data-action="view-toggle">[ TEXT ]</button>` : ""}
-                <button class="reader-action" data-action="raw">[ RAW ]</button>
-                <button class="reader-action" data-action="delete">[ DELETE ]</button>
-                <button class="reader-action danger" data-action="spam">[ SPAM ]</button>
-                <button class="reader-action danger" data-action="block">[ BLOCK ]</button>
-            </div>
             <header>
                 <div class="reader-header-row">
                     ${senderAvatar}
@@ -960,6 +947,19 @@ async function openMessage(id) {
                     </div>
                 </div>
             </header>
+            <div class="reader-actions">
+                <button class="reader-action" data-action="reply">[ REPLY ]</button>
+                <button class="reader-action" data-action="reply-all">[ REPLY ALL ]</button>
+                <button class="reader-action" data-action="forward">[ FORWARD ]</button>
+                <button class="reader-action" data-action="star" data-starred="${isStarred ? "1" : "0"}">${isStarred ? "[ ★ STARRED ]" : "[ ☆ STAR ]"}</button>
+                <button class="reader-action" data-action="unread">[ UNREAD ]</button>
+                <button class="reader-action" data-action="print">[ PRINT ]</button>
+                ${hasHtml && parsed.textBody ? `<button class="reader-action" data-action="view-toggle">[ TEXT ]</button>` : ""}
+                <button class="reader-action" data-action="raw">[ RAW ]</button>
+                <button class="reader-action" data-action="delete">[ DELETE ]</button>
+                <button class="reader-action danger" data-action="spam">[ SPAM ]</button>
+                <button class="reader-action danger" data-action="block">[ BLOCK ]</button>
+            </div>
             ${hasRemote ? `
                 <div class="remote-image-banner" id="remote-image-banner">
                     <span><span class="banner-tag">[IMAGES]</span> Remote images blocked for privacy.</span>

@@ -2293,41 +2293,128 @@ body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
     .reader-close { display: inline-flex; align-items: center; justify-content: center; }
 }
 
-/* ---------------- reader action toolbar ---------------- */
+/* ---------------- reader action toolbar — glass cyberpunk ----------------
+   Sits BELOW the message header (subject + meta). Each button is a
+   semi-transparent glass slab with a subtle backdrop-blur, a 1px
+   orange-tinted border, and a slow inner-glow pulse on hover that
+   spreads outward. clip-path notch on the top-right corner echoes
+   the auth-card silhouette. */
 .reader-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.4rem;
-    padding: 0.55rem 1.5rem 0.55rem;
-    border-bottom: 1px dashed rgba(255, 122, 31, 0.18);
-    background: rgba(8, 11, 10, 0.4);
+    gap: 0.5rem;
+    padding: 0.7rem 1.5rem;
+    border-top:    1px dashed rgba(255, 122, 31, 0.22);
+    border-bottom: 1px dashed rgba(255, 122, 31, 0.22);
+    background:
+        linear-gradient(180deg,
+            rgba(255, 122, 31, 0.04),
+            rgba(8, 11, 10, 0.55)),
+        rgba(8, 11, 10, 0.6);
+    backdrop-filter: blur(10px) saturate(140%);
+    -webkit-backdrop-filter: blur(10px) saturate(140%);
 }
 .reader-action {
-    background: transparent;
-    border: 1px solid rgba(255, 122, 31, 0.2);
+    position: relative;
+    background:
+        linear-gradient(180deg,
+            rgba(255, 138, 61, 0.08),
+            rgba(8, 11, 10, 0.55));
+    border: 1px solid rgba(255, 122, 31, 0.28);
     color: var(--fg-dim);
     font-family: var(--mono);
     font-size: 0.72em;
+    font-weight: 600;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    padding: 0.32rem 0.6rem;
+    padding: 0.4rem 0.75rem;
     cursor: pointer;
-    transition: color var(--t-fast), border-color var(--t-fast),
-        background var(--t-fast), letter-spacing var(--t-fast),
-        transform var(--t-fast);
+    overflow: hidden;
+    backdrop-filter: blur(6px) saturate(140%);
+    -webkit-backdrop-filter: blur(6px) saturate(140%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        inset 0 0 0 1px rgba(255, 122, 31, 0.05),
+        0 1px 0 rgba(0, 0, 0, 0.35);
+    /* Notch top-right corner — same silhouette as the auth card. */
+    clip-path: polygon(
+        0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 0 100%);
+    transition:
+        color var(--t-fast),
+        border-color var(--t-fast),
+        letter-spacing var(--t-fast),
+        transform var(--t-fast),
+        box-shadow 220ms ease,
+        background 220ms ease;
 }
+/* Diagonal sheen — slides across on hover, mirrors the home button. */
+.reader-action::before {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0; left: -120%;
+    width: 60%;
+    background: linear-gradient(100deg,
+        transparent 0%,
+        rgba(255, 138, 61, 0.18) 50%,
+        transparent 100%);
+    transform: skewX(-20deg);
+    transition: left 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+}
+.reader-action:hover::before { left: 130%; }
 .reader-action:hover {
     color: var(--accent);
     border-color: var(--orange);
-    background: rgba(255, 122, 31, 0.06);
     letter-spacing: 0.18em;
     transform: translateY(-1px);
+    background:
+        linear-gradient(180deg,
+            rgba(255, 138, 61, 0.18),
+            rgba(255, 122, 31, 0.08));
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 0 1px rgba(255, 138, 61, 0.35),
+        0 4px 14px rgba(255, 122, 31, 0.25),
+        0 0 22px rgba(255, 138, 61, 0.18);
+}
+.reader-action:active {
+    transform: translateY(0) scale(0.98);
+    transition-duration: 60ms;
+}
+.reader-action.danger {
+    border-color: rgba(255, 100, 100, 0.3);
+    background:
+        linear-gradient(180deg,
+            rgba(255, 100, 100, 0.06),
+            rgba(8, 11, 10, 0.55));
 }
 .reader-action.danger:hover {
     color: var(--warn);
     border-color: var(--warn);
-    background: rgba(255, 100, 100, 0.06);
+    background:
+        linear-gradient(180deg,
+            rgba(255, 100, 100, 0.18),
+            rgba(255, 100, 100, 0.06));
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 0 1px rgba(255, 100, 100, 0.35),
+        0 4px 14px rgba(255, 100, 100, 0.25),
+        0 0 22px rgba(255, 100, 100, 0.18);
 }
+/* Active "starred" state — keep the star button glowing while set. */
+.reader-action[data-starred="1"] {
+    color: var(--orange);
+    border-color: var(--orange);
+    background:
+        linear-gradient(180deg,
+            rgba(255, 138, 61, 0.22),
+            rgba(255, 122, 31, 0.1));
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        0 0 0 1px rgba(255, 138, 61, 0.4),
+        0 0 18px rgba(255, 138, 61, 0.25);
+}
+
 @media (max-width: 640px) {
     .reader-actions {
         padding: 0.55rem 0.7rem;
@@ -2335,15 +2422,108 @@ body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
         top: 0;
         z-index: 1;
     }
-    .reader-action { font-size: 0.65em; padding: 0.3rem 0.5rem; }
-    /* On phones the 32px avatar column eats too much of the narrow
-       message-list. Drop it; the from line still tells you who. */
+    .reader-action {
+        font-size: 0.65em;
+        padding: 0.32rem 0.55rem;
+        clip-path: polygon(
+            0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 0 100%);
+    }
     #message-list li {
         grid-template-columns: 22px 22px 1fr;
     }
     #message-list li > .avatar { display: none; }
-    /* Reader header avatar stays visible but slightly smaller. */
     .reader-header-row .avatar { width: 32px; height: 32px; }
+}
+
+/* ---------------- glass treatment — bulk + banner + attachments ----------------
+   Same notched, blurred, hover-sheen treatment applied to the rest
+   of the secondary buttons so the whole page reads as one family. */
+.bulk-actions button,
+.banner-action,
+.att-download {
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(6px) saturate(140%);
+    -webkit-backdrop-filter: blur(6px) saturate(140%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 1px 0 rgba(0, 0, 0, 0.35);
+    transition:
+        color var(--t-fast),
+        border-color var(--t-fast),
+        letter-spacing var(--t-fast),
+        transform var(--t-fast),
+        box-shadow 220ms ease,
+        background 220ms ease;
+}
+.bulk-actions button {
+    background:
+        linear-gradient(180deg,
+            rgba(255, 138, 61, 0.08),
+            rgba(8, 11, 10, 0.55));
+    clip-path: polygon(
+        0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 0 100%);
+}
+.bulk-actions button:hover {
+    transform: translateY(-1px);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 0 1px rgba(255, 138, 61, 0.35),
+        0 4px 14px rgba(255, 122, 31, 0.22);
+}
+.banner-action {
+    background:
+        linear-gradient(180deg,
+            rgba(255, 138, 61, 0.18),
+            rgba(255, 122, 31, 0.08));
+    clip-path: polygon(
+        0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 0 100%);
+}
+.banner-action:hover {
+    transform: translateY(-1px);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 0 1px rgba(255, 138, 61, 0.45),
+        0 4px 14px rgba(255, 138, 61, 0.3);
+}
+.att-download {
+    background:
+        linear-gradient(180deg,
+            rgba(8, 11, 10, 0.65),
+            rgba(8, 11, 10, 0.4));
+    clip-path: polygon(
+        0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);
+}
+.att-download:hover {
+    transform: translateY(-1px);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 0 0 1px rgba(255, 138, 61, 0.32),
+        0 4px 14px rgba(255, 122, 31, 0.18);
+}
+
+/* Reader close (×) — small glass button, top right of the popup. */
+.reader-close {
+    background: rgba(8, 11, 10, 0.6);
+    border-color: rgba(255, 122, 31, 0.3);
+    backdrop-filter: blur(6px) saturate(140%);
+    -webkit-backdrop-filter: blur(6px) saturate(140%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 1px 0 rgba(0, 0, 0, 0.35);
+    transition:
+        color var(--t-fast),
+        border-color var(--t-fast),
+        background var(--t-fast),
+        transform var(--t-fast),
+        box-shadow 220ms ease;
+}
+.reader-close:hover {
+    transform: scale(1.08);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 0 1px rgba(255, 138, 61, 0.4),
+        0 0 18px rgba(255, 138, 61, 0.25);
 }
 
 /* ---------------- compose CC / BCC toggle ---------------- */
