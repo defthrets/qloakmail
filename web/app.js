@@ -57,13 +57,54 @@ const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 //
 // On logout we clear both.
 
-const SESSION_KEY = "qloakmail.session.v1";
+const SESSION_KEY = "qloakmail.session.v2";
+const LEGACY_SESSION_KEYS = ["qloakmail.session.v1"];
 
-function saveSession(data, remember) {
+const DURATION_MS = {
+    "":    0,                   // session-only, password re-prompt on refresh
+    "4h":  4    * 60 * 60 * 1000,
+    "1d":  24   * 60 * 60 * 1000,
+    "1w":  7    * 24 * 60 * 60 * 1000,
+    "1mo": 30   * 24 * 60 * 60 * 1000,
+};
+
+function durationMs(d) { return DURATION_MS[d] || 0; }
+
+/**
+ * Persist what we need to come back on refresh without re-doing the SRP
+ * handshake. There are two modes:
+ *
+ *   duration === ""   → sessionStorage, ENCRYPTED privkey blob only.
+ *                       The plaintext privkey is NEVER persisted; the
+ *                       unlock-view will ask for the password and run
+ *                       Argon2id locally to recover it.
+ *
+ *   duration !== ""   → localStorage, includes the DECRYPTED privkey
+ *                       and an absolute expires_at timestamp. While the
+ *                       window is open, refresh = straight to inbox,
+ *                       no password prompt. After expiry it falls back
+ *                       to the unlock-view.
+ *
+ * Persisting the plaintext privkey IS a real trade-off — anyone with
+ * read access to localStorage can decrypt your mail. Same threat model
+ * as any "stay signed in" feature.
+ */
+function saveSession(data, duration, privkeyArmored) {
     sessionStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(SESSION_KEY);
-    const target = remember ? localStorage : sessionStorage;
-    target.setItem(SESSION_KEY, JSON.stringify({ ...data, remember }));
+    LEGACY_SESSION_KEYS.forEach(k => {
+        sessionStorage.removeItem(k);
+        localStorage.removeItem(k);
+    });
+
+    const ms = durationMs(duration);
+    const payload = { ...data, v: 2, remember: duration };
+    if (ms > 0 && privkeyArmored) {
+        payload.privkey_armored = privkeyArmored;
+        payload.expires_at = Date.now() + ms;
+    }
+    const target = ms > 0 ? localStorage : sessionStorage;
+    target.setItem(SESSION_KEY, JSON.stringify(payload));
 }
 
 function loadSession() {
@@ -72,7 +113,9 @@ function loadSession() {
     if (!raw) return null;
     try {
         const obj = JSON.parse(raw);
-        if (obj && obj.v === 1 && obj.session_token && obj.email) return obj;
+        if (obj && (obj.v === 2 || obj.v === 1) && obj.session_token && obj.email) {
+            return obj;
+        }
     } catch { /* fall through */ }
     return null;
 }
@@ -80,6 +123,34 @@ function loadSession() {
 function clearSession() {
     sessionStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(SESSION_KEY);
+    LEGACY_SESSION_KEYS.forEach(k => {
+        sessionStorage.removeItem(k);
+        localStorage.removeItem(k);
+    });
+}
+
+/** Returns {kind: "auth" | "unlock" | "restore", session?} */
+function classifyStoredSession() {
+    const sess = loadSession();
+    if (!sess) return { kind: "auth" };
+    if (sess.expires_at && sess.privkey_armored) {
+        if (sess.expires_at > Date.now()) {
+            return { kind: "restore", session: sess };
+        }
+        // Expired — wipe and force unlock if we have the encrypted blob
+        // to ask the password against, otherwise force full sign-in.
+        if (sess.encrypted_privkey_password) {
+            // Drop the now-stale plaintext key but keep the rest for
+            // unlock to work against the encrypted blob.
+            const { privkey_armored, expires_at, ...minimal } = sess;
+            sessionStorage.removeItem(SESSION_KEY);
+            localStorage.setItem(SESSION_KEY, JSON.stringify(minimal));
+            return { kind: "unlock", session: minimal };
+        }
+        clearSession();
+        return { kind: "auth" };
+    }
+    return { kind: "unlock", session: sess };
 }
 
 function show(viewId) {
@@ -131,7 +202,12 @@ function bindAuthTabs() {
 }
 
 // ----------------------------------------------------------------- login (shared)
-async function performLogin(email, password, remember = false) {
+//
+// `duration` is one of "" | "4h" | "1d" | "1w" | "1mo".
+// Empty → sessionStorage with encrypted blob, password re-prompt on refresh.
+// Anything else → localStorage with decrypted privkey + expires_at, refresh
+// inside the window restores directly to the inbox.
+async function performLogin(email, password, duration = "") {
     const init = await api.post("/auth/login/init", { email });
     const session = await SRP.startClient(email, password);
     const { M1Hex } = await session.processChallenge(init.srp_salt, init.srp_B);
@@ -153,14 +229,13 @@ async function performLogin(email, password, remember = false) {
     state.privkey = await openpgp.readPrivateKey({ armoredKey: privArmored });
 
     saveSession({
-        v: 1,
         email: v.email,
         account_id: v.account_id,
         session_token: v.session_token,
         pubkey_armored: v.pubkey_armored,
         encrypted_privkey_password: v.encrypted_privkey_password,
         argon2_params: v.argon2_params,
-    }, remember);
+    }, duration, privArmored);
 
     await enterMailbox();
 }
@@ -170,11 +245,11 @@ async function handleLogin(form) {
     const fd = new FormData(form);
     const email = fd.get("email").trim();
     const password = fd.get("password");
-    const remember = !!fd.get("remember");
+    const duration = (fd.get("remember") || "").toString();
 
     setStatus(status, "Authenticating...");
     try {
-        await performLogin(email, password, remember);
+        await performLogin(email, password, duration);
     } catch (e) {
         console.error(e);
         setStatus(status, "Sign-in failed: " + (e.message || e), "err");
@@ -184,6 +259,10 @@ async function handleLogin(form) {
 // Restore a session previously saved by performLogin. Re-runs the
 // Argon2id derivation locally against the user-typed password to
 // decrypt the privkey blob. Does NOT touch the SRP endpoints.
+//
+// If the original sign-in chose a duration > session, this also re-
+// upgrades the storage to include the freshly-decrypted privkey so
+// subsequent refreshes within the window go straight to inbox.
 async function unlockSession(password) {
     const sess = loadSession();
     if (!sess) throw new Error("no stored session");
@@ -196,6 +275,19 @@ async function unlockSession(password) {
     state.account = { account_id: sess.account_id, email: sess.email };
     state.pubkey = await openpgp.readKey({ armoredKey: sess.pubkey_armored });
     state.privkey = await openpgp.readPrivateKey({ armoredKey: privArmored });
+
+    // Refresh the persistence with the just-decrypted key so subsequent
+    // refreshes within the chosen duration window skip the unlock step.
+    if (sess.remember && sess.remember !== "") {
+        saveSession({
+            email: sess.email,
+            account_id: sess.account_id,
+            session_token: sess.session_token,
+            pubkey_armored: sess.pubkey_armored,
+            encrypted_privkey_password: sess.encrypted_privkey_password,
+            argon2_params: sess.argon2_params,
+        }, sess.remember, privArmored);
+    }
 
     // Quick liveness check — if the stored session_token is expired the
     // first call to /users/me will 401. Catching it here lets us drop
@@ -913,17 +1005,59 @@ async function boot() {
         show("auth-view");
     });
 
-    // If we already have a stored session for this device, jump to the
-    // unlock screen instead of the full sign-in form.
-    const stored = loadSession();
-    if (stored) {
-        $("#unlock-email").textContent = stored.email;
-        // Keep the remember-me checkbox in sync with the stored choice
-        // — useful when the user switches accounts after signing out.
-        $("#login-remember").checked = !!stored.remember;
+    // Decide which view to show based on what's in storage:
+    //   restore  — duration window still open + decrypted key on hand
+    //   unlock   — encrypted blob present, ask for password
+    //   auth     — nothing usable, show sign-in
+    const decision = classifyStoredSession();
+    if (decision.kind === "restore") {
+        // Skip the unlock prompt and go straight to the inbox.
+        try {
+            await restoreSession(decision.session);
+        } catch (e) {
+            console.error("[QloakMail] auto-restore failed:", e);
+            // Fallback to unlock prompt
+            $("#unlock-email").textContent = decision.session.email;
+            const sel = $("#login-remember");
+            if (sel) sel.value = decision.session.remember || "";
+            show("unlock-view");
+            setTimeout(() => $("#unlock-form input[name=password]").focus(), 50);
+        }
+    } else if (decision.kind === "unlock") {
+        $("#unlock-email").textContent = decision.session.email;
+        const sel = $("#login-remember");
+        if (sel) sel.value = decision.session.remember || "";
         show("unlock-view");
         setTimeout(() => $("#unlock-form input[name=password]").focus(), 50);
     }
+    // else "auth" — auth-view is already the default active view.
+}
+
+// Restore directly from storage — privkey is already plaintext in the
+// stored payload (allowed only when the user picked a duration). No
+// password prompt, no SRP. A liveness ping catches an expired
+// server-side token and routes back to the auth view.
+async function restoreSession(sess) {
+    api.setToken(sess.session_token);
+    state.account = { account_id: sess.account_id, email: sess.email };
+    state.pubkey = await openpgp.readKey({ armoredKey: sess.pubkey_armored });
+    state.privkey = await openpgp.readPrivateKey({ armoredKey: sess.privkey_armored });
+
+    try {
+        await api.get("/users/me");
+    } catch (e) {
+        if (e.status === 401) {
+            clearSession();
+            api.setToken(null);
+            state.account = state.privkey = state.pubkey = null;
+            show("auth-view");
+            toast("Session expired — please sign in again.", "err");
+            return;
+        }
+        // Other errors fall through to enterMailbox which has its own
+        // toast on failure.
+    }
+    await enterMailbox();
 }
 
 window.addEventListener("DOMContentLoaded", boot);

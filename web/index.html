@@ -25,9 +25,6 @@
     </symbol>
   </svg>
 
-  <!-- Animated scan line — slow vertical sweep across the viewport. -->
-  <div class="scan-line" aria-hidden="true"></div>
-
   <div id="app">
 
     <!-- ============== Auth ============== -->
@@ -70,9 +67,15 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
           <label>Password
             <input type="password" name="password" autocomplete="current-password" required>
           </label>
-          <label class="checkbox-row">
-            <input type="checkbox" name="remember" id="login-remember">
-            <span>Remember on this device</span>
+          <label class="duration-row">
+            <span class="duration-label">Stay signed in for</span>
+            <select name="remember" id="login-remember">
+              <option value="">this session only</option>
+              <option value="4h">4 hours</option>
+              <option value="1d">1 day</option>
+              <option value="1w">1 week</option>
+              <option value="1mo">1 month</option>
+            </select>
           </label>
           <button type="submit" class="primary">Sign in</button>
           <p class="status" id="login-status"></p>
@@ -126,15 +129,63 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
           <span class="prompt">&gt;</span> qloak --check
         </header>
         <ul class="features-list" role="list">
-          <li><span class="num">01</span><span class="check">[OK]</span> <strong>zero-access</strong> · server stores ciphertext only</li>
-          <li><span class="num">02</span><span class="check">[OK]</span> <strong>SRP-6a auth</strong> · password never crosses the wire</li>
-          <li><span class="num">03</span><span class="check">[OK]</span> <strong>OpenPGP</strong> · keypair generated in your browser</li>
-          <li><span class="num">04</span><span class="check">[OK]</span> <strong>Argon2id</strong> · private key wrapped locally</li>
-          <li><span class="num">05</span><span class="check">[OK]</span> <strong>no access logs</strong> · IPs hashed per-process, never persisted</li>
-          <li><span class="num">06</span><span class="check">[OK]</span> <strong>local-only search</strong> · IndexedDB, never hits the server</li>
-          <li><span class="num">07</span><span class="check">[OK]</span> <strong>Tor v3</strong> · onion service for clearnet-free access</li>
-          <li><span class="num">08</span><span class="check">[OK]</span> <strong>open source</strong> · <a href="https://github.com/defthrets/qloakmail" target="_blank" rel="noopener">audit on GitHub</a></li>
+          <li>
+            <span class="num">01</span><span class="check">[OK]</span> <strong>zero-access</strong> · server stores ciphertext only
+            <div class="layman">// Even if our servers were stolen or seized, your emails stay encrypted. Nobody reads them — not us, not law enforcement.</div>
+          </li>
+          <li>
+            <span class="num">02</span><span class="check">[OK]</span> <strong>SRP-6a auth</strong> · password never crosses the wire
+            <div class="layman">// When you sign in, your password never leaves your browser. We literally cannot leak it because we don't have it.</div>
+          </li>
+          <li>
+            <span class="num">03</span><span class="check">[OK]</span> <strong>OpenPGP</strong> · keypair generated in your browser
+            <div class="layman">// Your encryption keys are made on YOUR device. They never leave your computer unencrypted.</div>
+          </li>
+          <li>
+            <span class="num">04</span><span class="check">[OK]</span> <strong>Argon2id</strong> · private key wrapped locally
+            <div class="layman">// Your private key is locked behind your password using one of the strongest password-stretching algorithms ever designed.</div>
+          </li>
+          <li>
+            <span class="num">05</span><span class="check">[OK]</span> <strong>no access logs</strong> · IPs hashed per-process, never persisted
+            <div class="layman">// We don't record when you log in, what IP you came from, or what messages you read. There's nothing to hand over.</div>
+          </li>
+          <li>
+            <span class="num">06</span><span class="check">[OK]</span> <strong>local-only search</strong> · IndexedDB, never hits the server
+            <div class="layman">// When you search your inbox, the search runs in your browser. We never see what you're looking for.</div>
+          </li>
+          <li>
+            <span class="num">07</span><span class="check">[OK]</span> <strong>Tor v3</strong> · onion service for clearnet-free access
+            <div class="layman">// Connect via Tor Browser using our .onion address and we never even see your IP. Total anonymity.</div>
+          </li>
+          <li>
+            <span class="num">08</span><span class="check">[OK]</span> <strong>open source</strong> · <a href="https://github.com/defthrets/qloakmail" target="_blank" rel="noopener">audit on GitHub</a>
+            <div class="layman">// Anyone can read our code and verify we do what we claim. No black box.</div>
+          </li>
         </ul>
+      </section>
+
+      <section class="jurisdiction-panel" aria-label="jurisdiction and infrastructure">
+        <header class="features-header">
+          <span class="bracket">[</span><span class="label">JURISDICTION</span><span class="bracket">]</span>
+          <span class="prompt">&gt;</span> qloak --where
+        </header>
+        <ul class="jurisdiction-list" role="list">
+          <li><span class="key">Server  </span><span class="dot">·</span> FlokiNET <span class="dim">·</span> Iceland</li>
+          <li><span class="key">Domain  </span><span class="dot">·</span> 1984 Hosting <span class="dim">·</span> Iceland</li>
+          <li><span class="key">Payment </span><span class="dot">·</span> Bitcoin <span class="dim">·</span> pseudonymous</li>
+          <li><span class="key">Reach   </span><span class="dot">·</span> Tor v3 hidden service available</li>
+        </ul>
+        <p class="jurisdiction-note">
+          Iceland has the strongest press-freedom and privacy protections in
+          Europe — IMMI initiative, no mandatory data retention. Both server
+          host and domain registrar operate under Icelandic law, outside
+          Five Eyes intelligence-sharing.
+        </p>
+        <p class="layman jurisdiction-layman">
+          // In plain English: a foreign agency can't just ask for your mail.
+          They'd have to go through an Icelandic court — and we still
+          couldn't hand it over, because we never see it unencrypted.
+        </p>
       </section>
 
       <footer class="auth-footer">
