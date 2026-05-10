@@ -104,6 +104,21 @@ CREATE TABLE IF NOT EXISTS abuse_reports (
     handled         BOOLEAN NOT NULL DEFAULT FALSE
 );
 
+-- ---------- IP block list (admin) ----------
+-- Stores ONE-WAY hashes (HMAC-SHA256 keyed with IP_BAN_SECRET) of
+-- banned IPs. We never store the IP itself; the admin pastes one in,
+-- the API hashes it, the resulting fingerprint is what's compared
+-- against incoming requests. Rotating IP_BAN_SECRET invalidates the
+-- whole list.
+CREATE TABLE IF NOT EXISTS ip_blocks (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ip_hmac     TEXT NOT NULL UNIQUE,
+    reason      TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at  TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS ix_ip_blocks_ip_hmac ON ip_blocks (ip_hmac);
+
 -- ---------- helper: bump a folder's modseq when a message lands ----------
 CREATE OR REPLACE FUNCTION touch_account_used_bytes() RETURNS TRIGGER AS $$
 BEGIN

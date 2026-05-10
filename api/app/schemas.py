@@ -118,6 +118,7 @@ class MeResponse(BaseModel):
     quota_bytes: int
     used_bytes: int
     created_at: datetime
+    is_admin: bool = False
 
 
 class PubkeyLookup(BaseModel):

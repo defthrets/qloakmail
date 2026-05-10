@@ -767,6 +767,83 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
         </article>
       </main>
 
+      <!-- Admin modal — only opened if /users/me returns is_admin -->
+      <div id="admin-modal" class="modal" hidden>
+        <div class="modal-backdrop" data-close></div>
+        <div class="modal-card admin-card">
+          <header class="modal-head">
+            <h3>
+              <span class="bracket">[</span>ADMIN<span class="bracket">]</span>
+              <span class="prompt">&gt;</span> control panel
+            </h3>
+            <button type="button" class="link" data-close aria-label="Close">×</button>
+          </header>
+
+          <nav class="admin-tabs" role="tablist">
+            <button class="admin-tab active" data-admin-tab="stats"    type="button">Stats</button>
+            <button class="admin-tab"        data-admin-tab="accounts" type="button">Accounts</button>
+            <button class="admin-tab"        data-admin-tab="ip-bans"  type="button">IP bans</button>
+          </nav>
+
+          <!-- STATS TAB -->
+          <section class="admin-pane active" data-pane="stats">
+            <div class="stats-grid" id="admin-stats-grid">
+              <div class="stat-card"><div class="stat-label">Accounts</div><div class="stat-value" id="stat-accounts-total">—</div><div class="stat-sub" id="stat-accounts-breakdown"></div></div>
+              <div class="stat-card"><div class="stat-label">Signups · 24h</div><div class="stat-value" id="stat-signups-24h">—</div><div class="stat-sub">7d <span id="stat-signups-7d">—</span> / 30d <span id="stat-signups-30d">—</span></div></div>
+              <div class="stat-card"><div class="stat-label">Messages</div><div class="stat-value" id="stat-messages-total">—</div><div class="stat-sub">24h <span id="stat-messages-24h">—</span></div></div>
+              <div class="stat-card"><div class="stat-label">Storage</div><div class="stat-value" id="stat-storage">—</div><div class="stat-sub">total used</div></div>
+              <div class="stat-card"><div class="stat-label">IP bans</div><div class="stat-value" id="stat-ip-bans">—</div><div class="stat-sub">active</div></div>
+            </div>
+            <div class="admin-actions">
+              <button type="button" class="link" id="admin-refresh">Refresh</button>
+            </div>
+          </section>
+
+          <!-- ACCOUNTS TAB -->
+          <section class="admin-pane" data-pane="accounts" hidden>
+            <div class="admin-search">
+              <input type="search" id="admin-account-search"
+                     placeholder="Search by email..." autocomplete="off" spellcheck="false">
+              <span class="admin-result-count" id="admin-account-total"></span>
+            </div>
+            <div class="admin-table-wrap">
+              <table class="admin-table" id="admin-accounts-table">
+                <thead><tr>
+                  <th>Email</th><th>Status</th><th>Created</th><th>Last login</th><th>Msgs</th><th>Storage</th><th>Actions</th>
+                </tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div class="admin-pager">
+              <button type="button" class="link" id="admin-prev">‹ Prev</button>
+              <span id="admin-page-info">—</span>
+              <button type="button" class="link" id="admin-next">Next ›</button>
+            </div>
+          </section>
+
+          <!-- IP BANS TAB -->
+          <section class="admin-pane" data-pane="ip-bans" hidden>
+            <form id="admin-ipban-form" class="admin-ipban-form">
+              <input type="text" name="ip" placeholder="IP address (v4 or v6)" required>
+              <input type="text" name="reason" placeholder="Reason (optional)">
+              <input type="number" name="ttl_hours" placeholder="TTL hours (blank = forever)" min="1">
+              <button type="submit" class="primary">Add ban</button>
+            </form>
+            <div class="admin-table-wrap">
+              <table class="admin-table" id="admin-ipbans-table">
+                <thead><tr>
+                  <th>Fingerprint</th><th>Reason</th><th>Created</th><th>Expires</th><th></th>
+                </tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <p class="settings-hint">IPs are stored as one-way HMAC fingerprints — never as raw addresses. Rotating IP_BAN_SECRET invalidates the entire list.</p>
+          </section>
+
+          <p class="status" id="admin-status"></p>
+        </div>
+      </div>
+
       <!-- Settings modal -->
       <div id="settings-modal" class="modal" hidden>
         <div class="modal-backdrop" data-close></div>
@@ -873,6 +950,14 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
               <kbd>/</kbd><span>Focus search</span>
               <kbd>Esc</kbd><span>Close panel / overlay</span>
               <kbd>?</kbd><span>This list</span>
+            </div>
+          </section>
+
+          <section class="settings-section" id="settings-admin-section" hidden>
+            <h4><span class="bracket">[</span>ADMIN<span class="bracket">]</span></h4>
+            <p class="settings-hint">Operator-only control panel — stats, account management, IP bans.</p>
+            <div class="settings-actions">
+              <button type="button" class="link" id="settings-open-admin">Open admin panel</button>
             </div>
           </section>
 

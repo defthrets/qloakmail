@@ -84,6 +84,25 @@ class InviteCode(Base):
     expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
 
+class IPBlock(Base):
+    """Persistent IP block list for the admin panel.
+
+    The IP itself is never stored — only a stable HMAC computed with
+    settings.effective_ip_ban_secret. That way the admin can paste an
+    IP into the panel, the server hashes it, and the resulting fingerprint
+    is what's stored. Future requests get hashed under the same key and
+    compared. Same one-way property as the rate-limit fingerprints,
+    just persistent across restarts.
+    """
+    __tablename__ = "ip_blocks"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    ip_hmac: Mapped[str] = mapped_column(Text, unique=True, index=True)
+    reason: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
 class AbuseReport(Base):
     __tablename__ = "abuse_reports"
 

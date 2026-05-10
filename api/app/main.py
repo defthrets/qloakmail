@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
-from .routes import abuse, auth, internal, mail, users
+from .routes import abuse, admin, auth, internal, mail, users
 
 # Tor publishes the hidden-service hostname here once it bootstraps.
 # Volume is mounted read-only via docker-compose. We re-read on each
@@ -77,3 +77,4 @@ app.include_router(users.router, prefix=_v1)
 app.include_router(mail.router, prefix=_v1)
 app.include_router(abuse.router, prefix=_v1)
 app.include_router(internal.router, prefix=_v1)
+app.include_router(admin.router, prefix=_v1)

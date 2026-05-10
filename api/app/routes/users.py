@@ -5,11 +5,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import schemas
+from ..config import get_settings
 from ..db import get_session
 from ..deps import current_account
 from ..models import Account
 
 router = APIRouter(prefix="/users", tags=["users"])
+_settings = get_settings()
 
 
 @router.get("/me", response_model=schemas.MeResponse)
@@ -20,6 +22,7 @@ async def me(account: Account = Depends(current_account)):
         quota_bytes=account.quota_bytes,
         used_bytes=account.used_bytes,
         created_at=account.created_at,
+        is_admin=account.email.lower() in _settings.admin_email_set,
     )
 
 

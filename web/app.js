@@ -565,6 +565,7 @@ async function enterMailbox() {
     $("#who").textContent = state.account.email;
     armIdleLock();
     bindMailMobile();
+    refreshAdminGate();
     try {
         await Search.open(state.account.account_id);
         await refreshSearchStats();
@@ -2603,6 +2604,222 @@ function scheduleClipboardClear() {
     }, CLIPBOARD_AUTO_CLEAR_MS);
 }
 
+// ----------------------------------------------------------------- admin panel
+//
+// Loaded only when /users/me returns is_admin: true. Surfaces the
+// admin gear in the settings modal and a tabbed control panel
+// (stats / accounts / ip-bans). Every call hits /api/v1/admin/*,
+// which is gated by current_admin on the server — non-admins get
+// 404 from the API. We mirror the same UX in the SPA: the entry
+// button stays hidden unless the server confirms admin status, so
+// the panel doesn't even hint at its existence to regular users.
+
+const ADMIN_PAGE_SIZE = 25;
+let _adminAccountState = { offset: 0, total: 0, q: "" };
+
+async function refreshAdminGate() {
+    try {
+        const me = await api.get("/users/me");
+        const sec = $("#settings-admin-section");
+        if (sec) sec.hidden = !me.is_admin;
+        state.isAdmin = !!me.is_admin;
+    } catch { state.isAdmin = false; }
+}
+
+function bindAdmin() {
+    $("#settings-open-admin")?.addEventListener("click", () => {
+        closeSettings();
+        openAdmin();
+    });
+    $$("#admin-modal [data-close]").forEach(el =>
+        el.addEventListener("click", () => $("#admin-modal").hidden = true));
+    $$("#admin-modal .admin-tab").forEach(tab => {
+        tab.addEventListener("click", () => switchAdminTab(tab.dataset.adminTab));
+    });
+    $("#admin-refresh")?.addEventListener("click", () => loadAdminStats());
+
+    // Accounts tab
+    let _searchTimer = null;
+    $("#admin-account-search")?.addEventListener("input", (e) => {
+        clearTimeout(_searchTimer);
+        _searchTimer = setTimeout(() => {
+            _adminAccountState.q = e.target.value.trim();
+            _adminAccountState.offset = 0;
+            loadAdminAccounts();
+        }, 220);
+    });
+    $("#admin-prev")?.addEventListener("click", () => {
+        _adminAccountState.offset = Math.max(0, _adminAccountState.offset - ADMIN_PAGE_SIZE);
+        loadAdminAccounts();
+    });
+    $("#admin-next")?.addEventListener("click", () => {
+        if (_adminAccountState.offset + ADMIN_PAGE_SIZE < _adminAccountState.total) {
+            _adminAccountState.offset += ADMIN_PAGE_SIZE;
+            loadAdminAccounts();
+        }
+    });
+
+    // IP bans tab
+    $("#admin-ipban-form")?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const body = {
+            ip: fd.get("ip"),
+            reason: fd.get("reason") || null,
+            ttl_hours: fd.get("ttl_hours") ? +fd.get("ttl_hours") : null,
+        };
+        try {
+            await api.post("/admin/ip-blocks", body);
+            e.target.reset();
+            await loadAdminIpBans();
+            _adminToast("IP ban added.", "ok");
+        } catch (err) {
+            _adminToast("Failed: " + (err.message || err), "err");
+        }
+    });
+}
+
+function openAdmin() {
+    if (!state.isAdmin) return;
+    $("#admin-modal").hidden = false;
+    switchAdminTab("stats");
+}
+
+function switchAdminTab(name) {
+    $$("#admin-modal .admin-tab").forEach(t =>
+        t.classList.toggle("active", t.dataset.adminTab === name));
+    $$("#admin-modal .admin-pane").forEach(p =>
+        p.hidden = p.dataset.pane !== name);
+    if (name === "stats")    loadAdminStats();
+    if (name === "accounts") loadAdminAccounts();
+    if (name === "ip-bans")  loadAdminIpBans();
+}
+
+function _adminToast(msg, kind) {
+    const el = $("#admin-status");
+    if (!el) return;
+    el.textContent = msg;
+    el.className = "status" + (kind ? " " + kind : "");
+    setTimeout(() => { el.textContent = ""; el.className = "status"; }, 3500);
+}
+
+function _fmtBytes(n) { return fmtBytes(n); }
+function _fmtDate(s) {
+    if (!s) return "—";
+    const d = new Date(s);
+    return isNaN(d) ? s : d.toLocaleString();
+}
+
+async function loadAdminStats() {
+    try {
+        const s = await api.get("/admin/stats");
+        $("#stat-accounts-total").textContent = s.accounts_total;
+        $("#stat-accounts-breakdown").textContent =
+            `${s.accounts_active} active · ${s.accounts_banned} banned · ${s.accounts_pending} pending`;
+        $("#stat-signups-24h").textContent = s.signups_24h;
+        $("#stat-signups-7d").textContent  = s.signups_7d;
+        $("#stat-signups-30d").textContent = s.signups_30d;
+        $("#stat-messages-total").textContent = s.messages_total;
+        $("#stat-messages-24h").textContent   = s.messages_24h;
+        $("#stat-storage").textContent  = _fmtBytes(s.storage_bytes_used);
+        $("#stat-ip-bans").textContent  = s.ip_blocks_active;
+    } catch (e) {
+        _adminToast("Stats load failed: " + (e.message || e), "err");
+    }
+}
+
+async function loadAdminAccounts() {
+    try {
+        const params = new URLSearchParams({
+            offset: String(_adminAccountState.offset),
+            limit:  String(ADMIN_PAGE_SIZE),
+        });
+        if (_adminAccountState.q) params.set("q", _adminAccountState.q);
+        const r = await api.get("/admin/accounts?" + params.toString());
+        _adminAccountState.total = r.total;
+        $("#admin-account-total").textContent = `${r.total} match${r.total === 1 ? "" : "es"}`;
+        const tbody = $("#admin-accounts-table tbody");
+        tbody.innerHTML = r.items.map(a => `
+            <tr data-id="${a.id}" data-email="${escapeHtml(a.email)}">
+                <td class="email">${escapeHtml(a.email)}</td>
+                <td><span class="status-pill ${a.status}">${escapeHtml(a.status)}</span></td>
+                <td>${_fmtDate(a.created_at)}</td>
+                <td>${_fmtDate(a.last_login_at)}</td>
+                <td class="num">${a.message_count}</td>
+                <td class="num">${_fmtBytes(a.used_bytes)} / ${_fmtBytes(a.quota_bytes)}</td>
+                <td class="row-actions">
+                    ${a.status === "banned"
+                        ? `<button class="link" data-action="unban">Unban</button>`
+                        : `<button class="link" data-action="ban">Ban</button>`}
+                    <button class="link danger" data-action="delete">Delete</button>
+                </td>
+            </tr>
+        `).join("");
+        // Wire actions per row.
+        tbody.querySelectorAll("button[data-action]").forEach(btn => {
+            btn.addEventListener("click", async () => {
+                const tr = btn.closest("tr");
+                const id = tr.dataset.id;
+                const email = tr.dataset.email;
+                const action = btn.dataset.action;
+                try {
+                    if (action === "ban") {
+                        const reason = prompt(`Ban reason for ${email}? (optional)`);
+                        if (reason === null) return;
+                        await api.post(`/admin/account/${id}/ban`, { reason });
+                    } else if (action === "unban") {
+                        await api.post(`/admin/account/${id}/unban`, {});
+                    } else if (action === "delete") {
+                        if (!confirm(`Delete ${email} and all their data permanently?`)) return;
+                        await api.del(`/admin/account/${id}`);
+                    }
+                    await loadAdminAccounts();
+                    _adminToast(`${action} done.`, "ok");
+                } catch (e) {
+                    _adminToast(`${action} failed: ${e.message || e}`, "err");
+                }
+            });
+        });
+        const start = r.total === 0 ? 0 : _adminAccountState.offset + 1;
+        const end   = Math.min(_adminAccountState.offset + r.items.length, r.total);
+        $("#admin-page-info").textContent = `${start}–${end} of ${r.total}`;
+    } catch (e) {
+        _adminToast("Accounts load failed: " + (e.message || e), "err");
+    }
+}
+
+async function loadAdminIpBans() {
+    try {
+        const rows = await api.get("/admin/ip-blocks");
+        const tbody = $("#admin-ipbans-table tbody");
+        tbody.innerHTML = rows.length
+            ? rows.map(b => `
+                <tr data-id="${b.id}">
+                    <td class="mono">${escapeHtml(b.fingerprint)}</td>
+                    <td>${escapeHtml(b.reason || "")}</td>
+                    <td>${_fmtDate(b.created_at)}</td>
+                    <td>${b.expires_at ? _fmtDate(b.expires_at) : "—"}</td>
+                    <td><button class="link danger" data-action="remove">Remove</button></td>
+                </tr>`).join("")
+            : `<tr><td colspan="5" class="empty">No IP bans.</td></tr>`;
+        tbody.querySelectorAll('button[data-action="remove"]').forEach(btn => {
+            btn.addEventListener("click", async () => {
+                const id = btn.closest("tr").dataset.id;
+                if (!confirm("Remove this IP ban?")) return;
+                try {
+                    await api.del(`/admin/ip-blocks/${id}`);
+                    await loadAdminIpBans();
+                    _adminToast("Removed.", "ok");
+                } catch (e) {
+                    _adminToast("Failed: " + (e.message || e), "err");
+                }
+            });
+        });
+    } catch (e) {
+        _adminToast("IP bans load failed: " + (e.message || e), "err");
+    }
+}
+
 // ----------------------------------------------------------------- info-page nav
 //
 // Click handler for the [HOME]/[ABOUT]/[PRIVACY]/[TERMS] strip at the
@@ -2726,6 +2943,7 @@ async function boot() {
     bindStatusScroller();
     bindBrandNav();
     bindSettings();
+    bindAdmin();
     bindComposeExtras();
     bindListControls();
     bindShortcuts();

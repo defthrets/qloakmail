@@ -50,3 +50,19 @@ async def require_internal_token(
 ) -> None:
     if x_internal_token != _settings.internal_api_token:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "internal token required")
+
+
+async def current_admin(
+    account: Account = Depends(current_account),
+) -> Account:
+    """Gate admin endpoints. Requires:
+      1. A normal authenticated session (current_account passed).
+      2. The account email matches an entry in ADMIN_EMAILS.
+    Returns 404 (not 403) when not an admin so the existence of admin
+    endpoints isn't enumerable to a regular signed-in user — they'll
+    see the same response as if the path didn't exist.
+    """
+    admins = _settings.admin_email_set
+    if not admins or account.email.lower() not in admins:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "not found")
+    return account
