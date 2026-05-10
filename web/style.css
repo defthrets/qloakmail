@@ -2034,3 +2034,98 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
         background: var(--bg);
     }
 }
+
+/* ---- Phone (≤640px) — collapse the sidebar to a slim icon rail.
+   Goal is to give the message list as much horizontal real estate
+   as possible while keeping the folders one-tap reachable. ---- */
+@media (max-width: 640px) {
+    .mail-shell { grid-template-columns: 56px 1fr; }
+
+    .sidebar {
+        padding: 0.55rem 0.25rem;
+    }
+
+    /* Compose button collapses to just "+". Bumped to .primary.compose-btn
+       (0,2,0 specificity) so it beats button.primary (0,1,1). The
+       button.primary::before sheen is overridden so the pseudo
+       repositions from absolute to static and shows the "+" glyph. */
+    .primary.compose-btn {
+        font-size: 0;
+        padding: 0.6rem 0;
+        letter-spacing: 0;
+        animation: none;
+    }
+    .primary.compose-btn::before {
+        content: "+";
+        position: static;
+        background: none;
+        width: auto;
+        height: auto;
+        font-size: 1.4rem;
+        font-weight: 900;
+        line-height: 1;
+        transform: none;
+        color: #1a0a02;
+    }
+    .primary.compose-btn:hover:not(:disabled)::before { left: auto; }
+    .compose-btn .compose-prompt { display: none; }
+
+    /* Folder rows shed the bracketed name + tracking, keeping just
+       the icon glyph centred. The count badge floats top-right. */
+    .folder-list li {
+        padding: 0.6rem 0.2rem;
+        justify-content: center;
+        letter-spacing: 0;
+        font-size: 0;
+        position: relative;
+    }
+    .folder-list li > span:first-child {
+        font-size: 0;
+    }
+    .folder-list li > span:first-child::before,
+    .folder-list li > span:first-child::after {
+        display: none;
+    }
+    .folder-list .icon {
+        font-size: 1.05rem;
+        width: auto;
+        margin: 0;
+    }
+    .folder-list .count {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        font-size: 0.65em;
+        padding: 0.05rem 0.35rem;
+        line-height: 1.4;
+    }
+    .folder-list .count:empty { display: none; }
+
+    /* Foot — hide the "Onion ready" wording, keep just the dot. */
+    .sidebar-foot {
+        font-size: 0;
+        text-align: center;
+        padding-top: 0.55rem;
+    }
+    .onion-hint::before {
+        font-size: 0.9rem;
+        margin-right: 0;
+    }
+
+    /* Topbar tightening: brand mini ASCII shrinks even further so it
+       fits the 56px-wide first column. */
+    .topbar {
+        height: auto;
+        min-height: 56px;
+        padding: 0.4rem 0.55rem;
+        grid-template-columns: 56px 1fr auto;
+        gap: 0.55rem;
+    }
+    .brand-ascii--mini { font-size: 2.2px; line-height: 2.6px; }
+    .topbar-status {
+        font-size: 0.55em;
+        padding: 0.1em 0.3em;
+        letter-spacing: 0.1em;
+    }
+    .account-info { font-size: 0.78em; }
+}
