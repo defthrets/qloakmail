@@ -793,6 +793,18 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
 
           <section class="settings-section">
             <h4><span class="bracket">[</span>DISPLAY<span class="bracket">]</span></h4>
+            <div class="settings-row settings-row--avatar">
+              <span class="settings-key">Display picture</span>
+              <div class="avatar-edit">
+                <span id="settings-avatar-preview" class="avatar avatar-preview"></span>
+                <div class="avatar-edit-controls">
+                  <input type="file" id="settings-avatar-input" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+                  <button type="button" class="link" id="settings-avatar-pick">Upload</button>
+                  <button type="button" class="link danger" id="settings-avatar-clear" hidden>Remove</button>
+                </div>
+              </div>
+            </div>
+            <p class="settings-hint">Stored locally on this device only. Used in the reader header and outbound mail "From" preview.</p>
             <div class="settings-row">
               <span class="settings-key">Density</span>
               <select id="settings-density" class="settings-select">

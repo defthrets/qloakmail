@@ -53,6 +53,7 @@ const DEFAULT_PREFS = {
     density: "comfortable",   // "comfortable" | "compact"
     notifications: false,
     confirmExternalLinks: true,
+    avatar: "",               // base64 data URL of user-set display picture
 };
 function loadPrefs() {
     try {
@@ -765,6 +766,8 @@ async function renderMessageList() {
         const snippetStr  = c?.snippet || "";
         const when        = c?.date ? fmtRelative(c.date) : fmtRelative(m.received_at);
 
+        const fromForAvatar = c?.from || "";
+        const avatarMarkup  = c ? avatarHtml(fromForAvatar, { size: 28 }) : `<span class="avatar avatar-locked" title="encrypted">●</span>`;
         li.innerHTML = `
             <label class="row-check" aria-label="Select message">
                 <input type="checkbox" data-msg-id="${m.id}" ${state.selectedIds.has(m.id) ? "checked" : ""}>
@@ -773,9 +776,10 @@ async function renderMessageList() {
                     data-msg-id="${m.id}"
                     aria-label="${isStarred ? "Unstar" : "Star"}"
                     title="${isStarred ? "Unstar" : "Star"}">${isStarred ? "★" : "☆"}</button>
+            ${avatarMarkup}
             <div class="row-body">
                 <div class="row-top">
-                    <span class="from">${c ? escapeHtml(fromStr) : `<span class="lock-dot" title="encrypted — click to decrypt">●</span> <span class="enc-tag">[ENCRYPTED]</span>`}</span>
+                    <span class="from">${c ? escapeHtml(fromStr) : `<span class="enc-tag">[ENCRYPTED]</span>`}</span>
                     <span class="when">${escapeHtml(when)}</span>
                 </div>
                 <div class="subject ${c ? "" : "muted"}">${escapeHtml(subjectStr)}</div>
@@ -918,6 +922,15 @@ async function openMessage(id) {
             : plaintextRfc822;
         const liveMsg = state.messages.find(x => x.id === id);
         const isStarred = liveMsg?.flags.includes("\\Flagged");
+        const senderAvatar = avatarHtml(parsed.from, { size: 36 });
+        const hasHtml      = !!parsed.htmlBody;
+        const hasRemote    = hasHtml && htmlBodyHasRemoteImages(parsed.htmlBody);
+        const attachments  = parsed.attachments || [];
+        // Don't list inline images that DID get resolved into the HTML
+        // (they're already shown in the body); keep ones with no cid
+        // resolution as standalone attachments.
+        const visibleAttachments = attachments.filter(a => !a.cid || !parsed.inlineImages?.has(a.cid));
+
         view.innerHTML = `
             <button class="reader-close" aria-label="Close" type="button">×</button>
             <div class="reader-actions">
@@ -927,31 +940,87 @@ async function openMessage(id) {
                 <button class="reader-action" data-action="star" data-starred="${isStarred ? "1" : "0"}">${isStarred ? "[ ★ STARRED ]" : "[ ☆ STAR ]"}</button>
                 <button class="reader-action" data-action="unread">[ UNREAD ]</button>
                 <button class="reader-action" data-action="print">[ PRINT ]</button>
+                ${hasHtml && parsed.textBody ? `<button class="reader-action" data-action="view-toggle">[ TEXT ]</button>` : ""}
                 <button class="reader-action" data-action="raw">[ RAW ]</button>
                 <button class="reader-action" data-action="delete">[ DELETE ]</button>
                 <button class="reader-action danger" data-action="spam">[ SPAM ]</button>
                 <button class="reader-action danger" data-action="block">[ BLOCK ]</button>
             </div>
             <header>
-                <h2>${escapeHtml(parsed.subject || "(no subject)")}</h2>
-                <div class="meta">
-                    <div><span class="field-tag">[FROM]</span><strong>${escapeHtml(parsed.from || "")}</strong></div>
-                    <div><span class="field-tag">[TO]</span><strong>${escapeHtml(parsed.to || "")}</strong></div>
-                    ${parsed.cc ? `<div><span class="field-tag">[CC]</span><strong>${escapeHtml(parsed.cc)}</strong></div>` : ""}
-                    <div><span class="field-tag">[DATE]</span>${escapeHtml(parsed.date || "")}</div>
+                <div class="reader-header-row">
+                    ${senderAvatar}
+                    <div class="reader-header-text">
+                        <h2>${escapeHtml(parsed.subject || "(no subject)")}</h2>
+                        <div class="meta">
+                            <div><span class="field-tag">[FROM]</span><strong>${escapeHtml(parsed.from || "")}</strong></div>
+                            <div><span class="field-tag">[TO]</span><strong>${escapeHtml(parsed.to || "")}</strong></div>
+                            ${parsed.cc ? `<div><span class="field-tag">[CC]</span><strong>${escapeHtml(parsed.cc)}</strong></div>` : ""}
+                            <div><span class="field-tag">[DATE]</span>${escapeHtml(parsed.date || "")}</div>
+                        </div>
+                    </div>
                 </div>
             </header>
-            <pre class="body-content"></pre>
+            ${hasRemote ? `
+                <div class="remote-image-banner" id="remote-image-banner">
+                    <span><span class="banner-tag">[IMAGES]</span> Remote images blocked for privacy.</span>
+                    <button type="button" class="banner-action" data-action="load-images">Load images</button>
+                </div>` : ""}
+            <div class="body-content"></div>
+            ${visibleAttachments.length ? `
+                <section class="attachments">
+                    <h3><span class="bracket">[</span>ATTACHMENTS<span class="bracket">]</span> <span class="count">${visibleAttachments.length}</span></h3>
+                    <ul class="attachment-list">
+                        ${visibleAttachments.map((att, i) => `
+                            <li>
+                                <button class="att-download" data-att-index="${i}" type="button" title="Download">
+                                    <span class="att-icon">${_attachmentIcon(att.mime)}</span>
+                                    <span class="att-name">${escapeHtml(att.filename)}</span>
+                                    <span class="att-meta">${escapeHtml(att.mime || "")} · ${fmtBytes(Math.floor(att.dataB64.length * 0.75))}</span>
+                                </button>
+                            </li>`).join("")}
+                    </ul>
+                </section>` : ""}
         `;
-        view.querySelector("pre").textContent = bodyToRender;
-        // Stash for raw-toggle (no need to re-decrypt on toggle).
+
+        // Render body. HTML preferred when present, sanitised either way.
+        const bodyEl = view.querySelector(".body-content");
+        if (hasHtml) {
+            bodyEl.classList.add("html-body");
+            bodyEl.innerHTML = sanitiseHtml(parsed.htmlBody, {
+                inlineImages: parsed.inlineImages,
+                allowRemoteImages: false,
+            });
+        } else {
+            bodyEl.classList.add("text-body");
+            const pre = document.createElement("pre");
+            pre.textContent = bodyToRender;
+            bodyEl.appendChild(pre);
+        }
+
+        // Stash for raw-toggle / view-toggle (no need to re-decrypt).
         state.readerRaw = plaintextRfc822;
         state.readerParsed = parsed;
         state.readerMsgId = id;
         state.readerMode = "decoded";
-        // Wire the action toolbar — fresh closure per render so the
-        // current `parsed` and `id` are captured.
+        state.readerView = hasHtml ? "html" : "text";
+
+        // Wire interactive bits.
         bindReaderActions(view, id, parsed);
+        // Attachment downloads.
+        view.querySelectorAll(".att-download").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const i = +btn.dataset.attIndex;
+                downloadAttachment(visibleAttachments[i]);
+            });
+        });
+        // Load-remote-images banner.
+        view.querySelector('[data-action="load-images"]')?.addEventListener("click", () => {
+            bodyEl.innerHTML = sanitiseHtml(parsed.htmlBody, {
+                inlineImages: parsed.inlineImages,
+                allowRemoteImages: true,
+            });
+            $("#remote-image-banner")?.remove();
+        });
 
         if (!msg.flags.includes("\\Seen")) {
             await api.post(`/mail/messages/${id}/flags`, { add: ["\\Seen"], remove: [] });
@@ -1054,6 +1123,7 @@ function bindReaderActions(viewEl, msgId, parsed) {
                 else if (action === "unread")    await readerMarkUnread(msgId);
                 else if (action === "print")     printReader();
                 else if (action === "raw")       toggleRawView(viewEl);
+                else if (action === "view-toggle") toggleHtmlText(viewEl, parsed);
             } catch (e) {
                 console.error("[QloakMail] reader action failed:", action, e);
                 toast(`${action} failed: ${e.message || e}`, "err");
@@ -1089,6 +1159,33 @@ async function readerMarkUnread(id) {
 function printReader() {
     // The print stylesheet hides everything but the message body.
     window.print();
+}
+
+// Switch between rendered HTML and plain-text fallback for the same
+// message. Useful when the HTML rendering is doing something weird
+// (broken layout, dark-on-dark text from the sender's stylesheet, etc).
+function toggleHtmlText(viewEl, parsed) {
+    const bodyEl = viewEl.querySelector(".body-content");
+    if (!bodyEl) return;
+    if (state.readerView === "html") {
+        bodyEl.classList.remove("html-body");
+        bodyEl.classList.add("text-body");
+        bodyEl.innerHTML = "";
+        const pre = document.createElement("pre");
+        pre.textContent = parsed.textBody || _htmlToText(parsed.htmlBody || "");
+        bodyEl.appendChild(pre);
+        state.readerView = "text";
+        viewEl.querySelector('[data-action="view-toggle"]').textContent = "[ HTML ]";
+    } else {
+        bodyEl.classList.remove("text-body");
+        bodyEl.classList.add("html-body");
+        bodyEl.innerHTML = sanitiseHtml(parsed.htmlBody || "", {
+            inlineImages: parsed.inlineImages,
+            allowRemoteImages: false,
+        });
+        state.readerView = "html";
+        viewEl.querySelector('[data-action="view-toggle"]').textContent = "[ TEXT ]";
+    }
 }
 
 function toggleRawView(viewEl) {
@@ -1258,7 +1355,28 @@ function openSettings() {
     const linksEl = $("#settings-confirm-links");
     if (linksEl) linksEl.checked = p.confirmExternalLinks;
 
+    _renderAvatarPreview();
+
     $("#settings-modal").hidden = false;
+}
+
+function _renderAvatarPreview() {
+    const preview = $("#settings-avatar-preview");
+    const removeBtn = $("#settings-avatar-clear");
+    const dp = (loadPrefs().avatar || "").trim();
+    if (!preview) return;
+    if (dp) {
+        preview.classList.add("avatar-img");
+        preview.style.background = "transparent";
+        preview.innerHTML = `<img src="${escapeHtml(dp)}" alt="" />`;
+        if (removeBtn) removeBtn.hidden = false;
+    } else {
+        preview.classList.remove("avatar-img");
+        const { letter, color } = avatarFor(state.account?.email || "?");
+        preview.style.background = color;
+        preview.innerHTML = `<span class="avatar-letter">${escapeHtml(letter)}</span>`;
+        if (removeBtn) removeBtn.hidden = true;
+    }
 }
 function closeSettings() { $("#settings-modal").hidden = true; }
 
@@ -1321,6 +1439,35 @@ function bindSettings() {
     $("#settings-clear-drafts")?.addEventListener("click", () => {
         clearDraft();
         toast("Draft cleared.", "ok");
+    });
+
+    // Display-picture upload — file -> data URL into prefs.avatar.
+    // Cap at ~256KB so we don't blow up localStorage; resize is left
+    // to the user (kept simple — no canvas downscaling here).
+    $("#settings-avatar-pick")?.addEventListener("click", () =>
+        $("#settings-avatar-input")?.click());
+    $("#settings-avatar-input")?.addEventListener("change", async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.size > 256 * 1024) {
+            toast(`Image too large (${fmtBytes(file.size)}). Max 256 KB — try a smaller image.`, "err");
+            e.target.value = "";
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+            const dataUrl = String(reader.result);
+            savePrefs({ ...loadPrefs(), avatar: dataUrl });
+            _renderAvatarPreview();
+            toast("Display picture saved.", "ok");
+        };
+        reader.onerror = () => toast("Could not read image.", "err");
+        reader.readAsDataURL(file);
+    });
+    $("#settings-avatar-clear")?.addEventListener("click", () => {
+        savePrefs({ ...loadPrefs(), avatar: "" });
+        _renderAvatarPreview();
+        toast("Display picture removed.", "ok");
     });
 }
 
@@ -1485,6 +1632,214 @@ function appendSignature(form) {
     }
 }
 
+// ----------------------------------------------------------------- HTML sanitiser
+//
+// Strict allowlist sanitiser for inbound mail HTML. Defence against
+// XSS embedded in the message body. Rules:
+//   * Allowed tags only — block <script>, <iframe>, <object>, <embed>,
+//     <form>, <input>, <link>, <meta>, <base>, <style> (style handled
+//     specially below).
+//   * Allowed attrs per tag. Strip every on* event handler. style
+//     attributes are kept but property-filtered so url() / expression()
+//     / position:fixed / behaviour: are out.
+//   * href / src schemes whitelisted: http(s), mailto, cid:, data:
+//     (data: only for img). javascript:/vbscript:/file: are out.
+//   * Remote image src is rewritten to a placeholder until the user
+//     clicks "Load images" (image-loading button toggles a class on
+//     the body container that swaps placeholder -> original src).
+//
+// Notes:
+//   * No DOMPurify dependency — keeps the bundle small and the
+//     allowlist tight. Tradeoff: less battle-tested than DOMPurify;
+//     consider swapping in for high-threat deployments.
+//   * Inline cid:xxx images get rewritten in-place using the
+//     inlineImages map produced by parseRfc822.
+
+const HTML_ALLOWED_TAGS = new Set([
+    "a","abbr","b","blockquote","br","caption","cite","code","col","colgroup",
+    "dd","del","details","dfn","div","dl","dt","em","figcaption","figure",
+    "h1","h2","h3","h4","h5","h6","hr","i","ins","kbd","li","mark","ol","p",
+    "pre","q","s","samp","small","span","strong","sub","summary","sup",
+    "table","tbody","td","tfoot","th","thead","time","tr","u","ul","wbr",
+    "img"
+]);
+const HTML_ALLOWED_ATTRS = {
+    a:    new Set(["href","title","name","rel","target"]),
+    img:  new Set(["src","alt","title","width","height"]),
+    "*":  new Set(["title","alt","class","colspan","rowspan","start","cite","datetime"]),
+};
+const URL_SAFE_SCHEMES_HREF = /^(https?:|mailto:|tel:|cid:|#)/i;
+const URL_SAFE_SCHEMES_SRC  = /^(cid:|data:image\/)/i;       // remote http(s) is conditional
+const URL_SAFE_SCHEMES_SRC_LOAD = /^(cid:|data:image\/|https?:)/i;
+
+function sanitiseHtml(html, { inlineImages = new Map(), allowRemoteImages = false } = {}) {
+    const doc = new DOMParser().parseFromString(html || "", "text/html");
+    const root = doc.body;
+    if (!root) return "";
+
+    const SRC_RE = allowRemoteImages ? URL_SAFE_SCHEMES_SRC_LOAD : URL_SAFE_SCHEMES_SRC;
+
+    const walk = (node) => {
+        // Iterate a snapshot — we mutate during traversal.
+        const children = [...node.children];
+        for (const child of children) {
+            const tag = child.tagName.toLowerCase();
+            if (!HTML_ALLOWED_TAGS.has(tag)) {
+                // Replace disallowed element with a div containing its
+                // text content, so we don't drop user-readable text.
+                const repl = doc.createElement("div");
+                repl.textContent = child.textContent || "";
+                child.replaceWith(repl);
+                walk(repl);
+                continue;
+            }
+            // Filter attributes.
+            const allowed = HTML_ALLOWED_ATTRS[tag] || HTML_ALLOWED_ATTRS["*"];
+            const allowedAlways = HTML_ALLOWED_ATTRS["*"];
+            for (const attr of [...child.attributes]) {
+                const n = attr.name.toLowerCase();
+                if (n.startsWith("on")) { child.removeAttribute(n); continue; }
+                if (n === "style") {
+                    // Strip dangerous css. Keep only colour, font-*,
+                    // text-*, background-color (no urls), padding,
+                    // margin, border-*, line-height, list-style-*.
+                    const safe = (attr.value || "").split(";").map(s => s.trim()).filter(Boolean)
+                        .filter(decl => /^(color|font(-[a-z]+)?|text(-[a-z]+)?|background-color|padding(-[a-z]+)?|margin(-[a-z]+)?|border(-[a-z]+)?|line-height|list-style(-[a-z]+)?|width|max-width|min-width|height|max-height|min-height|display|vertical-align|text-align|opacity|letter-spacing)\s*:/i.test(decl))
+                        .filter(decl => !/url\s*\(|expression|behavior|@import|position\s*:\s*fixed/i.test(decl))
+                        .join(";");
+                    if (safe) child.setAttribute("style", safe);
+                    else      child.removeAttribute("style");
+                    continue;
+                }
+                if (!allowed.has(n) && !allowedAlways.has(n)) {
+                    child.removeAttribute(n); continue;
+                }
+                if (tag === "a" && n === "href") {
+                    if (!URL_SAFE_SCHEMES_HREF.test(attr.value)) {
+                        child.removeAttribute(n);
+                        continue;
+                    }
+                    // Force open-in-new-tab + no-referrer for external links.
+                    if (/^https?:/i.test(attr.value)) {
+                        child.setAttribute("target", "_blank");
+                        child.setAttribute("rel", "noopener noreferrer");
+                    }
+                }
+                if (tag === "img" && n === "src") {
+                    // cid: -> data url substitution.
+                    const cidMatch = /^cid:(.+)$/i.exec(attr.value);
+                    if (cidMatch) {
+                        const inline = inlineImages.get(cidMatch[1].trim());
+                        if (inline) {
+                            child.setAttribute("src", inline.dataUrl ||
+                                `data:${inline.mime};base64,${inline.dataB64}`);
+                        } else {
+                            child.removeAttribute(n);
+                        }
+                        continue;
+                    }
+                    if (!SRC_RE.test(attr.value)) {
+                        // Remote image while remote loading is off — stash original
+                        // url + replace with a 1x1 blank so the layout doesn't break.
+                        child.setAttribute("data-blocked-src", attr.value);
+                        child.setAttribute("src", "data:image/gif;base64,R0lGODlhAQABAAAAACw=");
+                        child.classList.add("blocked-image");
+                    }
+                }
+            }
+            walk(child);
+        }
+    };
+    walk(root);
+    return root.innerHTML;
+}
+
+function htmlBodyHasRemoteImages(html) {
+    return /<img[^>]+src=["']https?:/i.test(html || "");
+}
+
+// ----------------------------------------------------------------- attachments
+function downloadAttachment(att) {
+    try {
+        const bin = atob(att.dataB64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        const blob = new Blob([bytes], { type: att.mime || "application/octet-stream" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = att.filename || "attachment";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        // Revoke after the click so the browser has time to start the download.
+        setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    } catch (e) {
+        console.error("[QloakMail] attachment download failed:", e);
+        toast("Couldn't open attachment.", "err");
+    }
+}
+
+function fmtBytes(n) {
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function _attachmentIcon(mime) {
+    if (!mime) return "▪";
+    if (mime.startsWith("image/"))                  return "▦";
+    if (mime.startsWith("video/"))                  return "▶";
+    if (mime.startsWith("audio/"))                  return "♪";
+    if (mime === "application/pdf")                 return "▤";
+    if (/zip|rar|tar|gz|7z/.test(mime))             return "≡";
+    if (/word|document|sheet|presentation/.test(mime)) return "▥";
+    return "▪";
+}
+
+// ----------------------------------------------------------------- avatars
+//
+// Privacy-preserving avatar generator: deterministic colour from a
+// hash of the email, plus the first letter of the local-part. No
+// external services (Gravatar leaks the user's IP to Automattic).
+
+function _hashStr(s) {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) {
+        h ^= s.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+}
+function avatarFor(addr) {
+    if (!addr) return { letter: "?", color: "#444" };
+    // Pull the local part out of "Name <user@domain>" or "user@domain".
+    const m = /<([^>]+)>/.exec(addr);
+    const email = (m ? m[1] : addr).trim();
+    const local = email.split("@")[0] || email;
+    const letter = (local[0] || "?").toUpperCase();
+    const h = _hashStr(email.toLowerCase());
+    // HSL palette tuned to the cyberpunk theme — warm hues only.
+    const hue = (h % 60) + 8;          // 8–67° (red → orange → yellow)
+    const sat = 55 + ((h >> 8) % 25);  // 55–80%
+    const lig = 38 + ((h >> 16) % 12); // 38–50%
+    return { letter, color: `hsl(${hue} ${sat}% ${lig}%)` };
+}
+function avatarHtml(addr, { size = 28, mine = false } = {}) {
+    // If the user has set their own display picture and this is "us",
+    // render that image instead of the generated initials.
+    if (mine) {
+        const dp = (loadPrefs().avatar || "").trim();
+        if (dp) {
+            return `<span class="avatar avatar-img" style="width:${size}px;height:${size}px;">` +
+                   `<img src="${escapeHtml(dp)}" alt="" /></span>`;
+        }
+    }
+    const { letter, color } = avatarFor(addr);
+    return `<span class="avatar" style="width:${size}px;height:${size}px;background:${color};">` +
+           `<span class="avatar-letter">${escapeHtml(letter)}</span></span>`;
+}
+
 function extractPgpPart(rfc822) {
     const m = rfc822.match(/-----BEGIN PGP MESSAGE-----[\s\S]+?-----END PGP MESSAGE-----/);
     if (!m) throw new Error("no PGP block found in message");
@@ -1492,29 +1847,57 @@ function extractPgpPart(rfc822) {
 }
 
 function parseRfc822(raw) {
-    // Header/body separator. Try CRLFCRLF (RFC 5322 strict), fall back
-    // to LFLF (any sender that didn't bother). OpenPGP "text mode"
-    // literal-data packets normalise to LF on decrypt, so this is the
-    // common case once decrypted, NOT the rare case.
+    // Returns the rich structured form. The legacy `body` field is
+    // populated as the best-effort plaintext (for code that only
+    // wants a string) but new callers should use textBody / htmlBody
+    // / attachments / inlineImages.
     let eol = raw.indexOf("\r\n\r\n");
     let sepLen = 4;
     if (eol < 0) { eol = raw.indexOf("\n\n"); sepLen = 2; }
 
     const headerBlock = eol >= 0 ? raw.slice(0, eol) : raw;
     const rawBody     = eol >= 0 ? raw.slice(eol + sepLen) : "";
-    const headers = _parseHeaders(headerBlock);
-
-    // Body decoding: walk multipart, decode transfer-encoding.
+    const headers     = _parseHeaders(headerBlock);
     const ctype       = headers["content-type"] || "text/plain";
     const transferEnc = (headers["content-transfer-encoding"] || "7bit").toLowerCase();
-    let body;
+
+    // Aggregate buckets the multipart walker fills into.
+    const acc = {
+        textBody: null,
+        htmlBody: null,
+        attachments: [],     // [{ filename, mime, size, dataB64 }]
+        inlineImages: new Map(), // cid -> { mime, dataB64, dataUrl }
+    };
+
     if (/^multipart\//i.test(ctype)) {
-        body = _extractTextFromMultipart(rawBody, ctype) || rawBody;
+        _walkMultipart(rawBody, ctype, acc);
     } else if (/^text\/html/i.test(ctype)) {
-        body = _htmlToText(_decodeTransfer(rawBody, transferEnc));
+        acc.htmlBody = _decodeTransfer(rawBody, transferEnc);
+    } else if (/^text\//i.test(ctype) || ctype === "text/plain") {
+        acc.textBody = _decodeTransfer(rawBody, transferEnc);
     } else {
-        body = _decodeTransfer(rawBody, transferEnc);
+        // Single-part non-text body — treat as a download attachment.
+        const fnameMatch = /name=("([^"]+)"|([^;\s]+))/i.exec(ctype) ||
+                           /filename=("([^"]+)"|([^;\s]+))/i.exec(headers["content-disposition"] || "");
+        acc.attachments.push({
+            filename: fnameMatch ? (fnameMatch[2] || fnameMatch[3]) : "attachment",
+            mime: ctype.split(";")[0].trim(),
+            size: rawBody.length,
+            dataB64: transferEnc === "base64" ? rawBody.replace(/\s+/g, "") : btoa(rawBody),
+        });
     }
+
+    // Resolve cid: -> data URL for inline images.
+    for (const [cid, img] of acc.inlineImages) {
+        img.dataUrl = `data:${img.mime};base64,${img.dataB64}`;
+    }
+
+    // Legacy plaintext body: prefer text part; else strip HTML.
+    const legacyBody = acc.textBody
+        ? acc.textBody
+        : acc.htmlBody
+            ? _htmlToText(acc.htmlBody)
+            : rawBody;
 
     return {
         from:    headers.from       || "",
@@ -1522,9 +1905,13 @@ function parseRfc822(raw) {
         cc:      headers.cc         || "",
         subject: headers.subject    || "",
         date:    headers.date       || "",
-        messageId: headers["message-id"] || "",
+        messageId:  headers["message-id"] || "",
         references: headers.references   || headers["in-reply-to"] || "",
-        body,
+        textBody:    acc.textBody,
+        htmlBody:    acc.htmlBody,
+        attachments: acc.attachments,
+        inlineImages: acc.inlineImages,
+        body: legacyBody,
     };
 }
 
@@ -1546,19 +1933,18 @@ function _parseHeaders(block) {
     return headers;
 }
 
-// Pull the readable body from a multipart/* envelope. Prefers the first
-// text/plain part it can find; falls back to text/html (stripped of
-// tags). Recurses into nested multipart (multipart/alternative inside
-// multipart/mixed is common).
-function _extractTextFromMultipart(rawBody, ctypeHeader) {
+// Walks a multipart/* body, recursively, populating the accumulator
+// with text/html bodies, attachments, and inline images. The same
+// function handles multipart/alternative (text/plain + text/html),
+// multipart/related (HTML + cid: inline images), multipart/mixed
+// (mail body + attachments), and any nesting of the three.
+function _walkMultipart(rawBody, ctypeHeader, acc) {
     const m = /boundary=("([^"]+)"|([^;\s]+))/i.exec(ctypeHeader);
-    if (!m) return "";
+    if (!m) return;
     const boundary = m[2] || m[3];
-    // Each part is delimited by --boundary; the last one is --boundary--.
-    const parts = rawBody.split(new RegExp(`--${boundary.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:--)?`));
-
-    let textPlain = null;
-    let textHtml  = null;
+    const parts = rawBody.split(
+        new RegExp(`--${boundary.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:--)?`)
+    );
 
     for (const p of parts) {
         if (!p.trim()) continue;
@@ -1567,22 +1953,54 @@ function _extractTextFromMultipart(rawBody, ctypeHeader) {
 
         const partHeaderBlock = p.slice(0, sepMatch.index);
         const partBodyRaw     = p.slice(sepMatch.index + sepMatch[0].length).replace(/\r?\n*$/, "");
-        const partHeaders     = _parseHeaders(partHeaderBlock);
-        const partCtype       = partHeaders["content-type"] || "";
-        const partEnc         = (partHeaders["content-transfer-encoding"] || "7bit").toLowerCase();
+        const ph              = _parseHeaders(partHeaderBlock);
+        const partCtype       = ph["content-type"]              || "";
+        const partEnc         = (ph["content-transfer-encoding"] || "7bit").toLowerCase();
+        const partDisp        = ph["content-disposition"]       || "";
+        const cidRaw          = ph["content-id"]                || "";
+        const cid             = cidRaw.replace(/^<|>$/g, "").trim();
 
         if (/^multipart\//i.test(partCtype)) {
-            const nested = _extractTextFromMultipart(partBodyRaw, partCtype);
-            if (nested && textPlain === null) textPlain = nested;
-        } else if (/^text\/plain/i.test(partCtype)) {
-            if (textPlain === null) textPlain = _decodeTransfer(partBodyRaw, partEnc);
-        } else if (/^text\/html/i.test(partCtype)) {
-            if (textHtml === null) textHtml = _decodeTransfer(partBodyRaw, partEnc);
+            _walkMultipart(partBodyRaw, partCtype, acc);
+            continue;
+        }
+
+        const isAttach = /^attachment/i.test(partDisp);
+        const isInline = /^inline/i.test(partDisp) || cid;
+        const dispFnameMatch = /filename=("([^"]+)"|([^;\s]+))/i.exec(partDisp) ||
+                               /name=("([^"]+)"|([^;\s]+))/i.exec(partCtype);
+        const filename = dispFnameMatch ? (dispFnameMatch[2] || dispFnameMatch[3]) : null;
+        const mime = partCtype.split(";")[0].trim().toLowerCase();
+
+        if (/^text\/plain/i.test(partCtype) && !isAttach) {
+            if (acc.textBody === null) acc.textBody = _decodeTransfer(partBodyRaw, partEnc);
+        } else if (/^text\/html/i.test(partCtype) && !isAttach) {
+            if (acc.htmlBody === null) acc.htmlBody = _decodeTransfer(partBodyRaw, partEnc);
+        } else if (/^image\//i.test(partCtype) && (isInline || cid)) {
+            // Inline image — store base64 with its CID for HTML resolution.
+            const dataB64 = partEnc === "base64"
+                ? partBodyRaw.replace(/\s+/g, "")
+                : btoa(_decodeTransfer(partBodyRaw, partEnc));
+            if (cid) acc.inlineImages.set(cid, { mime, dataB64 });
+            // Inline images that aren't referenced are also useful as
+            // download-able attachments.
+            acc.attachments.push({
+                filename: filename || `image-${acc.attachments.length + 1}`,
+                mime, size: dataB64.length,
+                dataB64, inline: true, cid: cid || null,
+            });
+        } else {
+            // Anything else (PDFs, docs, archives, octet-stream): attachment.
+            const dataB64 = partEnc === "base64"
+                ? partBodyRaw.replace(/\s+/g, "")
+                : btoa(_decodeTransfer(partBodyRaw, partEnc));
+            acc.attachments.push({
+                filename: filename || "attachment",
+                mime, size: dataB64.length,
+                dataB64,
+            });
         }
     }
-    if (textPlain) return textPlain;
-    if (textHtml)  return _htmlToText(textHtml);
-    return "";
 }
 
 function _decodeTransfer(body, enc) {

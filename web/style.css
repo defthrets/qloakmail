@@ -2336,6 +2336,14 @@ body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
         z-index: 1;
     }
     .reader-action { font-size: 0.65em; padding: 0.3rem 0.5rem; }
+    /* On phones the 32px avatar column eats too much of the narrow
+       message-list. Drop it; the from line still tells you who. */
+    #message-list li {
+        grid-template-columns: 22px 22px 1fr;
+    }
+    #message-list li > .avatar { display: none; }
+    /* Reader header avatar stays visible but slightly smaller. */
+    .reader-header-row .avatar { width: 32px; height: 32px; }
 }
 
 /* ---------------- compose CC / BCC toggle ---------------- */
@@ -2534,10 +2542,10 @@ body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
 .bulk-actions button:hover { color: var(--accent); border-color: var(--orange); }
 .bulk-actions button.danger:hover { color: var(--warn); border-color: var(--warn); }
 
-/* ---------------- list rows: checkbox + star ---------------- */
+/* ---------------- list rows: checkbox + star + avatar ---------------- */
 #message-list li {
     display: grid;
-    grid-template-columns: 22px 22px 1fr;
+    grid-template-columns: 22px 22px 32px 1fr;
     gap: 0.4rem;
     align-items: start;
 }
@@ -2672,6 +2680,256 @@ body.density-compact #message-list li .snippet { display: none; }
     margin-bottom: 0.7rem;
     padding-bottom: 0.5rem;
     border-bottom: 1px dashed rgba(255, 122, 31, 0.18);
+}
+
+/* ---------------- avatars ---------------- */
+.avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex: 0 0 auto;
+    color: #1a0a02;
+    font-family: var(--mono);
+    font-weight: 700;
+    letter-spacing: 0;
+    box-shadow: 0 0 0 1px rgba(255, 122, 31, 0.18);
+    user-select: none;
+}
+.avatar .avatar-letter {
+    font-size: 0.78em;
+    line-height: 1;
+}
+.avatar.avatar-img { background: transparent; }
+.avatar.avatar-img img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.avatar.avatar-locked {
+    background: rgba(255, 122, 31, 0.1);
+    color: var(--orange);
+    font-size: 0.7em;
+}
+.avatar-preview {
+    width: 56px;
+    height: 56px;
+    box-shadow: 0 0 0 2px rgba(255, 122, 31, 0.25);
+}
+.avatar-preview .avatar-letter { font-size: 1.4em; }
+.avatar-edit {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+.avatar-edit-controls {
+    display: flex;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+}
+
+/* ---------------- reader header layout ---------------- */
+.reader-header-row {
+    display: flex;
+    gap: 0.85rem;
+    align-items: flex-start;
+}
+.reader-header-row .avatar { margin-top: 0.2rem; }
+.reader-header-text { flex: 1; min-width: 0; }
+
+/* ---------------- HTML message body ---------------- */
+.body-content.html-body {
+    padding: 1.5rem;
+    color: var(--fg);
+    line-height: 1.6;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+.body-content.html-body * {
+    /* HTML messages frequently come in dark text; we render on a dark
+       backdrop. Force a readable colour while keeping any sender-set
+       background. Can be overridden by inline style on the element. */
+    max-width: 100%;
+}
+.body-content.html-body p,
+.body-content.html-body div,
+.body-content.html-body td,
+.body-content.html-body li,
+.body-content.html-body span:not([style*="color"]) {
+    color: inherit;
+}
+.body-content.html-body a {
+    color: var(--accent-2);
+    text-decoration: underline;
+    text-decoration-color: rgba(255, 122, 31, 0.5);
+}
+.body-content.html-body a:hover {
+    color: var(--accent);
+    text-decoration-color: var(--accent);
+}
+.body-content.html-body img {
+    max-width: 100%;
+    height: auto;
+    display: inline-block;
+}
+.body-content.html-body img.blocked-image {
+    width: 80px;
+    height: 60px;
+    background: rgba(255, 122, 31, 0.08);
+    border: 1px dashed rgba(255, 122, 31, 0.35);
+    object-fit: contain;
+}
+.body-content.html-body table {
+    border-collapse: collapse;
+    max-width: 100%;
+}
+.body-content.html-body th,
+.body-content.html-body td {
+    padding: 0.3em 0.5em;
+    border: 1px solid rgba(255, 122, 31, 0.18);
+}
+.body-content.html-body blockquote {
+    border-left: 3px solid rgba(255, 122, 31, 0.4);
+    padding-left: 0.85rem;
+    margin: 0.6rem 0;
+    color: var(--fg-dim);
+}
+.body-content.html-body pre,
+.body-content.html-body code {
+    font-family: var(--mono);
+    background: rgba(255, 122, 31, 0.06);
+    padding: 0.15em 0.35em;
+    font-size: 0.94em;
+}
+.body-content.html-body pre {
+    padding: 0.7em 0.85em;
+    overflow-x: auto;
+}
+.body-content.html-body hr {
+    border: 0;
+    border-top: 1px dashed rgba(255, 122, 31, 0.22);
+    margin: 1rem 0;
+}
+.body-content.text-body pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: var(--sans);
+    font-size: 0.94em;
+    padding: 1.5rem;
+    margin: 0;
+    line-height: 1.6;
+    color: var(--fg);
+}
+
+/* ---------------- remote-image banner ---------------- */
+.remote-image-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 1rem;
+    background: rgba(255, 122, 31, 0.08);
+    border-bottom: 1px dashed rgba(255, 122, 31, 0.3);
+    font-family: var(--mono);
+    font-size: 0.78em;
+    letter-spacing: 0.06em;
+    color: var(--fg-dim);
+}
+.remote-image-banner .banner-tag {
+    color: var(--orange);
+    text-shadow: 0 0 4px var(--orange-glow);
+    letter-spacing: 0.18em;
+    font-weight: 700;
+    margin-right: 0.4em;
+}
+.remote-image-banner .banner-action {
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid rgba(255, 122, 31, 0.3);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 0.95em;
+    padding: 0.25rem 0.6rem;
+    cursor: pointer;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+.remote-image-banner .banner-action:hover {
+    background: rgba(255, 138, 61, 0.12);
+    border-color: var(--orange);
+}
+
+/* ---------------- attachments list ---------------- */
+.attachments {
+    margin: 1rem 1.5rem 2rem;
+    padding-top: 0.85rem;
+    border-top: 1px dashed rgba(255, 122, 31, 0.22);
+}
+.attachments h3 {
+    color: var(--accent);
+    text-shadow: 0 0 5px var(--accent-glow);
+    font-family: var(--mono);
+    font-size: 0.78em;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin: 0 0 0.6rem;
+    font-weight: 600;
+}
+.attachments h3 .bracket { color: var(--orange); text-shadow: 0 0 5px var(--orange-glow); margin: 0 0.18em; }
+.attachments h3 .count {
+    color: var(--fg-muted);
+    margin-left: 0.4em;
+    letter-spacing: 0;
+    font-size: 0.85em;
+}
+.attachment-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+.att-download {
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    gap: 0.65rem;
+    align-items: center;
+    width: 100%;
+    text-align: left;
+    background: rgba(8, 11, 10, 0.5);
+    border: 1px solid rgba(255, 122, 31, 0.22);
+    color: var(--fg);
+    font-family: var(--mono);
+    font-size: 0.85em;
+    padding: 0.5rem 0.8rem;
+    cursor: pointer;
+    transition: border-color var(--t-fast), background var(--t-fast);
+}
+.att-download:hover {
+    border-color: var(--orange);
+    background: rgba(255, 122, 31, 0.06);
+}
+.att-icon {
+    color: var(--orange);
+    text-shadow: 0 0 4px var(--orange-glow);
+    font-size: 1.1em;
+    text-align: center;
+}
+.att-name {
+    color: var(--accent);
+    text-shadow: 0 0 4px var(--accent-glow);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+.att-meta {
+    color: var(--fg-muted);
+    font-size: 0.85em;
+    letter-spacing: 0.06em;
 }
 
 /* ---------------- print stylesheet ---------------- */
