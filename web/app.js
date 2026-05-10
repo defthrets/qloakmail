@@ -188,7 +188,7 @@ function classifyStoredSession() {
 const MATRIX_VIEWS = new Set([
     "auth-view", "unlock-view",
     "about-view", "privacy-view", "terms-view",
-    "mail-view", "recovery-shown-view",
+    "mail-view",
 ]);
 function show(viewId) {
     $$(".view").forEach(v => v.classList.toggle("active", v.id === viewId));
@@ -358,92 +358,9 @@ async function unlockSession(password) {
     await enterMailbox();
 }
 
-// ----------------------------------------------------------------- signup
-async function handleSignup(form) {
-    const status = $("#signup-status");
-    setStatus(status, "Generating keypair (this can take a few seconds)...");
-
-    const fd = new FormData(form);
-    const email = fd.get("email").trim();
-    const password = fd.get("password");
-    const password2 = fd.get("password2");
-    const invite = (fd.get("invite") || "").trim();
-
-    if (password !== password2) {
-        setStatus(status, "Passwords do not match.", "err");
-        return;
-    }
-
-    try {
-        const { privateKey, publicKey } = await openpgp.generateKey({
-            type: "ecc",
-            curve: "ed25519",
-            userIDs: [{ email }],
-            format: "armored",
-        });
-        const pubObj = await openpgp.readKey({ armoredKey: publicKey });
-        const fpr = pubObj.getFingerprint();
-
-        const recoveryCode = generateRecoveryCode();
-
-        const wrappedPwd = await wrapPrivateKey(privateKey, password);
-        const wrappedRec = await wrapPrivateKey(privateKey, recoveryCode, {
-            ...wrappedPwd.argon2_params,
-            salt_b64: b64encode(_internals.randomBytes(16)),
-        });
-
-        const { saltHex, verifierHex } = await SRP.generateVerifier(email, password);
-
-        setStatus(status, "Submitting registration...");
-        await api.post("/auth/register", {
-            email,
-            srp_salt: saltHex,
-            srp_verifier: verifierHex,
-            pubkey_armored: publicKey,
-            pubkey_fpr: fpr,
-            encrypted_privkey_password: wrappedPwd.blobB64,
-            encrypted_privkey_recovery: wrappedRec.blobB64,
-            argon2_params: wrappedPwd.argon2_params,
-            invite_code: invite || null,
-            captcha_token: null,
-        });
-
-        // Show recovery code, then auto-login on confirm.
-        const codeEl = $("#recovery-shown-code");
-        codeEl.textContent = recoveryCode;
-        // Auto-clear the clipboard 30s after the user copies the
-        // recovery code, so it doesn't sit in the OS paste buffer.
-        codeEl.addEventListener("copy", scheduleClipboardClear, { once: true });
-        show("recovery-shown-view");
-
-        const confirmBox = $("#recovery-shown-confirm");
-        const continueBtn = $("#recovery-shown-continue");
-        const recoveryStatus = $("#recovery-shown-status");
-
-        confirmBox.checked = false;
-        continueBtn.disabled = true;
-        setStatus(recoveryStatus, "");
-
-        confirmBox.onchange = e => { continueBtn.disabled = !e.target.checked; };
-        continueBtn.onclick = async () => {
-            continueBtn.disabled = true;
-            setStatus(recoveryStatus, "Signing you in...");
-            try {
-                // Just-created accounts default to remember-on-this-device.
-                await performLogin(email, password, true);
-            } catch (e) {
-                console.error("[QloakMail] auto-login after signup failed:", e);
-                setStatus(recoveryStatus, "Auto sign-in failed. Use the form below.", "err");
-                show("auth-view");
-                $("#login-form input[name=email]").value = email;
-                $("#login-form input[name=password]").focus();
-            }
-        };
-    } catch (e) {
-        console.error(e);
-        setStatus(status, "Failed: " + (e.message || e), "err");
-    }
-}
+// (Signup flow intentionally removed — public registration is closed.
+// The /auth/register endpoint is also gated server-side via
+// REGISTRATION_ENABLED. New accounts have to be created out-of-band.)
 
 // ----------------------------------------------------------------- recovery
 async function handleRecovery(form) {
@@ -2690,9 +2607,10 @@ function switchAdminTab(name) {
         t.classList.toggle("active", t.dataset.adminTab === name));
     $$("#admin-modal .admin-pane").forEach(p =>
         p.hidden = p.dataset.pane !== name);
-    if (name === "stats")    loadAdminStats();
-    if (name === "accounts") loadAdminAccounts();
-    if (name === "ip-bans")  loadAdminIpBans();
+    if (name === "stats")     loadAdminStats();
+    if (name === "accounts")  loadAdminAccounts();
+    if (name === "ip-bans")   loadAdminIpBans();
+    if (name === "audit-log") loadAdminAuditLog();
 }
 
 function _adminToast(msg, kind) {
@@ -2712,7 +2630,12 @@ function _fmtDate(s) {
 
 async function loadAdminStats() {
     try {
-        const s = await api.get("/admin/stats");
+        const [s, sigs, msgs, storage] = await Promise.all([
+            api.get("/admin/stats"),
+            api.get("/admin/timeseries/signups?days=30"),
+            api.get("/admin/timeseries/messages?days=30"),
+            api.get("/admin/top-storage?limit=10"),
+        ]);
         $("#stat-accounts-total").textContent = s.accounts_total;
         $("#stat-accounts-breakdown").textContent =
             `${s.accounts_active} active · ${s.accounts_banned} banned · ${s.accounts_pending} pending`;
@@ -2723,8 +2646,127 @@ async function loadAdminStats() {
         $("#stat-messages-24h").textContent   = s.messages_24h;
         $("#stat-storage").textContent  = _fmtBytes(s.storage_bytes_used);
         $("#stat-ip-bans").textContent  = s.ip_blocks_active;
+
+        renderTimeChart($("#chart-signups"),  sigs);
+        renderTimeChart($("#chart-messages"), msgs);
+        renderTopStorage($("#admin-top-storage"), storage, s.storage_bytes_used);
     } catch (e) {
         _adminToast("Stats load failed: " + (e.message || e), "err");
+    }
+}
+
+// Pure-SVG line chart for {date, count} arrays. Designed to fit a
+// chart-card (200px tall, scales to host width) without external
+// dependencies. Bars + smoothed line + 3 y-grid lines + first/last
+// date labels. Cyberpunk colour palette.
+function renderTimeChart(host, points) {
+    if (!host) return;
+    const w = host.clientWidth || 320;
+    const h = 200;
+    const pad = { l: 36, r: 14, t: 16, b: 28 };
+    const innerW = w - pad.l - pad.r;
+    const innerH = h - pad.t - pad.b;
+    const max = Math.max(1, ...points.map(p => p.count));
+    const stepX = points.length > 1 ? innerW / (points.length - 1) : 0;
+    const yOf = v => pad.t + innerH - (v / max) * innerH;
+
+    // Path for the line.
+    const path = points.map((p, i) =>
+        `${i === 0 ? "M" : "L"} ${pad.l + i * stepX} ${yOf(p.count)}`
+    ).join(" ");
+    // Area fill — line + bottom-right + bottom-left + close.
+    const area = path +
+        ` L ${pad.l + (points.length - 1) * stepX} ${pad.t + innerH}` +
+        ` L ${pad.l} ${pad.t + innerH} Z`;
+
+    // Y-axis tick labels (0, max/2, max).
+    const yTicks = [0, max / 2, max].map(v => `
+        <line x1="${pad.l}" x2="${pad.l + innerW}" y1="${yOf(v)}" y2="${yOf(v)}"
+              stroke="rgba(255,122,31,0.12)" stroke-dasharray="2 4"/>
+        <text x="${pad.l - 6}" y="${yOf(v) + 3}" fill="#7a8088"
+              font-family="ui-monospace,monospace" font-size="9"
+              text-anchor="end">${Math.round(v)}</text>
+    `).join("");
+
+    // Bars on top of the area for daily granularity.
+    const bars = points.map((p, i) => {
+        const bw = Math.max(1, stepX * 0.55);
+        const x  = pad.l + i * stepX - bw / 2;
+        const y  = yOf(p.count);
+        return `<rect x="${x}" y="${y}" width="${bw}" height="${pad.t + innerH - y}"
+            fill="rgba(255,138,61,0.6)"></rect>`;
+    }).join("");
+
+    // First + last date labels.
+    const fmtDay = s => s.slice(5);  // "MM-DD"
+    const lbls = `
+        <text x="${pad.l}" y="${h - 8}" fill="#7a8088"
+              font-family="ui-monospace,monospace" font-size="9">${fmtDay(points[0]?.date || "")}</text>
+        <text x="${pad.l + innerW}" y="${h - 8}" fill="#7a8088"
+              font-family="ui-monospace,monospace" font-size="9" text-anchor="end">${fmtDay(points[points.length - 1]?.date || "")}</text>
+    `;
+
+    host.innerHTML = `
+        <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}"
+             preserveAspectRatio="none" role="img" aria-label="time series">
+            ${yTicks}
+            <path d="${area}" fill="rgba(255,138,61,0.12)"/>
+            ${bars}
+            <path d="${path}" fill="none" stroke="#ff8a3d" stroke-width="1.5"/>
+            ${lbls}
+        </svg>`;
+}
+
+function renderTopStorage(host, rows, totalBytes) {
+    if (!host) return;
+    if (!rows.length) {
+        host.innerHTML = `<p class="settings-hint">No accounts yet.</p>`;
+        return;
+    }
+    const max = Math.max(1, ...rows.map(r => r.used_bytes));
+    host.innerHTML = rows.map(r => {
+        const pct = Math.round((r.used_bytes / max) * 100);
+        const quotaPct = r.quota_bytes ? Math.round((r.used_bytes / r.quota_bytes) * 100) : 0;
+        return `
+            <div class="storage-row" data-id="${r.account_id}">
+                <div class="storage-row-head">
+                    <span class="storage-email">${escapeHtml(r.email)}</span>
+                    <span class="storage-bytes">${_fmtBytes(r.used_bytes)}
+                        <span class="storage-quota">/ ${_fmtBytes(r.quota_bytes)} (${quotaPct}%)</span></span>
+                </div>
+                <div class="storage-bar"><span style="width:${pct}%"></span></div>
+                <div class="storage-meta">${r.message_count} msg${r.message_count === 1 ? "" : "s"}</div>
+            </div>`;
+    }).join("");
+}
+
+async function loadAdminAuditLog() {
+    try {
+        const rows = await api.get("/admin/audit-log?limit=200");
+        const tbody = $("#admin-audit-table tbody");
+        if (!rows.length) {
+            tbody.innerHTML = `<tr><td colspan="5" class="empty">No admin actions yet.</td></tr>`;
+            return;
+        }
+        const labels = {
+            ban_account:     "Ban account",
+            unban_account:   "Unban account",
+            delete_account:  "Delete account",
+            revoke_sessions: "Revoke sessions",
+            add_ip_block:    "Add IP block",
+            remove_ip_block: "Remove IP block",
+        };
+        tbody.innerHTML = rows.map(r => `
+            <tr>
+                <td>${_fmtDate(r.created_at)}</td>
+                <td class="email">${escapeHtml(r.admin_email)}</td>
+                <td><span class="action-pill">${escapeHtml(labels[r.action] || r.action)}</span></td>
+                <td>${escapeHtml(r.target_label || "—")}</td>
+                <td>${escapeHtml(r.details || "")}</td>
+            </tr>
+        `).join("");
+    } catch (e) {
+        _adminToast("Audit load failed: " + (e.message || e), "err");
     }
 }
 
@@ -2751,6 +2793,7 @@ async function loadAdminAccounts() {
                     ${a.status === "banned"
                         ? `<button class="link" data-action="unban">Unban</button>`
                         : `<button class="link" data-action="ban">Ban</button>`}
+                    <button class="link" data-action="revoke">Kick</button>
                     <button class="link danger" data-action="delete">Delete</button>
                 </td>
             </tr>
@@ -2769,6 +2812,11 @@ async function loadAdminAccounts() {
                         await api.post(`/admin/account/${id}/ban`, { reason });
                     } else if (action === "unban") {
                         await api.post(`/admin/account/${id}/unban`, {});
+                    } else if (action === "revoke") {
+                        if (!confirm(`Force-revoke all live sessions for ${email}?`)) return;
+                        const r = await api.post(`/admin/account/${id}/revoke-sessions`, {});
+                        _adminToast(`Revoked ${r.revoked} session(s).`, "ok");
+                        return;
                     } else if (action === "delete") {
                         if (!confirm(`Delete ${email} and all their data permanently?`)) return;
                         await api.del(`/admin/account/${id}`);
@@ -2956,16 +3004,10 @@ async function boot() {
         invite_required: false, captcha_provider: "none",
         onion_address: "",
     }));
-    $("#signup-domain-hint").textContent =
-        "Domain: " + state.config.domains.join(", ");
-    if (state.config.invite_required) $("#invite-row").hidden = false;
     bindOnionNotice(state.config.onion_address);
 
     $("#login-form").addEventListener("submit", e => {
         e.preventDefault(); handleLogin(e.target);
-    });
-    $("#signup-form").addEventListener("submit", e => {
-        e.preventDefault(); handleSignup(e.target);
     });
     $("#recovery-form").addEventListener("submit", e => {
         e.preventDefault(); handleRecovery(e.target);

@@ -73,11 +73,6 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
           <span class="meta"><span class="meta-dot">●</span>online</span>
         </nav>
 
-        <nav class="auth-tabs">
-          <button class="tab active" data-tab="login">Sign in</button>
-          <button class="tab" data-tab="signup">Create account</button>
-        </nav>
-
         <form id="login-form" class="auth-form active" autocomplete="on">
           <label>Email
             <input type="email" name="email" autocomplete="username" required>
@@ -100,24 +95,6 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
           </div>
           <button type="submit" class="primary">Sign in</button>
           <p class="status" id="login-status"></p>
-        </form>
-
-        <form id="signup-form" class="auth-form" autocomplete="off">
-          <label>Email
-            <input type="email" name="email" required>
-            <small id="signup-domain-hint"></small>
-          </label>
-          <label>Password (12+ chars)
-            <input type="password" name="password" minlength="12" required>
-          </label>
-          <label>Confirm password
-            <input type="password" name="password2" minlength="12" required>
-          </label>
-          <label id="invite-row" hidden>Invite code
-            <input type="text" name="invite">
-          </label>
-          <button type="submit" class="primary">Create account</button>
-          <p class="status" id="signup-status"></p>
         </form>
 
         <form id="recovery-form" class="auth-form" autocomplete="off">
@@ -658,24 +635,6 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
       </div>
     </section>
 
-    <!-- ============== Recovery code reveal ============== -->
-    <section id="recovery-shown-view" class="view">
-      <div class="auth-card recovery-card">
-        <h2>Save your recovery code</h2>
-        <p class="warn">
-          This is the <strong>only</strong> way to recover your account if you forget
-          your password. We can't regenerate it. Write it down and store it offline.
-        </p>
-        <pre id="recovery-shown-code"></pre>
-        <label class="confirm">
-          <input type="checkbox" id="recovery-shown-confirm">
-          <span>I have saved my recovery code in a safe place.</span>
-        </label>
-        <button id="recovery-shown-continue" class="primary" disabled>Continue to inbox</button>
-        <p class="status" id="recovery-shown-status"></p>
-      </div>
-    </section>
-
     <!-- ============== Mail ============== -->
     <section id="mail-view" class="view">
       <header class="topbar">
@@ -780,9 +739,10 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
           </header>
 
           <nav class="admin-tabs" role="tablist">
-            <button class="admin-tab active" data-admin-tab="stats"    type="button">Stats</button>
-            <button class="admin-tab"        data-admin-tab="accounts" type="button">Accounts</button>
-            <button class="admin-tab"        data-admin-tab="ip-bans"  type="button">IP bans</button>
+            <button class="admin-tab active" data-admin-tab="stats"     type="button">Stats</button>
+            <button class="admin-tab"        data-admin-tab="accounts"  type="button">Accounts</button>
+            <button class="admin-tab"        data-admin-tab="ip-bans"   type="button">IP bans</button>
+            <button class="admin-tab"        data-admin-tab="audit-log" type="button">Audit log</button>
           </nav>
 
           <!-- STATS TAB -->
@@ -794,6 +754,21 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
               <div class="stat-card"><div class="stat-label">Storage</div><div class="stat-value" id="stat-storage">—</div><div class="stat-sub">total used</div></div>
               <div class="stat-card"><div class="stat-label">IP bans</div><div class="stat-value" id="stat-ip-bans">—</div><div class="stat-sub">active</div></div>
             </div>
+
+            <div class="admin-charts">
+              <figure class="chart-card">
+                <figcaption><span class="bracket">[</span>SIGNUPS · 30d<span class="bracket">]</span></figcaption>
+                <div class="chart-host" id="chart-signups"></div>
+              </figure>
+              <figure class="chart-card">
+                <figcaption><span class="bracket">[</span>MESSAGES · 30d<span class="bracket">]</span></figcaption>
+                <div class="chart-host" id="chart-messages"></div>
+              </figure>
+            </div>
+
+            <h4 class="admin-h4"><span class="bracket">[</span>TOP STORAGE<span class="bracket">]</span></h4>
+            <div class="storage-list" id="admin-top-storage"></div>
+
             <div class="admin-actions">
               <button type="button" class="link" id="admin-refresh">Refresh</button>
             </div>
@@ -838,6 +813,19 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
               </table>
             </div>
             <p class="settings-hint">IPs are stored as one-way HMAC fingerprints — never as raw addresses. Rotating IP_BAN_SECRET invalidates the entire list.</p>
+          </section>
+
+          <!-- AUDIT LOG TAB -->
+          <section class="admin-pane" data-pane="audit-log" hidden>
+            <div class="admin-table-wrap">
+              <table class="admin-table" id="admin-audit-table">
+                <thead><tr>
+                  <th>When</th><th>Admin</th><th>Action</th><th>Target</th><th>Details</th>
+                </tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <p class="settings-hint">Append-only log of every admin action. Bans, deletes, IP blocks, session revocations.</p>
           </section>
 
           <p class="status" id="admin-status"></p>

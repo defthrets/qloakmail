@@ -84,6 +84,26 @@ class InviteCode(Base):
     expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
 
+class AdminAction(Base):
+    """Audit log row for every admin action.
+
+    Written by the admin endpoints whenever something mutates state
+    (ban / unban / delete / IP block add+remove / session revoke).
+    Read-only afterwards: there's no edit/delete endpoint.
+    """
+    __tablename__ = "admin_actions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    admin_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    admin_email: Mapped[str] = mapped_column(String)
+    action: Mapped[str] = mapped_column(Text)        # "ban_account", "delete_account", etc.
+    target_type: Mapped[Optional[str]] = mapped_column(Text)  # "account" / "ip_block"
+    target_id: Mapped[Optional[str]] = mapped_column(Text)    # uuid string or fingerprint
+    target_label: Mapped[Optional[str]] = mapped_column(Text) # email / fingerprint prefix for display
+    details: Mapped[Optional[str]] = mapped_column(Text)      # reason, etc.
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
 class IPBlock(Base):
     """Persistent IP block list for the admin panel.
 

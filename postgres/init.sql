@@ -104,6 +104,22 @@ CREATE TABLE IF NOT EXISTS abuse_reports (
     handled         BOOLEAN NOT NULL DEFAULT FALSE
 );
 
+-- ---------- admin audit log ----------
+-- Append-only history of every admin action: bans, unbans, deletes,
+-- IP blocks, session revocations. Read-only after insert.
+CREATE TABLE IF NOT EXISTS admin_actions (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    admin_id      UUID NOT NULL,
+    admin_email   CITEXT NOT NULL,
+    action        TEXT NOT NULL,
+    target_type   TEXT,
+    target_id     TEXT,
+    target_label  TEXT,
+    details       TEXT,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ix_admin_actions_created ON admin_actions (created_at DESC);
+
 -- ---------- IP block list (admin) ----------
 -- Stores ONE-WAY hashes (HMAC-SHA256 keyed with IP_BAN_SECRET) of
 -- banned IPs. We never store the IP itself; the admin pastes one in,

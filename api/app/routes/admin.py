@@ -1,4 +1,4 @@
-"""Admin panel API.
+"""Admin panel API — stats, accounts, IP blocks, audit log, charts.
 
 Behind the `current_admin` dependency, which requires:
   1. A valid authenticated session (normal Bearer token).
@@ -33,13 +33,13 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import get_settings
 from ..db import get_session
-from ..deps import current_admin
-from ..models import Account, IPBlock, Message
+from ..deps import current_admin, get_redis
+from ..models import Account, AdminAction, IPBlock, Message
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 _settings = get_settings()
@@ -110,6 +110,28 @@ def _now() -> datetime:
 def hmac_ip(ip: str) -> str:
     secret = _settings.effective_ip_ban_secret.encode()
     return hmac.new(secret, ip.encode(), hashlib.sha256).hexdigest()
+
+
+async def _audit(
+    session: AsyncSession,
+    admin: Account,
+    action: str,
+    target_type: str | None = None,
+    target_id: str | None = None,
+    target_label: str | None = None,
+    details: str | None = None,
+) -> None:
+    session.add(AdminAction(
+        id=uuid.uuid4(),
+        admin_id=admin.id,
+        admin_email=admin.email,
+        action=action,
+        target_type=target_type,
+        target_id=target_id,
+        target_label=target_label,
+        details=details,
+        created_at=_now(),
+    ))
 
 
 # ----------------------------------------------------------------- stats
@@ -240,13 +262,15 @@ async def get_account(
 async def ban_account(
     account_id: uuid.UUID,
     body: BanRequest,
-    _admin: Account = Depends(current_admin),
+    admin: Account = Depends(current_admin),
     session: AsyncSession = Depends(get_session),
 ):
     a = (await session.execute(select(Account).where(Account.id == account_id))).scalar_one_or_none()
     if not a:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "not found")
     a.status = "banned"
+    await _audit(session, admin, "ban_account", "account",
+                 str(a.id), a.email, body.reason)
     await session.commit()
     return {"ok": True, "status": a.status, "reason": body.reason}
 
@@ -254,15 +278,46 @@ async def ban_account(
 @router.post("/account/{account_id}/unban")
 async def unban_account(
     account_id: uuid.UUID,
-    _admin: Account = Depends(current_admin),
+    admin: Account = Depends(current_admin),
     session: AsyncSession = Depends(get_session),
 ):
     a = (await session.execute(select(Account).where(Account.id == account_id))).scalar_one_or_none()
     if not a:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "not found")
     a.status = "active"
+    await _audit(session, admin, "unban_account", "account", str(a.id), a.email)
     await session.commit()
     return {"ok": True, "status": a.status}
+
+
+@router.post("/account/{account_id}/revoke-sessions")
+async def revoke_sessions(
+    account_id: uuid.UUID,
+    admin: Account = Depends(current_admin),
+    session: AsyncSession = Depends(get_session),
+    redis_client = Depends(get_redis),
+):
+    """Drop all live session tokens for an account from Redis.
+    Forces every signed-in client of that account to re-authenticate
+    on its next API call (a returning user hits the unlock view).
+    """
+    a = (await session.execute(select(Account).where(Account.id == account_id))).scalar_one_or_none()
+    if not a:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "not found")
+    # Sessions table has rows pointing to redis-stored tokens. Walk
+    # the redis keyspace for sess:* and delete any that map to this
+    # account_id.
+    deleted = 0
+    target = str(a.id).encode()
+    async for key in redis_client.scan_iter(match="sess:*", count=200):
+        val = await redis_client.get(key)
+        if val == target:
+            await redis_client.delete(key)
+            deleted += 1
+    await _audit(session, admin, "revoke_sessions", "account",
+                 str(a.id), a.email, f"{deleted} session(s)")
+    await session.commit()
+    return {"ok": True, "revoked": deleted}
 
 
 @router.delete("/account/{account_id}")
@@ -276,6 +331,8 @@ async def delete_account(
     a = (await session.execute(select(Account).where(Account.id == account_id))).scalar_one_or_none()
     if not a:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "not found")
+    label = a.email
+    await _audit(session, admin, "delete_account", "account", str(a.id), label)
     await session.delete(a)
     await session.commit()
     return {"ok": True}
@@ -306,7 +363,7 @@ async def list_ip_blocks(
 @router.post("/ip-blocks", response_model=IPBlockOut)
 async def add_ip_block(
     body: IPBlockRequest,
-    _admin: Account = Depends(current_admin),
+    admin: Account = Depends(current_admin),
     session: AsyncSession = Depends(get_session),
 ):
     fp = hmac_ip(body.ip.strip())
@@ -332,6 +389,8 @@ async def add_ip_block(
         expires_at=expires_at,
     )
     session.add(blk)
+    await _audit(session, admin, "add_ip_block", "ip_block",
+                 str(blk.id), fp[:12] + "…", body.reason)
     await session.commit()
     return IPBlockOut(
         id=blk.id,
@@ -345,15 +404,143 @@ async def add_ip_block(
 @router.delete("/ip-blocks/{block_id}")
 async def remove_ip_block(
     block_id: uuid.UUID,
-    _admin: Account = Depends(current_admin),
+    admin: Account = Depends(current_admin),
     session: AsyncSession = Depends(get_session),
 ):
     b = (await session.execute(select(IPBlock).where(IPBlock.id == block_id))).scalar_one_or_none()
     if not b:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "not found")
+    await _audit(session, admin, "remove_ip_block", "ip_block",
+                 str(b.id), b.ip_hmac[:12] + "…")
     await session.delete(b)
     await session.commit()
     return {"ok": True}
+
+
+# ----------------------------------------------------------------- timeseries
+
+class TimeSeriesPoint(BaseModel):
+    date: str   # YYYY-MM-DD
+    count: int
+
+
+@router.get("/timeseries/signups", response_model=list[TimeSeriesPoint])
+async def timeseries_signups(
+    days: int = 30,
+    _admin: Account = Depends(current_admin),
+    session: AsyncSession = Depends(get_session),
+):
+    days = max(7, min(365, days))
+    cutoff = _now() - timedelta(days=days - 1)
+    bucket = func.date_trunc("day", Account.created_at)
+    rows = (await session.execute(
+        select(bucket, func.count())
+        .where(Account.created_at >= cutoff)
+        .group_by(bucket)
+        .order_by(bucket)
+    )).all()
+    seen = {row[0].date(): int(row[1]) for row in rows if row[0]}
+    out: list[TimeSeriesPoint] = []
+    for i in range(days):
+        d = (cutoff + timedelta(days=i)).date()
+        out.append(TimeSeriesPoint(date=d.isoformat(), count=seen.get(d, 0)))
+    return out
+
+
+@router.get("/timeseries/messages", response_model=list[TimeSeriesPoint])
+async def timeseries_messages(
+    days: int = 30,
+    _admin: Account = Depends(current_admin),
+    session: AsyncSession = Depends(get_session),
+):
+    days = max(7, min(365, days))
+    cutoff = _now() - timedelta(days=days - 1)
+    bucket = func.date_trunc("day", Message.received_at)
+    rows = (await session.execute(
+        select(bucket, func.count())
+        .where(Message.received_at >= cutoff)
+        .group_by(bucket)
+        .order_by(bucket)
+    )).all()
+    seen = {row[0].date(): int(row[1]) for row in rows if row[0]}
+    out: list[TimeSeriesPoint] = []
+    for i in range(days):
+        d = (cutoff + timedelta(days=i)).date()
+        out.append(TimeSeriesPoint(date=d.isoformat(), count=seen.get(d, 0)))
+    return out
+
+
+# ----------------------------------------------------------------- top storage
+
+class StorageEntry(BaseModel):
+    account_id: uuid.UUID
+    email: str
+    used_bytes: int
+    quota_bytes: int
+    message_count: int
+
+
+@router.get("/top-storage", response_model=list[StorageEntry])
+async def top_storage(
+    limit: int = 10,
+    _admin: Account = Depends(current_admin),
+    session: AsyncSession = Depends(get_session),
+):
+    limit = max(1, min(50, limit))
+    rows = (await session.execute(
+        select(Account).order_by(Account.used_bytes.desc()).limit(limit)
+    )).scalars().all()
+    if not rows:
+        return []
+    ids = [a.id for a in rows]
+    mc_rows = (await session.execute(
+        select(Message.account_id, func.count())
+        .where(Message.account_id.in_(ids))
+        .group_by(Message.account_id)
+    )).all()
+    mc = {row[0]: int(row[1]) for row in mc_rows}
+    return [
+        StorageEntry(
+            account_id=a.id, email=a.email,
+            used_bytes=a.used_bytes, quota_bytes=a.quota_bytes,
+            message_count=mc.get(a.id, 0),
+        ) for a in rows
+    ]
+
+
+# ----------------------------------------------------------------- audit log
+
+class AuditEntry(BaseModel):
+    id: uuid.UUID
+    admin_email: str
+    action: str
+    target_type: str | None
+    target_label: str | None
+    details: str | None
+    created_at: datetime
+
+
+@router.get("/audit-log", response_model=list[AuditEntry])
+async def audit_log(
+    limit: int = 100,
+    offset: int = 0,
+    _admin: Account = Depends(current_admin),
+    session: AsyncSession = Depends(get_session),
+):
+    limit = max(1, min(500, limit))
+    offset = max(0, offset)
+    rows = (await session.execute(
+        select(AdminAction)
+        .order_by(AdminAction.created_at.desc())
+        .offset(offset).limit(limit)
+    )).scalars().all()
+    return [
+        AuditEntry(
+            id=a.id, admin_email=a.admin_email, action=a.action,
+            target_type=a.target_type, target_label=a.target_label,
+            details=a.details, created_at=a.created_at,
+        ) for a in rows
+    ]
 
 
 # Used by auth/signup paths to check if a request IP is blocked. Wiring

@@ -51,6 +51,15 @@ async def register(
 ):
     settings = get_settings()
 
+    # Public registration is closed by default. Flip REGISTRATION_ENABLED=true
+    # in .env to allow signups again. The webmail no longer surfaces a signup
+    # form; this gate enforces the policy at the API.
+    if not settings.registration_enabled:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "registration is closed; accounts are provisioned by invitation only",
+        )
+
     allowed, _ = await rl_hit(
         redis_client, rate_limit_key(request, "register"),
         limit=5, window_seconds=3600,

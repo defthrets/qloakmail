@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     # means admin endpoints are completely disabled.
     admin_emails: str = ""
 
+    # Public registration. When false (default), POST /auth/register
+    # returns 403 — accounts must be provisioned out-of-band by an
+    # admin. The webmail no longer surfaces a signup form regardless;
+    # this flag is the server-side enforcement.
+    registration_enabled: bool = False
+
     # HMAC secret used to fingerprint banned IPs. Persisted (unlike
     # the per-process rate-limit secret) so a banned IP stays banned
     # across restarts. Treat like a private key — change it and all
