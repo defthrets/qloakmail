@@ -59,8 +59,17 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+      - /var/run
     cap_drop: [ALL]
     cap_add:
+      # CHOWN + FOWNER + DAC_OVERRIDE: the redis docker entrypoint
+      # chowns /data on startup so the redis user can write the AOF.
+      # Without these the recursive chown silently fails, find returns
+      # "Permission denied", and redis-server can't open the appendonly
+      # file. SETUID/SETGID for the gosu drop from root to redis.
+      - CHOWN
+      - FOWNER
+      - DAC_OVERRIDE
       - SETGID
       - SETUID
     volumes:
@@ -183,6 +192,12 @@ services:
     restart: unless-stopped
     cap_drop: [ALL]
     cap_add:
+      # rspamd's entrypoint chowns /var/log/rspamd to the _rspamd user
+      # before forking workers. Without CHOWN+FOWNER+DAC_OVERRIDE the
+      # log file open fails and the process exits.
+      - CHOWN
+      - FOWNER
+      - DAC_OVERRIDE
       - SETGID
       - SETUID
     env_file: .env
