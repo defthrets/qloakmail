@@ -11,6 +11,7 @@ COPY main.cf.tmpl /etc/postfix/main.cf.tmpl
 COPY master.cf.tmpl /etc/postfix/master.cf.tmpl
 COPY transport.pcre /etc/postfix/transport.pcre
 COPY virtual-domains.tmpl /etc/postfix/virtual-domains.tmpl
+COPY virtual-aliases.pcre /etc/postfix/virtual-aliases.pcre
 COPY header_checks.pcre /etc/postfix/header_checks.pcre
 COPY opendkim/opendkim.conf.tmpl /etc/opendkim/opendkim.conf.tmpl
 COPY opendkim/TrustedHosts /etc/opendkim/TrustedHosts

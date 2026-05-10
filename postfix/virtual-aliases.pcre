@@ -1,0 +1,20 @@
+# QloakMail virtual aliases.
+#
+# Rewrites RFC-2142 standard role addresses (postmaster, abuse, etc)
+# and our project-specific role addresses (security, admin, info,
+# privacy, legal, support) to the operator's actual mailbox.
+#
+# Postfix consults this BEFORE the encrypt-pipe, so the inbound
+# message is delivered to the operator's mailbox encrypted to their
+# OpenPGP key — same zero-access guarantee as any other inbound mail.
+#
+# Loaded via main.cf:
+#   virtual_alias_maps = pcre:/etc/postfix/virtual-aliases.pcre
+
+# All role addresses on the primary domain → mick@qloak.me.
+# Add more aliases here (one rule per address, or a regex group).
+/^(postmaster|hostmaster|webmaster|abuse|security|admin|administrator|info|hello|contact|support|help|press|legal|privacy|tls-reports|noreply|no-reply|root|mailer-daemon)@qloak\.me$/  mick@qloak.me
+
+# Anything other ought to fall through and be looked up against the
+# real account list (handled downstream by virtual_mailbox_maps +
+# the encrypt-pipe).

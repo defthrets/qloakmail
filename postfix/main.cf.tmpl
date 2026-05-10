@@ -25,6 +25,12 @@ virtual_mailbox_domains = pcre:/etc/postfix/virtual-domains
 virtual_mailbox_maps = pcre:/etc/postfix/virtual-accept
 virtual_transport = lmtp:encrypt-pipe:10025
 
+# Role-address aliases — postmaster/abuse/security/legal/etc all
+# rewrite to the operator's real mailbox before the encrypt-pipe
+# sees them. Cleanup runs aliases first, so the pipe encrypts to
+# the resolved recipient's pubkey.
+virtual_alias_maps = pcre:/etc/postfix/virtual-aliases.pcre
+
 # Limits.
 # message_size_limit is in bytes. 26214400 = 25 MiB.
 message_size_limit = 26214400
