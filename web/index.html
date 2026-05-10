@@ -6,18 +6,35 @@
   <meta name="referrer" content="no-referrer">
   <meta name="theme-color" content="#0b0c0e">
   <title>QloakMail</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="/style.css">
   <script src="/lib/openpgp.min.js"></script>
   <script src="/lib/hash-wasm.umd.min.js"></script>
 </head>
 <body>
+  <!-- Reusable logo glyph: a Q-ring with an envelope-flap chevron inside
+       and the Q tail. Consumers reference via <use href="#qm-logo">. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="qm-logo" viewBox="0 0 32 32">
+      <g fill="none" stroke="currentColor" stroke-width="2.5"
+         stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="14" cy="14" r="9"/>
+        <path d="M9 12 L14 17 L19 12"/>
+        <line x1="20" y1="20" x2="25" y2="25"/>
+      </g>
+    </symbol>
+  </svg>
+
   <div id="app">
 
     <!-- ============== Auth ============== -->
     <section id="auth-view" class="view active">
       <div class="auth-card">
         <header class="brand">
-          <h1>QloakMail</h1>
+          <div class="brand-logo">
+            <svg class="logo-mark" width="36" height="36" aria-hidden="true"><use href="#qm-logo"/></svg>
+            <h1>QloakMail</h1>
+          </div>
           <p class="tagline">Encrypted email we can't read.</p>
         </header>
 
@@ -33,6 +50,10 @@
           </label>
           <label>Password
             <input type="password" name="password" autocomplete="current-password" required>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" name="remember" id="login-remember">
+            <span>Remember on this device</span>
           </label>
           <button type="submit" class="primary">Sign in</button>
           <p class="status" id="login-status"></p>
@@ -75,6 +96,32 @@
       </footer>
     </section>
 
+    <!-- ============== Unlock (returning user with stored session) ============== -->
+    <section id="unlock-view" class="view">
+      <div class="auth-card">
+        <header class="brand">
+          <div class="brand-logo">
+            <svg class="logo-mark" width="36" height="36" aria-hidden="true"><use href="#qm-logo"/></svg>
+            <h1>QloakMail</h1>
+          </div>
+          <p class="tagline">
+            Welcome back, <span id="unlock-email" class="who"></span>
+          </p>
+        </header>
+        <form id="unlock-form" autocomplete="on">
+          <label>Password
+            <input type="password" name="password" autocomplete="current-password" required autofocus>
+            <small>Your session is still alive — your password unlocks your private key locally.</small>
+          </label>
+          <button type="submit" class="primary">Unlock inbox</button>
+          <p class="status" id="unlock-status"></p>
+        </form>
+        <button type="button" id="unlock-signout" class="link unlock-signout">
+          Sign out and use a different account
+        </button>
+      </div>
+    </section>
+
     <!-- ============== Recovery code reveal ============== -->
     <section id="recovery-shown-view" class="view">
       <div class="auth-card recovery-card">
@@ -96,7 +143,10 @@
     <!-- ============== Mail ============== -->
     <section id="mail-view" class="view">
       <header class="topbar">
-        <div class="brand-mini">QloakMail</div>
+        <div class="brand-mini">
+          <svg class="logo-mark" width="22" height="22" aria-hidden="true"><use href="#qm-logo"/></svg>
+          <span>QloakMail</span>
+        </div>
         <div class="search-bar">
           <input id="search-input" type="search" placeholder="Search decrypted mail..." autocomplete="off" spellcheck="false">
           <span id="search-stats" class="search-stats"></span>
