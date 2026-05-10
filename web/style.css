@@ -31,15 +31,15 @@
     --radius-lg:    0px;
     --sans:         ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
     --mono:         ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
-    /* Sleek modern UI font for buttons + chips. System font stack
-       picks the native sleek display face on every OS:
-       SF Pro (mac/iOS), Segoe UI Variable (Win 11+), Inter-ish
-       (Android), system-ui fallback elsewhere. No web-font fetch,
-       no privacy footgun. */
-    --btn-font:     "SF Pro Display", "SF Pro Text",
-                    "Segoe UI Variable Display", "Segoe UI Variable",
-                    "Segoe UI", system-ui, -apple-system,
-                    "Inter", "Helvetica Neue", Arial, sans-serif;
+    /* Cyberpunk-leaning button font stack. Uses modern coding monos
+       that ship with current OSes — Cascadia Code (Win 11+),
+       JetBrains Mono (common Linux/macOS install), SF Mono (mac),
+       falling through to ui-monospace. Subtly more character than
+       the previous SF Pro Display stack while staying terminal-y.
+       No web-font fetch — pure system stack. */
+    --btn-font:     "Cascadia Code", "JetBrains Mono",
+                    "Fira Code", "SF Mono", ui-monospace,
+                    Menlo, Consolas, "Source Code Pro", monospace;
     --t-fast:       110ms ease;
     --t-med:        220ms ease;
     --t-snap:       80ms cubic-bezier(0.2, 0.9, 0.1, 1.4);
@@ -186,10 +186,10 @@ button.primary {
     backdrop-filter: blur(10px) saturate(140%);
     -webkit-backdrop-filter: blur(10px) saturate(140%);
     box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.1),
-        inset 0 0 0 1px rgba(255, 138, 61, 0.08),
-        0 1px 0 rgba(0, 0, 0, 0.4),
-        0 0 18px rgba(255, 138, 61, 0.18);
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        inset 0 0 0 1px rgba(255, 138, 61, 0.06),
+        0 1px 0 rgba(0, 0, 0, 0.35),
+        0 0 8px rgba(255, 138, 61, 0.08);
     animation: primary-pulse 3.2s ease-in-out infinite;
     transition:
         color var(--t-fast),
@@ -202,18 +202,17 @@ button.primary {
 @keyframes primary-pulse {
     0%, 100% {
         box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.1),
-            inset 0 0 0 1px rgba(255, 138, 61, 0.08),
-            0 1px 0 rgba(0, 0, 0, 0.4),
-            0 0 14px rgba(255, 138, 61, 0.18);
+            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            inset 0 0 0 1px rgba(255, 138, 61, 0.06),
+            0 1px 0 rgba(0, 0, 0, 0.35),
+            0 0 6px rgba(255, 138, 61, 0.08);
     }
     50% {
         box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.14),
-            inset 0 0 0 1px rgba(255, 138, 61, 0.12),
-            0 1px 0 rgba(0, 0, 0, 0.4),
-            0 0 28px rgba(255, 138, 61, 0.35),
-            0 0 40px rgba(255, 106, 0, 0.2);
+            inset 0 1px 0 rgba(255, 255, 255, 0.12),
+            inset 0 0 0 1px rgba(255, 138, 61, 0.08),
+            0 1px 0 rgba(0, 0, 0, 0.35),
+            0 0 12px rgba(255, 138, 61, 0.14);
     }
 }
 button.primary:hover:not(:disabled) {
@@ -223,11 +222,10 @@ button.primary:hover:not(:disabled) {
     animation: none;
     border-color: var(--orange);
     box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14),
         0 0 0 1px var(--orange),
-        0 6px 18px rgba(255, 122, 31, 0.45),
-        0 0 28px rgba(255, 138, 61, 0.35),
-        0 0 56px rgba(255, 106, 0, 0.22);
+        0 4px 10px rgba(255, 122, 31, 0.22),
+        0 0 14px rgba(255, 138, 61, 0.16);
 }
 button.primary:active:not(:disabled) {
     transform: translateY(0) scale(0.98);
@@ -890,8 +888,8 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     transform: translateY(-1px);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.08),
-        0 0 0 1px rgba(255, 138, 61, 0.3),
-        0 4px 12px rgba(255, 122, 31, 0.2);
+        0 0 0 1px rgba(255, 138, 61, 0.22),
+        0 3px 7px rgba(255, 122, 31, 0.12);
 }
 .auth-tabs .tab.active {
     color: var(--accent);
@@ -906,9 +904,9 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
             rgba(255, 122, 31, 0.06));
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.1),
-        0 0 0 1px rgba(255, 138, 61, 0.35),
-        0 0 18px rgba(255, 138, 61, 0.22);
-    text-shadow: 0 0 5px var(--accent-glow);
+        0 0 0 1px rgba(255, 138, 61, 0.25),
+        0 0 9px rgba(255, 138, 61, 0.12);
+    text-shadow: 0 0 4px var(--accent-glow);
 }
 
 .auth-form { display: none; padding-top: 0.5rem; }
@@ -1745,8 +1743,8 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     letter-spacing: 0.18em;
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.08),
-        0 0 0 1px rgba(255, 138, 61, 0.3),
-        0 4px 14px rgba(255, 122, 31, 0.22);
+        0 0 0 1px rgba(255, 138, 61, 0.22),
+        0 3px 8px rgba(255, 122, 31, 0.12);
 }
 .settings-btn .settings-icon {
     color: var(--orange);
@@ -2489,13 +2487,13 @@ body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
     transform: translateY(-1px);
     background:
         linear-gradient(180deg,
-            rgba(255, 138, 61, 0.18),
-            rgba(255, 122, 31, 0.08));
+            rgba(255, 138, 61, 0.14),
+            rgba(255, 122, 31, 0.06));
     box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.1),
-        0 0 0 1px rgba(255, 138, 61, 0.35),
-        0 4px 14px rgba(255, 122, 31, 0.25),
-        0 0 22px rgba(255, 138, 61, 0.18);
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 0 0 1px rgba(255, 138, 61, 0.25),
+        0 3px 8px rgba(255, 122, 31, 0.14),
+        0 0 10px rgba(255, 138, 61, 0.10);
 }
 .reader-action:active {
     transform: translateY(0) scale(0.98);
@@ -2665,8 +2663,8 @@ body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
     transform: translateY(-1px);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.1),
-        0 0 0 1px rgba(255, 138, 61, 0.35),
-        0 4px 14px rgba(255, 122, 31, 0.22);
+        0 0 0 1px rgba(255, 138, 61, 0.25),
+        0 3px 8px rgba(255, 122, 31, 0.12);
 }
 .banner-action {
     background:
@@ -2680,8 +2678,8 @@ body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
     transform: translateY(-1px);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.1),
-        0 0 0 1px rgba(255, 138, 61, 0.45),
-        0 4px 14px rgba(255, 138, 61, 0.3);
+        0 0 0 1px rgba(255, 138, 61, 0.32),
+        0 3px 8px rgba(255, 138, 61, 0.16);
 }
 .att-download {
     background:
@@ -2695,8 +2693,8 @@ body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
     transform: translateY(-1px);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.06),
-        0 0 0 1px rgba(255, 138, 61, 0.32),
-        0 4px 14px rgba(255, 122, 31, 0.18);
+        0 0 0 1px rgba(255, 138, 61, 0.22),
+        0 3px 8px rgba(255, 122, 31, 0.10);
 }
 
 /* Reader close (×) — small glass button, top right of the popup. */
@@ -2719,8 +2717,8 @@ body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
     transform: scale(1.08);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.1),
-        0 0 0 1px rgba(255, 138, 61, 0.4),
-        0 0 18px rgba(255, 138, 61, 0.25);
+        0 0 0 1px rgba(255, 138, 61, 0.28),
+        0 0 10px rgba(255, 138, 61, 0.14);
 }
 
 /* ---------------- compose CC / BCC toggle ---------------- */
@@ -2754,8 +2752,8 @@ body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
     transform: translateY(-1px);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.08),
-        0 0 0 1px rgba(255, 138, 61, 0.3),
-        0 4px 12px rgba(255, 122, 31, 0.18);
+        0 0 0 1px rgba(255, 138, 61, 0.22),
+        0 3px 7px rgba(255, 122, 31, 0.10);
 }
 .cc-toggle.active {
     color: var(--accent-2);
@@ -2906,8 +2904,8 @@ body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
     transform: translateY(-1px);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.08),
-        0 0 0 1px rgba(255, 138, 61, 0.3),
-        0 4px 12px rgba(255, 122, 31, 0.18);
+        0 0 0 1px rgba(255, 138, 61, 0.22),
+        0 3px 7px rgba(255, 122, 31, 0.10);
 }
 .filter-chips button.active,
 .sort-chips button.active {
@@ -2923,8 +2921,8 @@ body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
             rgba(255, 122, 31, 0.08));
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.1),
-        0 0 0 1px rgba(255, 138, 61, 0.35),
-        0 0 12px rgba(255, 138, 61, 0.2);
+        0 0 0 1px rgba(255, 138, 61, 0.25),
+        0 0 7px rgba(255, 138, 61, 0.12);
 }
 .sort-chips { margin-left: auto; }
 
@@ -3395,8 +3393,8 @@ body.density-compact #message-list li .snippet { display: none; }
     transform: translateY(-1px);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.08),
-        0 0 0 1px rgba(255, 138, 61, 0.3),
-        0 4px 12px rgba(255, 122, 31, 0.18);
+        0 0 0 1px rgba(255, 138, 61, 0.22),
+        0 3px 7px rgba(255, 122, 31, 0.10);
 }
 .admin-tab.active {
     color: var(--accent);
@@ -3411,9 +3409,9 @@ body.density-compact #message-list li .snippet { display: none; }
             rgba(255, 122, 31, 0.06));
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.1),
-        0 0 0 1px rgba(255, 138, 61, 0.35),
-        0 0 14px rgba(255, 138, 61, 0.2);
-    text-shadow: 0 0 5px var(--accent-glow);
+        0 0 0 1px rgba(255, 138, 61, 0.25),
+        0 0 8px rgba(255, 138, 61, 0.12);
+    text-shadow: 0 0 4px var(--accent-glow);
 }
 .admin-pane[hidden] { display: none; }
 
