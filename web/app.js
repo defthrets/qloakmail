@@ -155,6 +155,12 @@ function classifyStoredSession() {
 
 function show(viewId) {
     $$(".view").forEach(v => v.classList.toggle("active", v.id === viewId));
+    // Matrix rain lives behind the auth + unlock screens only — once
+    // the user is in their inbox there's enough green-on-dark already.
+    document.body.classList.toggle(
+        "matrix-on",
+        viewId === "auth-view" || viewId === "unlock-view"
+    );
 }
 
 function setStatus(el, text, kind = "") {
@@ -862,6 +868,105 @@ function bindCompose() {
     });
 }
 
+// ----------------------------------------------------------------- matrix rain
+//
+// Subtle Japanese-character rain behind the auth and unlock views.
+// Dark gray with a faint green tint so it reads as ambient texture
+// rather than primary content. Pauses when the canvas isn't visible
+// (mail-view has no .matrix-on class on body) — the requestAnimationFrame
+// loop continues but the draw call early-returns.
+//
+// Skipped entirely under prefers-reduced-motion (handled in CSS via
+// display:none + here via initMatrix() short-circuit).
+
+const MATRIX_GLYPHS =
+    // Katakana
+    "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン" +
+    // Hiragana (sparser)
+    "あいうえおかきくけこさしすせそ" +
+    // Half-width tech symbols
+    "0123456789!?+-*/=<>{}[]#$%&@";
+
+function initMatrix() {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const canvas = document.getElementById("matrix-bg");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+
+    const FONT_SIZE = 14;
+    let cols = 0;
+    let drops = [];
+    let dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+
+    function resize() {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        canvas.width  = Math.floor(w * dpr);
+        canvas.height = Math.floor(h * dpr);
+        canvas.style.width  = w + "px";
+        canvas.style.height = h + "px";
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        cols = Math.ceil(w / FONT_SIZE);
+        // Stagger initial drop positions so the rain doesn't start as
+        // a uniform wall.
+        drops = new Array(cols).fill(0).map(() => Math.random() * -50);
+    }
+    resize();
+    window.addEventListener("resize", resize);
+
+    let frame = 0;
+    function draw() {
+        // Only render while the matrix-on class is on body. Saves CPU
+        // on the mail-view.
+        if (!document.body.classList.contains("matrix-on")) {
+            requestAnimationFrame(draw);
+            return;
+        }
+        // Step every other frame — slows the rain to ~30fps and reduces
+        // GPU pressure while keeping motion smooth.
+        frame++;
+        if (frame % 2) {
+            requestAnimationFrame(draw);
+            return;
+        }
+
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+
+        // Translucent dark wash → leaves fading trails of past chars.
+        ctx.fillStyle = "rgba(5, 8, 7, 0.10)";
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.font = `${FONT_SIZE}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
+        ctx.textBaseline = "top";
+
+        for (let i = 0; i < cols; i++) {
+            const ch = MATRIX_GLYPHS[
+                (Math.random() * MATRIX_GLYPHS.length) | 0
+            ];
+            const x = i * FONT_SIZE;
+            const y = drops[i] * FONT_SIZE;
+
+            // Most chars are dark gray with a faint green tint.
+            // The very head (rarely) gets a brighter highlight.
+            const isHead = Math.random() < 0.012;
+            ctx.fillStyle = isHead
+                ? "rgba(80, 130, 100, 0.55)"
+                : "rgba(48, 60, 55, 0.65)";
+            ctx.fillText(ch, x, y);
+
+            // Reset to top with random delay; longer streams look
+            // organic.
+            if (y > h && Math.random() > 0.972) drops[i] = 0;
+            drops[i]++;
+        }
+
+        requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+}
+
 // ----------------------------------------------------------------- ripple effect
 //
 // Material-style click ripple on every primary button (and re-applies to
@@ -973,6 +1078,9 @@ async function boot() {
     bindSearch();
     bindUnlock();
     bindRipples();
+    initMatrix();
+    // Initial state is auth-view → matrix-on
+    document.body.classList.add("matrix-on");
 
     state.config = await api.config().catch(() => ({
         domain: "qloak.me", domains: ["qloak.me"],

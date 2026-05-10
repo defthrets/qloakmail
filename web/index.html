@@ -25,6 +25,9 @@
     </symbol>
   </svg>
 
+  <!-- Matrix rain — canvas runs only on the auth/unlock views. -->
+  <canvas id="matrix-bg" aria-hidden="true"></canvas>
+
   <div id="app">
 
     <!-- ============== Auth ============== -->
@@ -131,35 +134,35 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
         <ul class="features-list" role="list">
           <li>
             <span class="num">01</span><span class="check">[OK]</span> <strong>zero-access</strong> · server stores ciphertext only
-            <div class="layman">// Even if our servers were stolen or seized, your emails stay encrypted. Nobody reads them — not us, not law enforcement.</div>
+            <div class="layman">// nobody reads it</div>
           </li>
           <li>
             <span class="num">02</span><span class="check">[OK]</span> <strong>SRP-6a auth</strong> · password never crosses the wire
-            <div class="layman">// When you sign in, your password never leaves your browser. We literally cannot leak it because we don't have it.</div>
+            <div class="layman">// password never sent</div>
           </li>
           <li>
             <span class="num">03</span><span class="check">[OK]</span> <strong>OpenPGP</strong> · keypair generated in your browser
-            <div class="layman">// Your encryption keys are made on YOUR device. They never leave your computer unencrypted.</div>
+            <div class="layman">// keys stay yours</div>
           </li>
           <li>
             <span class="num">04</span><span class="check">[OK]</span> <strong>Argon2id</strong> · private key wrapped locally
-            <div class="layman">// Your private key is locked behind your password using one of the strongest password-stretching algorithms ever designed.</div>
+            <div class="layman">// uncrackable lock</div>
           </li>
           <li>
             <span class="num">05</span><span class="check">[OK]</span> <strong>no access logs</strong> · IPs hashed per-process, never persisted
-            <div class="layman">// We don't record when you log in, what IP you came from, or what messages you read. There's nothing to hand over.</div>
+            <div class="layman">// we track nothing</div>
           </li>
           <li>
             <span class="num">06</span><span class="check">[OK]</span> <strong>local-only search</strong> · IndexedDB, never hits the server
-            <div class="layman">// When you search your inbox, the search runs in your browser. We never see what you're looking for.</div>
+            <div class="layman">// search stays private</div>
           </li>
           <li>
             <span class="num">07</span><span class="check">[OK]</span> <strong>Tor v3</strong> · onion service for clearnet-free access
-            <div class="layman">// Connect via Tor Browser using our .onion address and we never even see your IP. Total anonymity.</div>
+            <div class="layman">// total IP anonymity</div>
           </li>
           <li>
             <span class="num">08</span><span class="check">[OK]</span> <strong>open source</strong> · <a href="https://github.com/defthrets/qloakmail" target="_blank" rel="noopener">audit on GitHub</a>
-            <div class="layman">// Anyone can read our code and verify we do what we claim. No black box.</div>
+            <div class="layman">// audit our code</div>
           </li>
         </ul>
       </section>
@@ -182,9 +185,7 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
           Five Eyes intelligence-sharing.
         </p>
         <p class="layman jurisdiction-layman">
-          // In plain English: a foreign agency can't just ask for your mail.
-          They'd have to go through an Icelandic court — and we still
-          couldn't hand it over, because we never see it unencrypted.
+          // outside foreign reach
         </p>
       </section>
 

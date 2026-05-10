@@ -47,6 +47,24 @@ html, body {
     overflow-x: hidden;
 }
 
+/* Matrix rain canvas — only visible while body has .matrix-on (set
+   when the active view is auth or unlock). Sits behind the ambient
+   glow at z-index -3. Drawn by initMatrix() in app.js. */
+#matrix-bg {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -3;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 600ms ease;
+}
+body.matrix-on #matrix-bg { opacity: 0.55; }
+@media (prefers-reduced-motion: reduce) {
+    #matrix-bg { display: none !important; }
+}
+
 /* Ambient backdrop — soft radial green glows + a faint diagonal grid.
    Sits behind everything as a fixed-position ::before pseudo. Costs
    nothing in DOM, looks like a hacker terminal at dusk. */
