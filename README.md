@@ -2,11 +2,11 @@
 
 > Encrypted email we can't read. <https://qloak.me>
 
-QloakMail is a small-scale, privacy-focused mail platform inspired by Proton Mail.
-The server stores **only ciphertext**: incoming mail is encrypted with the
-recipient's public key before it touches the mailstore, and the user's private
-key is held server-side **only as an Argon2id-encrypted blob** that the server
-cannot decrypt.
+QloakMail is a small-scale, privacy-first mail platform built around end-to-end
+encryption and zero-access design. The server stores **only ciphertext**:
+incoming mail is encrypted with the recipient's public key before it touches
+the mailstore, and the user's private key is held server-side **only as an
+Argon2id-encrypted blob** that the server cannot decrypt.
 
 This README is the operator's guide. End-user docs live in the webmail.
 
@@ -137,45 +137,32 @@ voidmail/
 
 ---
 
-## Security threat model
+## What QloakMail is built to protect
 
-QloakMail protects against:
-
-* **Server-side mail-content disclosure.** The server only ever holds
-  ciphertext — the encrypt-pipe wraps every inbound RFC822 message in
-  RFC 3156 multipart/encrypted before it touches the mailstore.
-* **Password disclosure.** SRP-6a authentication; the server holds the
-  verifier only and the password never crosses the wire.
-* **Private-key disclosure.** The server holds private keys only as
-  Argon2id-AES-GCM-encrypted blobs that the server cannot derive the
-  key for.
-* **User-IP correlation by us.** No API access logs, rate-limit keys
-  are HMAC(IP) with a per-process secret, sessions table holds no IP
-  or user-agent, systemd journal is volatile (RAM, lost on reboot),
-  bash history disabled, wtmp/lastlog/btmp linked to /dev/null. See
-  the "what we don't log" matrix in
+* **Mail content is end-to-end encrypted.** The encrypt-pipe wraps every
+  inbound RFC822 message in RFC 3156 multipart/encrypted using the
+  recipient's public key before it touches the mailstore. Only the
+  recipient's device holds the key needed to read it.
+* **Passwords stay on your device.** SRP-6a authentication means the
+  server only ever sees a verifier — the password itself never crosses
+  the wire.
+* **Private keys are sealed locally.** The server holds them only as
+  Argon2id + AES-GCM blobs derived from your password. Lose the
+  password and the recovery code, and the keys are mathematically
+  unrecoverable — even by us.
+* **No IP correlation by us.** No API access logs, rate-limit keys are
+  HMAC(IP) with a per-process secret, the sessions table holds no IP or
+  user-agent, the systemd journal is volatile (RAM, lost on reboot),
+  bash history is disabled, and wtmp/lastlog/btmp are linked to
+  /dev/null. See the "what we don't log" matrix in
   [docs/deploy-flokinet.md](docs/deploy-flokinet.md).
-* **User-IP correlation by anyone.** A built-in Tor v3 hidden service
-  is exposed in `docker-compose.yml`. Clients that connect via the
-  .onion never reveal a clearnet IP to us *or* our host.
-
-QloakMail does **not** protect against:
-
-* **Active server compromise injecting malicious JS into the SPA.** An
-  attacker who controls the API can serve a backdoored OpenPGP.js. Pin
-  the script hashes via SRI if you can; high-threat users should use a
-  desktop OpenPGP client and treat the SPA as untrusted UI.
-* **Metadata leakage.** The SMTP envelope (From / To / received-at /
-  message size) is read by Postfix to route the message — no MTA can
-  hide this. The encryption pipe writes a fixed `Subject: [encrypted]`
-  on the outer envelope and encrypts the original Subject inside the
-  PGP body, so internal observers see only the routing minimum.
-* **Endpoint compromise.** If the user's device is owned, the attacker
-  has the keys. There is no server-side fix for this.
-* **Court orders.** No host has a "no-log" policy in any meaningful
-  sense. The defense is *not collecting things in the first place* —
-  which is what the privacy-hardening above does. There is nothing
-  for a subpoena to compel us to hand over except encrypted blobs.
+* **No IP correlation by anyone, optionally.** A built-in Tor v3 hidden
+  service is exposed in `docker-compose.yml`. Clients that connect via
+  the .onion never reveal a clearnet IP — to us or to our host.
+* **Search stays local.** The webmail builds an IndexedDB index of
+  decrypted plaintext on-device. Search queries never touch the server.
+* **Open source.** Audit the code, build it yourself, run your own
+  instance.
 
 ---
 

@@ -11,19 +11,19 @@
     --fg:           #d8dce0;
     --fg-dim:       #7a8086;
     --fg-muted:     #4d5258;
-    --accent:       #ffc796;
-    --accent-2:     #ffe2c8;
-    --accent-soft:  rgba(255, 199, 150, 0.12);
-    --accent-glow:  rgba(255, 199, 150, 0.45);
+    --accent:       #ff7a1f;
+    --accent-2:     #ffa260;
+    --accent-soft:  rgba(255, 122, 31, 0.12);
+    --accent-glow:  rgba(255, 122, 31, 0.5);
     --orange:      #ff8a3d;
-    --orange-glow: rgba(255, 138, 61, 0.5);
+    --orange-glow: rgba(255, 138, 61, 0.55);
     --logo:        #ff6a00;
-    --logo-glow:   rgba(255, 106, 0, 0.55);
+    --logo-glow:   rgba(255, 106, 0, 0.6);
     --cyan:         #00f0ff;
     --warn:         #ff6464;
     --warn-soft:    rgba(255, 100, 100, 0.12);
-    --ok:           #ffc796;
-    --ok-soft:      rgba(255, 199, 150, 0.10);
+    --ok:           #ff7a1f;
+    --ok-soft:      rgba(255, 122, 31, 0.10);
     --shadow-1:     0 1px 2px rgba(0, 0, 0, 0.5);
     --shadow-2:     0 8px 24px rgba(0, 0, 0, 0.6);
     --radius:       0px;        /* no rounded corners — terminal aesthetic */
@@ -62,7 +62,7 @@ html, body {
     opacity: 0;
     transition: opacity 600ms ease;
 }
-body.matrix-on #matrix-bg { opacity: 0.55; }
+body.matrix-on #matrix-bg { opacity: 0.85; }
 @media (prefers-reduced-motion: reduce) {
     #matrix-bg { display: none !important; }
 }
@@ -78,9 +78,9 @@ body::before {
     pointer-events: none;
     background:
         radial-gradient(ellipse 60% 50% at 15% 20%,
-            rgba(255, 199, 150, 0.06), transparent 60%),
+            rgba(255, 122, 31, 0.06), transparent 60%),
         radial-gradient(ellipse 50% 40% at 85% 80%,
-            rgba(255, 199, 150, 0.04), transparent 60%),
+            rgba(255, 122, 31, 0.04), transparent 60%),
         linear-gradient(135deg, rgba(255,255,255,0.01) 1px, transparent 1px) 0 0/56px 56px,
         linear-gradient(45deg,  rgba(255,255,255,0.01) 1px, transparent 1px) 0 0/56px 56px;
 }
@@ -137,7 +137,7 @@ button:active:not(:disabled) { transform: translateY(0); }
 
 button.primary {
     background: var(--accent);
-    color: #021006;
+    color: #1a0a02;
     border-color: transparent;
     font-weight: 700;
     letter-spacing: 0.18em;
@@ -147,17 +147,50 @@ button.primary {
     box-shadow:
         0 1px 0 rgba(255, 255, 255, 0.18) inset,
         0 0 0 0 var(--accent-glow);
+    animation: primary-pulse 3.2s ease-in-out infinite;
+    transition:
+        background var(--t-fast),
+        border-color var(--t-fast),
+        color var(--t-fast),
+        transform var(--t-fast),
+        letter-spacing var(--t-fast),
+        box-shadow var(--t-fast);
+}
+@keyframes primary-pulse {
+    0%, 100% {
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.18) inset,
+            0 0 0 0 var(--accent-glow),
+            0 0 8px rgba(255, 122, 31, 0.18);
+    }
+    50% {
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.18) inset,
+            0 0 0 0 var(--accent-glow),
+            0 0 22px rgba(255, 138, 61, 0.45),
+            0 0 36px rgba(255, 106, 0, 0.22);
+    }
 }
 button.primary:hover:not(:disabled) {
     background: var(--accent-2);
-    color: #021006;
-    transform: translateY(-1px);
+    color: #1a0a02;
+    transform: translateY(-2px);
+    letter-spacing: 0.22em;
+    animation: none;
     box-shadow:
-        0 1px 0 rgba(255, 255, 255, 0.18) inset,
-        0 4px 14px rgba(255, 199, 150, 0.35),
-        0 0 22px rgba(255, 199, 150, 0.18);
+        0 1px 0 rgba(255, 255, 255, 0.22) inset,
+        0 6px 18px rgba(255, 122, 31, 0.5),
+        0 0 28px rgba(255, 138, 61, 0.35),
+        0 0 56px rgba(255, 106, 0, 0.18);
 }
-button.primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+button.primary:active:not(:disabled) {
+    transform: translateY(0) scale(0.98);
+    transition-duration: 60ms;
+}
+button.primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; animation: none; }
+@media (prefers-reduced-motion: reduce) {
+    button.primary { animation: none; }
+}
 
 /* Diagonal sheen sweep on hover for primary buttons. */
 button.primary::before {
@@ -199,7 +232,7 @@ button.link {
     overflow: visible;
 }
 button.link:hover {
-    background: rgba(255, 199, 150, 0.08);
+    background: rgba(255, 122, 31, 0.08);
     color: var(--accent);
     transform: none;
 }
@@ -224,8 +257,8 @@ input:focus, textarea:focus, select:focus {
     border-color: var(--accent);
     background: rgba(0, 0, 0, 0.45);
     box-shadow:
-        0 0 0 3px rgba(255, 199, 150, 0.12),
-        0 0 14px rgba(255, 199, 150, 0.08) inset;
+        0 0 0 3px rgba(255, 122, 31, 0.12),
+        0 0 14px rgba(255, 122, 31, 0.08) inset;
 }
 input:hover:not(:focus), textarea:hover:not(:focus) {
     border-color: var(--border-2);
@@ -264,14 +297,14 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     background:
         linear-gradient(180deg, rgba(0,0,0,0.2), transparent 60px),
         rgba(15, 22, 20, 0.55);
-    border: 1px solid rgba(255, 199, 150, 0.18);
+    border: 1px solid rgba(255, 122, 31, 0.18);
     border-radius: 0;
     backdrop-filter: blur(14px) saturate(140%);
     -webkit-backdrop-filter: blur(14px) saturate(140%);
     box-shadow:
         0 24px 60px rgba(0, 0, 0, 0.6),
         0 0 0 1px rgba(255, 138, 61, 0.08),
-        0 0 40px rgba(255, 199, 150, 0.05);
+        0 0 40px rgba(255, 122, 31, 0.05);
     animation: card-in 380ms cubic-bezier(0.2, 0.8, 0.2, 1);
     position: relative;
     /* Notch the top-right corner — distinctive cyberpunk touch. */
@@ -314,7 +347,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     color: var(--accent);
     margin: 0 0 0.85rem;
     padding-bottom: 0.7rem;
-    border-bottom: 1px dashed rgba(255, 199, 150, 0.18);
+    border-bottom: 1px dashed rgba(255, 122, 31, 0.18);
     text-shadow: 0 0 6px var(--accent-glow);
     opacity: 0.92;
 }
@@ -442,7 +475,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     flex: 0 0 auto;
     width: auto;
     background: var(--bg-2);
-    border: 1px solid rgba(255, 199, 150, 0.18);
+    border: 1px solid rgba(255, 122, 31, 0.18);
     color: var(--accent);
     font-family: var(--mono);
     font-size: 0.95em;
@@ -470,7 +503,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 .duration-row select:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(255, 199, 150, 0.15);
+    box-shadow: 0 0 0 3px rgba(255, 122, 31, 0.15);
 }
 
 .unlock-signout {
@@ -525,14 +558,14 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     background: rgba(15, 22, 20, 0.55);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 199, 150, 0.14);
+    border: 1px solid rgba(255, 122, 31, 0.14);
     border-radius: var(--radius);
     font-family: var(--mono);
     font-size: 0.78em;
     color: var(--fg-dim);
     box-shadow:
         0 8px 24px rgba(0, 0, 0, 0.4),
-        0 0 16px rgba(255, 199, 150, 0.04);
+        0 0 16px rgba(255, 122, 31, 0.04);
     animation: card-in 360ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .features-header {
@@ -542,7 +575,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     text-transform: uppercase;
     margin-bottom: 0.85rem;
     padding-bottom: 0.6rem;
-    border-bottom: 1px dashed rgba(255, 199, 150, 0.18);
+    border-bottom: 1px dashed rgba(255, 122, 31, 0.18);
     text-shadow: 0 0 6px var(--accent-glow);
     opacity: 0.92;
     display: flex;
@@ -562,6 +595,98 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 @keyframes cursor-blink {
     0%, 50%   { opacity: 1; }
     50.01%, 100% { opacity: 0; }
+}
+
+/* Pulsing "live" status dot in the panel header — signals an active feed. */
+.features-header .live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--orange);
+    box-shadow:
+        0 0 6px var(--orange-glow),
+        0 0 12px rgba(255, 138, 61, 0.5);
+    margin: 0 0.4em 0 0.1em;
+    animation: live-dot-pulse 1.4s ease-in-out infinite;
+    flex: 0 0 auto;
+}
+@keyframes live-dot-pulse {
+    0%, 100% { transform: scale(1);   opacity: 1;   box-shadow: 0 0 4px var(--orange-glow); }
+    50%      { transform: scale(1.3); opacity: 0.6; box-shadow: 0 0 14px var(--orange-glow), 0 0 22px rgba(255, 138, 61, 0.4); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .features-header .live-dot { animation: none; }
+}
+
+/* Live "always-being-written" log strip below the header. The line text
+   is typed in by JS (cycleFeaturesLog in app.js); CSS only handles the
+   blinking caret + flicker on type. */
+.features-log {
+    font-size: 0.72em;
+    color: var(--fg-dim);
+    letter-spacing: 0.05em;
+    margin: 0 0 0.85rem 0;
+    padding: 0.35rem 0.6rem;
+    background: rgba(255, 122, 31, 0.04);
+    border-left: 2px solid var(--orange);
+    border-top: 1px dashed rgba(255, 122, 31, 0.12);
+    border-bottom: 1px dashed rgba(255, 122, 31, 0.12);
+    font-family: var(--mono);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    animation: log-flicker 6.4s linear infinite;
+}
+.features-log .log-prefix {
+    color: var(--orange);
+    text-shadow: 0 0 4px var(--orange-glow);
+    margin-right: 0.5em;
+    font-weight: 700;
+}
+.features-log .log-line {
+    color: var(--fg);
+}
+.features-log .log-caret {
+    color: var(--accent);
+    text-shadow: 0 0 5px var(--accent-glow);
+    margin-left: 1px;
+    animation: cursor-blink 0.85s steps(1) infinite;
+}
+@keyframes log-flicker {
+    0%, 4%, 100% { opacity: 1; }
+    4.5%  { opacity: 0.6; }
+    5%    { opacity: 1; }
+    47%   { opacity: 1; }
+    47.6% { opacity: 0.7; }
+    48%   { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .features-log { animation: none; }
+    .features-log .log-caret { animation: none; opacity: 0.7; }
+}
+
+/* Each [OK] tag periodically re-shimmers, suggesting live re-verification. */
+.features-list li:nth-child(1) .check { animation: ok-recheck 6.7s 1.4s infinite; }
+.features-list li:nth-child(2) .check { animation: ok-recheck 7.1s 0.6s infinite; }
+.features-list li:nth-child(3) .check { animation: ok-recheck 5.9s 2.4s infinite; }
+.features-list li:nth-child(4) .check { animation: ok-recheck 8.3s 0.2s infinite; }
+.features-list li:nth-child(5) .check { animation: ok-recheck 6.1s 3.1s infinite; }
+.features-list li:nth-child(6) .check { animation: ok-recheck 7.7s 1.7s infinite; }
+.features-list li:nth-child(7) .check { animation: ok-recheck 5.3s 4.0s infinite; }
+.features-list li:nth-child(8) .check { animation: ok-recheck 9.1s 0.9s infinite; }
+@keyframes ok-recheck {
+    0%, 96%, 100% {
+        color: var(--accent);
+        text-shadow: 0 0 4px var(--accent-glow);
+    }
+    96.5% { color: var(--orange); text-shadow: 0 0 6px var(--orange-glow); }
+    97%   { color: var(--fg-dim); text-shadow: none; }
+    97.5% { color: var(--orange); text-shadow: 0 0 8px var(--orange-glow); }
+    98%   { color: var(--accent-2); text-shadow: 0 0 6px var(--accent-glow); }
+    99%   { color: var(--accent); text-shadow: 0 0 4px var(--accent-glow); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .features-list .check { animation: none; }
 }
 .features-list {
     list-style: none;
@@ -609,7 +734,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 }
 .features-list a {
     color: var(--accent-2);
-    border-bottom: 1px dotted rgba(255, 199, 150, 0.35);
+    border-bottom: 1px dotted rgba(255, 122, 31, 0.35);
     text-decoration: none;
     transition: border-bottom-color var(--t-fast), color var(--t-fast);
 }
@@ -640,13 +765,13 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     background: rgba(15, 22, 20, 0.55);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 199, 150, 0.14);
+    border: 1px solid rgba(255, 122, 31, 0.14);
     font-family: var(--mono);
     font-size: 0.78em;
     color: var(--fg-dim);
     box-shadow:
         0 8px 24px rgba(0, 0, 0, 0.4),
-        0 0 16px rgba(255, 199, 150, 0.04);
+        0 0 16px rgba(255, 122, 31, 0.04);
     animation: card-in 360ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .jurisdiction-list {
@@ -668,7 +793,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 .jurisdiction-note {
     margin: 0.6rem 0 0;
     padding-top: 0.6rem;
-    border-top: 1px dashed rgba(255, 199, 150, 0.12);
+    border-top: 1px dashed rgba(255, 122, 31, 0.12);
     color: var(--fg-dim);
     line-height: 1.55;
     font-size: 0.95em;
@@ -690,7 +815,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     background: rgba(15, 22, 20, 0.55);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 199, 150, 0.14);
+    border: 1px solid rgba(255, 122, 31, 0.14);
     border-radius: var(--radius);
     display: flex;
     align-items: center;
@@ -699,7 +824,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     color: var(--fg-dim);
     box-shadow:
         0 8px 24px rgba(0, 0, 0, 0.4),
-        0 0 16px rgba(255, 199, 150, 0.04);
+        0 0 16px rgba(255, 122, 31, 0.04);
     animation: card-in 360ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .onion-dot {
@@ -834,7 +959,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     background: rgba(15, 22, 20, 0.7);
     backdrop-filter: blur(10px) saturate(140%);
     -webkit-backdrop-filter: blur(10px) saturate(140%);
-    border-bottom: 1px solid rgba(255, 199, 150, 0.08);
+    border-bottom: 1px solid rgba(255, 122, 31, 0.08);
     height: 56px;
     position: relative;
     z-index: 5;
@@ -845,7 +970,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     left: 0; right: 0; bottom: -1px;
     height: 1px;
     background: linear-gradient(90deg,
-        transparent, rgba(255, 199, 150, 0.25), transparent);
+        transparent, rgba(255, 122, 31, 0.25), transparent);
 }
 .brand-mini {
     display: flex;
@@ -885,7 +1010,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     align-items: center;
     gap: 0.25em;
     padding: 0.2em 0.5em;
-    border: 1px solid rgba(255, 199, 150, 0.18);
+    border: 1px solid rgba(255, 122, 31, 0.18);
 }
 .topbar-status .bracket { color: var(--orange); text-shadow: 0 0 4px var(--orange-glow); }
 .topbar-status .dot {
@@ -1024,7 +1149,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     text-shadow: 0 0 4px var(--orange-glow);
 }
 .folder-list li:hover {
-    background: rgba(255, 199, 150, 0.06);
+    background: rgba(255, 122, 31, 0.06);
     color: var(--fg);
     transform: translateX(2px);
 }
@@ -1032,7 +1157,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     background: var(--accent-soft);
     color: var(--accent);
     font-weight: 500;
-    box-shadow: inset 2px 0 0 var(--accent), 0 0 12px rgba(255, 199, 150, 0.06);
+    box-shadow: inset 2px 0 0 var(--accent), 0 0 12px rgba(255, 122, 31, 0.06);
 }
 .folder-list .icon {
     display: inline-block;
@@ -1092,12 +1217,12 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     position: relative;
 }
 #message-list li:hover {
-    background: rgba(255, 199, 150, 0.04);
+    background: rgba(255, 122, 31, 0.04);
     padding-left: 1.15rem;
 }
 #message-list li.active {
-    background: rgba(255, 199, 150, 0.08);
-    box-shadow: inset 3px 0 0 var(--accent), 0 0 18px rgba(255, 199, 150, 0.05);
+    background: rgba(255, 122, 31, 0.08);
+    box-shadow: inset 3px 0 0 var(--accent), 0 0 18px rgba(255, 122, 31, 0.05);
 }
 #message-list li.unread .from { color: var(--accent-2); font-weight: 600; }
 #message-list li.unread::before {
@@ -1221,7 +1346,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 .reader-empty p { margin: 0; font-size: 0.9em; }
 
 .reader header {
-    border-bottom: 1px dashed rgba(255, 199, 150, 0.2);
+    border-bottom: 1px dashed rgba(255, 122, 31, 0.2);
     padding: 1.25rem 1.5rem;
     background: rgba(15, 22, 20, 0.5);
     backdrop-filter: blur(8px);
@@ -1239,7 +1364,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     opacity: 0.85;
     margin-bottom: 0.6rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px dashed rgba(255, 199, 150, 0.12);
+    border-bottom: 1px dashed rgba(255, 122, 31, 0.12);
 }
 .reader header h2 {
     margin: 0 0 0.5rem;
@@ -1300,14 +1425,14 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     -webkit-backdrop-filter: blur(18px) saturate(140%);
     width: min(680px, 96vw);
     max-height: 88vh;
-    border: 1px solid rgba(255, 199, 150, 0.16);
+    border: 1px solid rgba(255, 122, 31, 0.16);
     border-bottom: none;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     display: flex;
     flex-direction: column;
     box-shadow:
         0 -24px 60px rgba(0, 0, 0, 0.6),
-        0 -1px 0 rgba(255, 199, 150, 0.2);
+        0 -1px 0 rgba(255, 122, 31, 0.2);
     z-index: 1;
     animation: modal-in 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -1320,7 +1445,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     justify-content: space-between;
     align-items: center;
     padding: 0.85rem 1.25rem;
-    border-bottom: 1px dashed rgba(255, 199, 150, 0.18);
+    border-bottom: 1px dashed rgba(255, 122, 31, 0.18);
 }
 .modal-head h3 {
     margin: 0;
@@ -1401,12 +1526,12 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     backdrop-filter: blur(12px) saturate(150%);
     -webkit-backdrop-filter: blur(12px) saturate(150%);
     color: var(--fg);
-    border: 1px solid rgba(255, 199, 150, 0.18);
+    border: 1px solid rgba(255, 122, 31, 0.18);
     padding: 0.75rem 1.25rem;
     border-radius: var(--radius);
     box-shadow:
         0 8px 32px rgba(0, 0, 0, 0.5),
-        0 0 24px rgba(255, 199, 150, 0.08);
+        0 0 24px rgba(255, 122, 31, 0.08);
     z-index: 100;
     max-width: 90vw;
     font-size: 0.92em;

@@ -935,7 +935,8 @@ function initMatrix() {
         const h = window.innerHeight;
 
         // Translucent dark wash → leaves fading trails of past chars.
-        ctx.fillStyle = "rgba(5, 8, 7, 0.10)";
+        // Lower alpha = trails persist longer for a more visible rain.
+        ctx.fillStyle = "rgba(5, 8, 7, 0.07)";
         ctx.fillRect(0, 0, w, h);
 
         ctx.font = `${FONT_SIZE}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
@@ -948,12 +949,13 @@ function initMatrix() {
             const x = i * FONT_SIZE;
             const y = drops[i] * FONT_SIZE;
 
-            // Most chars are dark gray with a faint warm tint.
-            // The very head (rarely) gets a brighter highlight.
-            const isHead = Math.random() < 0.012;
+            // Warm orange tint to match the deep-orange theme. The head
+            // of each stream gets a brighter saturated orange; the trail
+            // is a dimmer burnt-orange.
+            const isHead = Math.random() < 0.04;
             ctx.fillStyle = isHead
-                ? "rgba(150, 110, 80, 0.55)"
-                : "rgba(60, 55, 48, 0.65)";
+                ? "rgba(255, 138, 61, 0.85)"
+                : "rgba(140, 70, 25, 0.75)";
             ctx.fillText(ch, x, y);
 
             // Reset to top with random delay; longer streams look
@@ -965,6 +967,72 @@ function initMatrix() {
         requestAnimationFrame(draw);
     }
     requestAnimationFrame(draw);
+}
+
+// ----------------------------------------------------------------- live log strip
+//
+// Types one of FEATURES_LOG_LINES into #features-log-line, pauses, then
+// deletes and types the next — the "always being written" effect for
+// the [STATUS] panel. Pure cosmetic; copy is rotated through a small
+// pool of plausible-sounding diagnostics so it doesn't loop too fast.
+//
+// Skipped under prefers-reduced-motion; quietly no-ops if the element
+// isn't in the current view (recovery view + mail view don't render it).
+
+const FEATURES_LOG_LINES = [
+    "scan: probing 8 sealed checks ............ [PASS]",
+    "verify: argon2id wrap factor ............. [OK]",
+    "audit: ciphertext-only mailstore ......... [OK]",
+    "ping:  rotating session HMAC ............. [OK]",
+    "trace: zero log retention .... [CONFIRMED]",
+    "probe: srp-6a verifier integrity ......... [PASS]",
+    "watch: tor v3 hidden service ............. [UP]",
+    "audit: signed openpgp.js fingerprint ..... [MATCH]",
+    "ping:  flokinet iceland .................. [83ms]",
+    "scan:  rspamd outbound rate-limit ........ [ARMED]",
+];
+
+function startFeaturesLogLoop() {
+    const el = document.getElementById("features-log-line");
+    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        el.textContent = FEATURES_LOG_LINES[0];
+        return;
+    }
+
+    let idx = 0;
+    let stopped = false;
+
+    async function typewrite(text, speed) {
+        for (let i = 0; i < text.length && !stopped; i++) {
+            el.textContent = text.slice(0, i + 1);
+            // Slight per-char jitter — feels like an actual typist.
+            await new Promise(r => setTimeout(r, speed + (Math.random() * 14 - 7)));
+        }
+    }
+    async function backspace(speed) {
+        let t = el.textContent;
+        while (t.length > 0 && !stopped) {
+            t = t.slice(0, -1);
+            el.textContent = t;
+            await new Promise(r => setTimeout(r, speed));
+        }
+    }
+
+    (async function loop() {
+        while (!stopped) {
+            const line = FEATURES_LOG_LINES[idx % FEATURES_LOG_LINES.length];
+            await typewrite(line, 22);
+            await new Promise(r => setTimeout(r, 1900));
+            await backspace(8);
+            await new Promise(r => setTimeout(r, 200));
+            idx++;
+        }
+    })();
+
+    // No need to expose stop() — the element is replaced when the SPA
+    // navigates away from auth-view, and the loop's awaits naturally
+    // continue against a detached node (harmless DOM writes).
 }
 
 // ----------------------------------------------------------------- ripple effect
@@ -1079,6 +1147,7 @@ async function boot() {
     bindUnlock();
     bindRipples();
     initMatrix();
+    startFeaturesLogLoop();
     // Initial state is auth-view → matrix-on
     document.body.classList.add("matrix-on");
 

@@ -129,8 +129,12 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
       <section class="features-panel" aria-label="security features">
         <header class="features-header">
           <span class="bracket">[</span><span class="label">STATUS</span><span class="bracket">]</span>
+          <span class="live-dot" aria-hidden="true"></span>
           <span class="prompt">&gt;</span> qloak --check
         </header>
+        <div class="features-log" aria-hidden="true">
+          <span class="log-prefix">$</span><span class="log-line" id="features-log-line"></span><span class="log-caret">_</span>
+        </div>
         <ul class="features-list" role="list">
           <li>
             <span class="num">01</span><span class="check">[OK]</span> <strong>zero-access</strong> · server stores ciphertext only
