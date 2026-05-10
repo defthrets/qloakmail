@@ -17,6 +17,8 @@
     --accent-glow:  rgba(255, 199, 150, 0.45);
     --orange:      #ff8a3d;
     --orange-glow: rgba(255, 138, 61, 0.5);
+    --logo:        #ff6a00;
+    --logo-glow:   rgba(255, 106, 0, 0.55);
     --cyan:         #00f0ff;
     --warn:         #ff6464;
     --warn-soft:    rgba(255, 100, 100, 0.12);
@@ -336,10 +338,10 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     font-size: 6.5px;
     line-height: 7px;
     letter-spacing: 0;
-    color: var(--accent);
+    color: var(--logo);
     text-shadow:
-        0 0 4px var(--accent-glow),
-        0 0 12px rgba(255, 199, 150, 0.3);
+        0 0 4px var(--logo-glow),
+        0 0 14px rgba(255, 106, 0, 0.35);
     white-space: pre;
     user-select: none;
     text-align: left;
@@ -364,31 +366,31 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     0%, 87%, 91%, 100% {
         transform: translate(0, 0);
         text-shadow:
-            0 0 4px var(--accent-glow),
-            0 0 12px rgba(255, 199, 150, 0.3);
+            0 0 4px var(--logo-glow),
+            0 0 14px rgba(255, 106, 0, 0.35);
         filter: none;
     }
     87.5% {
         transform: translate(-2px, 1px);
         text-shadow:
-             2px 0 0 var(--orange),
+             2px 0 0 var(--accent-2),
             -2px 0 0 var(--cyan),
-            0 0 4px var(--accent-glow);
+            0 0 4px var(--logo-glow);
     }
     88% {
         transform: translate(2px, -1px);
         text-shadow:
-            -2px 0 0 var(--orange),
+            -2px 0 0 var(--accent-2),
              2px 0 0 var(--cyan),
-            0 0 4px var(--accent-glow);
+            0 0 4px var(--logo-glow);
         filter: hue-rotate(8deg);
     }
     88.5% {
         transform: translate(-1px, 0);
         text-shadow:
-             1px 0 0 var(--orange),
+             1px 0 0 var(--accent-2),
             -1px 0 0 var(--cyan),
-            0 0 6px var(--accent-glow);
+            0 0 6px var(--logo-glow);
     }
     89% {
         transform: translate(0, -1px);
@@ -855,13 +857,13 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
    page ASCII logo, condensed to a single glowing word that fits
    the 56px topbar. */
 .brand-mini-mark {
-    color: var(--accent);
+    color: var(--logo);
     font-weight: 700;
     letter-spacing: 0.08em;
     font-size: 1.1em;
     text-shadow:
-        0 0 6px var(--accent-glow),
-        0 0 14px rgba(255, 199, 150, 0.25);
+        0 0 6px var(--logo-glow),
+        0 0 14px rgba(255, 106, 0, 0.35);
     animation:
         brand-flicker 9s infinite,
         brand-glitch  7.3s infinite;
