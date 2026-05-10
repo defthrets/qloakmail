@@ -957,17 +957,17 @@ async function openMessage(id) {
                 </div>
             </header>
             <div class="reader-actions">
-                <button class="reader-action" data-action="reply">[ REPLY ]</button>
-                <button class="reader-action" data-action="reply-all">[ REPLY ALL ]</button>
-                <button class="reader-action" data-action="forward">[ FORWARD ]</button>
-                <button class="reader-action" data-action="star" data-starred="${isStarred ? "1" : "0"}">${isStarred ? "[ ★ STARRED ]" : "[ ☆ STAR ]"}</button>
-                <button class="reader-action" data-action="unread">[ UNREAD ]</button>
-                <button class="reader-action" data-action="print">[ PRINT ]</button>
-                ${hasHtml && parsed.textBody ? `<button class="reader-action" data-action="view-toggle">[ TEXT ]</button>` : ""}
-                <button class="reader-action" data-action="raw">[ RAW ]</button>
-                <button class="reader-action" data-action="delete">[ DELETE ]</button>
-                <button class="reader-action danger" data-action="spam">[ SPAM ]</button>
-                <button class="reader-action danger" data-action="block">[ BLOCK ]</button>
+                <button class="reader-action" data-action="reply"      data-label="Reply"      title="Reply" type="button">↩</button>
+                <button class="reader-action" data-action="reply-all"  data-label="Reply all"  title="Reply all" type="button">⇇</button>
+                <button class="reader-action" data-action="forward"    data-label="Forward"    title="Forward" type="button">↪</button>
+                <button class="reader-action" data-action="star"       data-label="${isStarred ? "Unstar" : "Star"}" data-starred="${isStarred ? "1" : "0"}" title="${isStarred ? "Unstar" : "Star"}" type="button">${isStarred ? "★" : "☆"}</button>
+                <button class="reader-action" data-action="unread"     data-label="Mark unread" title="Mark unread" type="button">◐</button>
+                <button class="reader-action" data-action="print"      data-label="Print"       title="Print" type="button">⎙</button>
+                ${hasHtml && parsed.textBody ? `<button class="reader-action" data-action="view-toggle" data-label="Plain text" title="Toggle plain text / HTML" type="button">¶</button>` : ""}
+                <button class="reader-action" data-action="raw"        data-label="Raw source"  title="Raw RFC 822 source" type="button">⌭</button>
+                <button class="reader-action" data-action="delete"     data-label="Delete"      title="Delete" type="button">⌫</button>
+                <button class="reader-action danger" data-action="spam"  data-label="Spam"  title="Mark as spam" type="button">⚠</button>
+                <button class="reader-action danger" data-action="block" data-label="Block" title="Block sender" type="button">⊘</button>
             </div>
             ${hasRemote ? `
                 <div class="remote-image-banner" id="remote-image-banner">
@@ -1150,7 +1150,9 @@ async function readerToggleStar(viewEl, id) {
     if (btn) {
         const now = !isStarred;
         btn.dataset.starred = now ? "1" : "0";
-        btn.textContent = now ? "[ ★ STARRED ]" : "[ ☆ STAR ]";
+        btn.textContent = now ? "★" : "☆";
+        btn.dataset.label = now ? "Unstar" : "Star";
+        btn.title       = now ? "Unstar" : "Star";
     }
     await renderMessageList();
 }
@@ -1175,6 +1177,7 @@ function printReader() {
 // (broken layout, dark-on-dark text from the sender's stylesheet, etc).
 function toggleHtmlText(viewEl, parsed) {
     const bodyEl = viewEl.querySelector(".body-content");
+    const btn    = viewEl.querySelector('[data-action="view-toggle"]');
     if (!bodyEl) return;
     if (state.readerView === "html") {
         bodyEl.classList.remove("html-body");
@@ -1184,7 +1187,11 @@ function toggleHtmlText(viewEl, parsed) {
         pre.textContent = parsed.textBody || _htmlToText(parsed.htmlBody || "");
         bodyEl.appendChild(pre);
         state.readerView = "text";
-        viewEl.querySelector('[data-action="view-toggle"]').textContent = "[ HTML ]";
+        if (btn) {
+            btn.textContent  = "❮❯";
+            btn.dataset.label = "Rich HTML";
+            btn.title         = "Switch back to HTML";
+        }
     } else {
         bodyEl.classList.remove("text-body");
         bodyEl.classList.add("html-body");
@@ -1193,7 +1200,11 @@ function toggleHtmlText(viewEl, parsed) {
             allowRemoteImages: false,
         });
         state.readerView = "html";
-        viewEl.querySelector('[data-action="view-toggle"]').textContent = "[ TEXT ]";
+        if (btn) {
+            btn.textContent  = "¶";
+            btn.dataset.label = "Plain text";
+            btn.title         = "Switch to plain text";
+        }
     }
 }
 
