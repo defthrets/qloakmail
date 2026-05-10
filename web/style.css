@@ -338,6 +338,56 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     pointer-events: none;
 }
 
+/* Live password-strength meter -- sits directly below a signup or
+   recovery password field. Bar fills from 0 -> 100% as the score
+   improves; colour ramps red -> orange -> yellow -> green. Label text
+   reads "Too short", "Weak", "Fair", "Good", "Strong". Updated by the
+   bindPasswordStrength() helper in app.js. */
+.pw-strength {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.4rem;
+    font-family: var(--mono);
+    font-size: 0.75em;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+}
+.pw-strength-bar {
+    flex: 1 1 auto;
+    height: 4px;
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    position: relative;
+    overflow: hidden;
+}
+.pw-strength-fill {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: var(--warn);
+    transition: width 180ms ease, background 180ms ease;
+}
+.pw-strength-label {
+    flex: 0 0 auto;
+    min-width: 6.5em;
+    text-align: right;
+}
+/* Tier classes set on the wrapper -- both fill colour and label
+   colour update together so the meter reads at a glance even at a
+   distance. */
+.pw-strength.t-toolow  .pw-strength-fill { background: var(--warn); }
+.pw-strength.t-toolow  .pw-strength-label{ color: var(--warn); }
+.pw-strength.t-weak    .pw-strength-fill { background: #ff6464; }
+.pw-strength.t-weak    .pw-strength-label{ color: #ff8080; }
+.pw-strength.t-fair    .pw-strength-fill { background: #ffa260; }
+.pw-strength.t-fair    .pw-strength-label{ color: var(--accent-2); }
+.pw-strength.t-good    .pw-strength-fill { background: #ffd34d; }
+.pw-strength.t-good    .pw-strength-label{ color: #ffd34d; }
+.pw-strength.t-strong  .pw-strength-fill { background: var(--ok-green); }
+.pw-strength.t-strong  .pw-strength-label{ color: var(--ok-green); }
+
 /* ---------------- views ---------------- */
 
 .view { display: none; }

@@ -391,7 +391,87 @@ function validatePasswordStrength(pw, email) {
             return "Password must not contain your email.";
         }
     }
+    // Final gate: even after meeting the structural rules above, the
+    // password must score at least "Good" (>= 55) on the live meter.
+    // This catches structurally-valid-but-low-entropy passwords like
+    // "Passsword1234" (3 classes, 12 chars, not weak-listed, still
+    // trivial) and anything with long character runs.
+    const { tier } = scorePassword(pw, email);
+    if (tier !== "good" && tier !== "strong") {
+        return "Password is not strong enough — aim for 'Good' or 'Strong' on the meter (more length, more variety, no repetition).";
+    }
     return null;
+}
+
+// Live strength score: returns { score:0..100, tier:'toolow'|...|'strong',
+// label } so the meter UI and the submit gate share one source of
+// truth. Scoring is deliberately simple (no zxcvbn dependency); it
+// rewards length, character-class variety, and uncommon shapes, and
+// penalises the well-known weak list and email-substring presence.
+function scorePassword(pw, email) {
+    if (!pw) return { score: 0, tier: "toolow", label: "Type a password" };
+    if (pw.length < 12) {
+        return { score: Math.round((pw.length / 12) * 20),
+                 tier: "toolow", label: "Too short" };
+    }
+    let s = 0;
+    // Length: 12 chars -> 20pts, then +3 per extra char up to 28 chars -> 68pts.
+    s += 20 + Math.min(48, Math.max(0, (pw.length - 12) * 3));
+    // Character-class variety: 6pts each.
+    s += (/[a-z]/.test(pw) ? 6 : 0);
+    s += (/[A-Z]/.test(pw) ? 6 : 0);
+    s += (/[0-9]/.test(pw) ? 6 : 0);
+    s += (/[^A-Za-z0-9]/.test(pw) ? 6 : 0);
+    // Bonus: long passwords with all four classes get a small kicker.
+    if (pw.length >= 20 && /[a-z]/.test(pw) && /[A-Z]/.test(pw)
+        && /[0-9]/.test(pw) && /[^A-Za-z0-9]/.test(pw)) s += 10;
+    // Penalties.
+    if (WEAK_PASSWORDS.has(pw.toLowerCase())) s -= 60;
+    if (email) {
+        const local = String(email).split("@")[0].toLowerCase();
+        if (local && local.length >= 4 && pw.toLowerCase().includes(local)) s -= 30;
+    }
+    // Trivial-repetition penalties.
+    //   Whole-string single-char (aaaa...)        -> -60
+    //   Whole-string ababab... or abcabcabc...    -> -40
+    //   Any run of 5+ identical chars inside pw   -> -25 (catches
+    //                                                  e.g. aaaaaA1!)
+    //   Sequential keyboard/number run length >=5 -> -15
+    if (/^(.)\1+$/.test(pw)) s -= 60;
+    if (/^(..?)\1{3,}$/.test(pw)) s -= 40;
+    if (/(.)\1{4,}/.test(pw)) s -= 25;
+    if (/01234|12345|23456|34567|45678|56789|abcde|bcdef|cdefg|defgh|qwert|werty/i.test(pw)) s -= 15;
+    s = Math.max(0, Math.min(100, s));
+
+    let tier, label;
+    if      (s < 30)  { tier = "weak";   label = "Weak"; }
+    else if (s < 55)  { tier = "fair";   label = "Fair"; }
+    else if (s < 80)  { tier = "good";   label = "Good"; }
+    else              { tier = "strong"; label = "Strong"; }
+    return { score: s, tier, label };
+}
+
+// Wire a .pw-strength wrapper to its referenced password input. Updates
+// the bar width + colour + label on every input event. Idempotent --
+// calling twice on the same wrapper just re-binds.
+function bindPasswordStrength(wrapper, getEmail) {
+    if (!wrapper || wrapper._bound) return;
+    const targetId = wrapper.dataset.for;
+    const input = document.getElementById(targetId);
+    if (!input) return;
+    const fill  = wrapper.querySelector(".pw-strength-fill");
+    const label = wrapper.querySelector(".pw-strength-label");
+    const tiers = ["toolow", "weak", "fair", "good", "strong"];
+    const update = () => {
+        const email = typeof getEmail === "function" ? getEmail() : "";
+        const { score, tier, label: text } = scorePassword(input.value, email);
+        fill.style.width = score + "%";
+        label.textContent = text;
+        tiers.forEach(t => wrapper.classList.toggle("t-" + t, t === tier));
+    };
+    input.addEventListener("input", update);
+    wrapper._bound = true;
+    update();
 }
 
 // ----------------------------------------------------------------- signup
@@ -3234,6 +3314,21 @@ async function boot() {
     $("#recovery-form").addEventListener("submit", e => {
         e.preventDefault(); handleRecovery(e.target);
     });
+    // Live strength meters. The signup meter knows the user's email-
+    // to-be (so substring matches get penalised); the recovery meter
+    // reads the email field of its own form.
+    bindPasswordStrength(
+        document.querySelector('#signup-form .pw-strength'),
+        () => {
+            const uname = document.querySelector('#signup-form input[name="username"]')?.value || "";
+            const dom = (state.config?.domain || "qloak.me");
+            return uname ? `${uname}@${dom}` : "";
+        },
+    );
+    bindPasswordStrength(
+        document.querySelector('#recovery-form .pw-strength'),
+        () => document.querySelector('#recovery-form input[name="email"]')?.value || "",
+    );
     $("#logout-btn").addEventListener("click", async () => {
         disarmIdleLock();
         try { await api.post("/auth/logout", {}); } catch {}

@@ -115,10 +115,17 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
             <small id="signup-domain-hint"></small>
           </label>
           <label>Password (12+ chars)
-            <input type="password" name="password" minlength="12" required>
+            <input type="password" name="password" id="signup-pw"
+                   minlength="12" required
+                   autocomplete="new-password" spellcheck="false">
+            <span class="pw-strength" data-for="signup-pw" aria-live="polite">
+              <span class="pw-strength-bar"><span class="pw-strength-fill"></span></span>
+              <span class="pw-strength-label">Type a password</span>
+            </span>
           </label>
           <label>Confirm password
-            <input type="password" name="password2" minlength="12" required>
+            <input type="password" name="password2" minlength="12" required
+                   autocomplete="new-password" spellcheck="false">
           </label>
           <button type="submit" class="primary">Create account</button>
           <p class="status" id="signup-status"></p>
@@ -132,7 +139,13 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
             <input type="text" name="recovery" required spellcheck="false" autocapitalize="characters">
           </label>
           <label>New password (12+ chars)
-            <input type="password" name="password" minlength="12" required>
+            <input type="password" name="password" id="recovery-pw"
+                   minlength="12" required
+                   autocomplete="new-password" spellcheck="false">
+            <span class="pw-strength" data-for="recovery-pw" aria-live="polite">
+              <span class="pw-strength-bar"><span class="pw-strength-fill"></span></span>
+              <span class="pw-strength-label">Type a password</span>
+            </span>
           </label>
           <button type="submit" class="primary">Recover account</button>
           <p class="status" id="recovery-status"></p>
@@ -1052,7 +1065,7 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
   -->
   <script type="module"
           src="/app.js"
-          integrity="sha384-WCqtbYDrayzurHXiEYIze7uMn34CxmWLWnaFqiNiej/gyFwqL7obyGLyxDFabB12"
+          integrity="sha384-OvtzG/4mNPHDwZO7nGWz28st1B+jTIxCG9AElpUzXhl1BI3uLpX09FNzeQD+AlS1"
           crossorigin="anonymous"></script>
 </body>
 </html>
