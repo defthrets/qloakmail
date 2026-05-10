@@ -156,7 +156,7 @@ function classifyStoredSession() {
 function show(viewId) {
     $$(".view").forEach(v => v.classList.toggle("active", v.id === viewId));
     // Matrix rain lives behind the auth + unlock screens only — once
-    // the user is in their inbox there's enough green-on-dark already.
+    // the user is in their inbox there's enough warm-on-dark already.
     document.body.classList.toggle(
         "matrix-on",
         viewId === "auth-view" || viewId === "unlock-view"
@@ -871,7 +871,7 @@ function bindCompose() {
 // ----------------------------------------------------------------- matrix rain
 //
 // Subtle Japanese-character rain behind the auth and unlock views.
-// Dark gray with a faint green tint so it reads as ambient texture
+// Dark gray with a faint warm tint so it reads as ambient texture
 // rather than primary content. Pauses when the canvas isn't visible
 // (mail-view has no .matrix-on class on body) — the requestAnimationFrame
 // loop continues but the draw call early-returns.
@@ -948,12 +948,12 @@ function initMatrix() {
             const x = i * FONT_SIZE;
             const y = drops[i] * FONT_SIZE;
 
-            // Most chars are dark gray with a faint green tint.
+            // Most chars are dark gray with a faint warm tint.
             // The very head (rarely) gets a brighter highlight.
             const isHead = Math.random() < 0.012;
             ctx.fillStyle = isHead
-                ? "rgba(80, 130, 100, 0.55)"
-                : "rgba(48, 60, 55, 0.65)";
+                ? "rgba(150, 110, 80, 0.55)"
+                : "rgba(60, 55, 48, 0.65)";
             ctx.fillText(ch, x, y);
 
             // Reset to top with random delay; longer streams look

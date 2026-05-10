@@ -11,17 +11,17 @@
     --fg:           #d8dce0;
     --fg-dim:       #7a8086;
     --fg-muted:     #4d5258;
-    --accent:       #4dff85;
-    --accent-2:     #a5ffba;
-    --accent-soft:  rgba(77, 255, 133, 0.12);
-    --accent-glow:  rgba(77, 255, 133, 0.45);
+    --accent:       #ffc796;
+    --accent-2:     #ffe2c8;
+    --accent-soft:  rgba(255, 199, 150, 0.12);
+    --accent-glow:  rgba(255, 199, 150, 0.45);
     --orange:      #ff8a3d;
     --orange-glow: rgba(255, 138, 61, 0.5);
     --cyan:         #00f0ff;
     --warn:         #ff6464;
     --warn-soft:    rgba(255, 100, 100, 0.12);
-    --ok:           #4dff85;
-    --ok-soft:      rgba(77, 255, 133, 0.10);
+    --ok:           #ffc796;
+    --ok-soft:      rgba(255, 199, 150, 0.10);
     --shadow-1:     0 1px 2px rgba(0, 0, 0, 0.5);
     --shadow-2:     0 8px 24px rgba(0, 0, 0, 0.6);
     --radius:       0px;        /* no rounded corners — terminal aesthetic */
@@ -65,7 +65,7 @@ body.matrix-on #matrix-bg { opacity: 0.55; }
     #matrix-bg { display: none !important; }
 }
 
-/* Ambient backdrop — soft radial green glows + a faint diagonal grid.
+/* Ambient backdrop — soft radial warm glows + a faint diagonal grid.
    Sits behind everything as a fixed-position ::before pseudo. Costs
    nothing in DOM, looks like a hacker terminal at dusk. */
 body::before {
@@ -76,9 +76,9 @@ body::before {
     pointer-events: none;
     background:
         radial-gradient(ellipse 60% 50% at 15% 20%,
-            rgba(77, 255, 133, 0.06), transparent 60%),
+            rgba(255, 199, 150, 0.06), transparent 60%),
         radial-gradient(ellipse 50% 40% at 85% 80%,
-            rgba(77, 255, 133, 0.04), transparent 60%),
+            rgba(255, 199, 150, 0.04), transparent 60%),
         linear-gradient(135deg, rgba(255,255,255,0.01) 1px, transparent 1px) 0 0/56px 56px,
         linear-gradient(45deg,  rgba(255,255,255,0.01) 1px, transparent 1px) 0 0/56px 56px;
 }
@@ -152,8 +152,8 @@ button.primary:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow:
         0 1px 0 rgba(255, 255, 255, 0.18) inset,
-        0 4px 14px rgba(77, 255, 133, 0.35),
-        0 0 22px rgba(77, 255, 133, 0.18);
+        0 4px 14px rgba(255, 199, 150, 0.35),
+        0 0 22px rgba(255, 199, 150, 0.18);
 }
 button.primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
@@ -197,7 +197,7 @@ button.link {
     overflow: visible;
 }
 button.link:hover {
-    background: rgba(77, 255, 133, 0.08);
+    background: rgba(255, 199, 150, 0.08);
     color: var(--accent);
     transform: none;
 }
@@ -222,8 +222,8 @@ input:focus, textarea:focus, select:focus {
     border-color: var(--accent);
     background: rgba(0, 0, 0, 0.45);
     box-shadow:
-        0 0 0 3px rgba(77, 255, 133, 0.12),
-        0 0 14px rgba(77, 255, 133, 0.08) inset;
+        0 0 0 3px rgba(255, 199, 150, 0.12),
+        0 0 14px rgba(255, 199, 150, 0.08) inset;
 }
 input:hover:not(:focus), textarea:hover:not(:focus) {
     border-color: var(--border-2);
@@ -262,14 +262,14 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     background:
         linear-gradient(180deg, rgba(0,0,0,0.2), transparent 60px),
         rgba(15, 22, 20, 0.55);
-    border: 1px solid rgba(77, 255, 133, 0.18);
+    border: 1px solid rgba(255, 199, 150, 0.18);
     border-radius: 0;
     backdrop-filter: blur(14px) saturate(140%);
     -webkit-backdrop-filter: blur(14px) saturate(140%);
     box-shadow:
         0 24px 60px rgba(0, 0, 0, 0.6),
         0 0 0 1px rgba(255, 138, 61, 0.08),
-        0 0 40px rgba(77, 255, 133, 0.05);
+        0 0 40px rgba(255, 199, 150, 0.05);
     animation: card-in 380ms cubic-bezier(0.2, 0.8, 0.2, 1);
     position: relative;
     /* Notch the top-right corner — distinctive cyberpunk touch. */
@@ -299,7 +299,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 }
 
 /* Status strip above the brand on auth/unlock cards. Channels the
-   "BBS terminal" feel: greens + orange brackets, uppercase, spaced. */
+   "BBS terminal" feel: pale-orange + bright-orange brackets, uppercase, spaced. */
 .brand-status {
     display: flex;
     justify-content: center;
@@ -312,7 +312,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     color: var(--accent);
     margin: 0 0 0.85rem;
     padding-bottom: 0.7rem;
-    border-bottom: 1px dashed rgba(77, 255, 133, 0.18);
+    border-bottom: 1px dashed rgba(255, 199, 150, 0.18);
     text-shadow: 0 0 6px var(--accent-glow);
     opacity: 0.92;
 }
@@ -339,7 +339,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     color: var(--accent);
     text-shadow:
         0 0 4px var(--accent-glow),
-        0 0 12px rgba(77, 255, 133, 0.3);
+        0 0 12px rgba(255, 199, 150, 0.3);
     white-space: pre;
     user-select: none;
     text-align: left;
@@ -365,7 +365,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
         transform: translate(0, 0);
         text-shadow:
             0 0 4px var(--accent-glow),
-            0 0 12px rgba(77, 255, 133, 0.3);
+            0 0 12px rgba(255, 199, 150, 0.3);
         filter: none;
     }
     87.5% {
@@ -440,7 +440,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     flex: 0 0 auto;
     width: auto;
     background: var(--bg-2);
-    border: 1px solid rgba(77, 255, 133, 0.18);
+    border: 1px solid rgba(255, 199, 150, 0.18);
     color: var(--accent);
     font-family: var(--mono);
     font-size: 0.95em;
@@ -468,7 +468,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 .duration-row select:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(77, 255, 133, 0.15);
+    box-shadow: 0 0 0 3px rgba(255, 199, 150, 0.15);
 }
 
 .unlock-signout {
@@ -523,14 +523,14 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     background: rgba(15, 22, 20, 0.55);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(77, 255, 133, 0.14);
+    border: 1px solid rgba(255, 199, 150, 0.14);
     border-radius: var(--radius);
     font-family: var(--mono);
     font-size: 0.78em;
     color: var(--fg-dim);
     box-shadow:
         0 8px 24px rgba(0, 0, 0, 0.4),
-        0 0 16px rgba(77, 255, 133, 0.04);
+        0 0 16px rgba(255, 199, 150, 0.04);
     animation: card-in 360ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .features-header {
@@ -540,7 +540,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     text-transform: uppercase;
     margin-bottom: 0.85rem;
     padding-bottom: 0.6rem;
-    border-bottom: 1px dashed rgba(77, 255, 133, 0.18);
+    border-bottom: 1px dashed rgba(255, 199, 150, 0.18);
     text-shadow: 0 0 6px var(--accent-glow);
     opacity: 0.92;
     display: flex;
@@ -607,7 +607,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 }
 .features-list a {
     color: var(--accent-2);
-    border-bottom: 1px dotted rgba(77, 255, 133, 0.35);
+    border-bottom: 1px dotted rgba(255, 199, 150, 0.35);
     text-decoration: none;
     transition: border-bottom-color var(--t-fast), color var(--t-fast);
 }
@@ -638,13 +638,13 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     background: rgba(15, 22, 20, 0.55);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(77, 255, 133, 0.14);
+    border: 1px solid rgba(255, 199, 150, 0.14);
     font-family: var(--mono);
     font-size: 0.78em;
     color: var(--fg-dim);
     box-shadow:
         0 8px 24px rgba(0, 0, 0, 0.4),
-        0 0 16px rgba(77, 255, 133, 0.04);
+        0 0 16px rgba(255, 199, 150, 0.04);
     animation: card-in 360ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .jurisdiction-list {
@@ -666,7 +666,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 .jurisdiction-note {
     margin: 0.6rem 0 0;
     padding-top: 0.6rem;
-    border-top: 1px dashed rgba(77, 255, 133, 0.12);
+    border-top: 1px dashed rgba(255, 199, 150, 0.12);
     color: var(--fg-dim);
     line-height: 1.55;
     font-size: 0.95em;
@@ -688,7 +688,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     background: rgba(15, 22, 20, 0.55);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(77, 255, 133, 0.14);
+    border: 1px solid rgba(255, 199, 150, 0.14);
     border-radius: var(--radius);
     display: flex;
     align-items: center;
@@ -697,7 +697,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     color: var(--fg-dim);
     box-shadow:
         0 8px 24px rgba(0, 0, 0, 0.4),
-        0 0 16px rgba(77, 255, 133, 0.04);
+        0 0 16px rgba(255, 199, 150, 0.04);
     animation: card-in 360ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .onion-dot {
@@ -832,7 +832,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     background: rgba(15, 22, 20, 0.7);
     backdrop-filter: blur(10px) saturate(140%);
     -webkit-backdrop-filter: blur(10px) saturate(140%);
-    border-bottom: 1px solid rgba(77, 255, 133, 0.08);
+    border-bottom: 1px solid rgba(255, 199, 150, 0.08);
     height: 56px;
     position: relative;
     z-index: 5;
@@ -843,7 +843,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     left: 0; right: 0; bottom: -1px;
     height: 1px;
     background: linear-gradient(90deg,
-        transparent, rgba(77, 255, 133, 0.25), transparent);
+        transparent, rgba(255, 199, 150, 0.25), transparent);
 }
 .brand-mini {
     display: flex;
@@ -861,7 +861,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     font-size: 1.1em;
     text-shadow:
         0 0 6px var(--accent-glow),
-        0 0 14px rgba(77, 255, 133, 0.25);
+        0 0 14px rgba(255, 199, 150, 0.25);
     animation:
         brand-flicker 9s infinite,
         brand-glitch  7.3s infinite;
@@ -883,7 +883,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     align-items: center;
     gap: 0.25em;
     padding: 0.2em 0.5em;
-    border: 1px solid rgba(77, 255, 133, 0.18);
+    border: 1px solid rgba(255, 199, 150, 0.18);
 }
 .topbar-status .bracket { color: var(--orange); text-shadow: 0 0 4px var(--orange-glow); }
 .topbar-status .dot {
@@ -1008,7 +1008,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 }
 /* Bracketed folder name — the visual frame is via pseudo-elements
    so the underlying data stays clean ("Inbox"), but the user sees
-   `[ INBOX ]` in the orange+green dual-tone. */
+   `[ INBOX ]` in the bright-orange + pale-orange dual-tone. */
 .folder-list li > span:first-child::before {
     content: "[";
     color: var(--orange);
@@ -1022,7 +1022,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     text-shadow: 0 0 4px var(--orange-glow);
 }
 .folder-list li:hover {
-    background: rgba(77, 255, 133, 0.06);
+    background: rgba(255, 199, 150, 0.06);
     color: var(--fg);
     transform: translateX(2px);
 }
@@ -1030,7 +1030,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     background: var(--accent-soft);
     color: var(--accent);
     font-weight: 500;
-    box-shadow: inset 2px 0 0 var(--accent), 0 0 12px rgba(77, 255, 133, 0.06);
+    box-shadow: inset 2px 0 0 var(--accent), 0 0 12px rgba(255, 199, 150, 0.06);
 }
 .folder-list .icon {
     display: inline-block;
@@ -1090,12 +1090,12 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     position: relative;
 }
 #message-list li:hover {
-    background: rgba(77, 255, 133, 0.04);
+    background: rgba(255, 199, 150, 0.04);
     padding-left: 1.15rem;
 }
 #message-list li.active {
-    background: rgba(77, 255, 133, 0.08);
-    box-shadow: inset 3px 0 0 var(--accent), 0 0 18px rgba(77, 255, 133, 0.05);
+    background: rgba(255, 199, 150, 0.08);
+    box-shadow: inset 3px 0 0 var(--accent), 0 0 18px rgba(255, 199, 150, 0.05);
 }
 #message-list li.unread .from { color: var(--accent-2); font-weight: 600; }
 #message-list li.unread::before {
@@ -1219,7 +1219,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 .reader-empty p { margin: 0; font-size: 0.9em; }
 
 .reader header {
-    border-bottom: 1px dashed rgba(77, 255, 133, 0.2);
+    border-bottom: 1px dashed rgba(255, 199, 150, 0.2);
     padding: 1.25rem 1.5rem;
     background: rgba(15, 22, 20, 0.5);
     backdrop-filter: blur(8px);
@@ -1237,7 +1237,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     opacity: 0.85;
     margin-bottom: 0.6rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px dashed rgba(77, 255, 133, 0.12);
+    border-bottom: 1px dashed rgba(255, 199, 150, 0.12);
 }
 .reader header h2 {
     margin: 0 0 0.5rem;
@@ -1298,14 +1298,14 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     -webkit-backdrop-filter: blur(18px) saturate(140%);
     width: min(680px, 96vw);
     max-height: 88vh;
-    border: 1px solid rgba(77, 255, 133, 0.16);
+    border: 1px solid rgba(255, 199, 150, 0.16);
     border-bottom: none;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     display: flex;
     flex-direction: column;
     box-shadow:
         0 -24px 60px rgba(0, 0, 0, 0.6),
-        0 -1px 0 rgba(77, 255, 133, 0.2);
+        0 -1px 0 rgba(255, 199, 150, 0.2);
     z-index: 1;
     animation: modal-in 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -1318,7 +1318,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     justify-content: space-between;
     align-items: center;
     padding: 0.85rem 1.25rem;
-    border-bottom: 1px dashed rgba(77, 255, 133, 0.18);
+    border-bottom: 1px dashed rgba(255, 199, 150, 0.18);
 }
 .modal-head h3 {
     margin: 0;
@@ -1399,12 +1399,12 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     backdrop-filter: blur(12px) saturate(150%);
     -webkit-backdrop-filter: blur(12px) saturate(150%);
     color: var(--fg);
-    border: 1px solid rgba(77, 255, 133, 0.18);
+    border: 1px solid rgba(255, 199, 150, 0.18);
     padding: 0.75rem 1.25rem;
     border-radius: var(--radius);
     box-shadow:
         0 8px 32px rgba(0, 0, 0, 0.5),
-        0 0 24px rgba(77, 255, 133, 0.08);
+        0 0 24px rgba(255, 199, 150, 0.08);
     z-index: 100;
     max-width: 90vw;
     font-size: 0.92em;
