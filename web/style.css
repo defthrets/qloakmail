@@ -26,6 +26,13 @@
     --ok-soft:      rgba(255, 122, 31, 0.10);
     --ok-green:     #4dff85;
     --ok-green-glow: rgba(77, 255, 133, 0.6);
+    /* Neutral dark gray for form controls (text inputs, textareas,
+       selects, native checkboxes). Distinct from the green-tinted
+       --bg-2 / --panel family so the form controls read as a clearly
+       separate UI surface from the panels around them. */
+    --input-bg:       #2a2a2a;
+    --input-bg-focus: #333333;
+    --input-border:   #3a3a3a;
     --shadow-1:     0 1px 2px rgba(0, 0, 0, 0.5);
     --shadow-2:     0 8px 24px rgba(0, 0, 0, 0.6);
     --radius:       0px;        /* no rounded corners — terminal aesthetic */
@@ -231,13 +238,19 @@ button.link:hover {
 /* ---------------- inputs ---------------- */
 
 input, textarea, select {
-    background: var(--bg-2);
+    background: var(--input-bg);
     color: var(--fg);
-    border: 1px solid var(--border);
+    border: 1px solid var(--input-border);
     padding: 0.6rem 0.75rem;
     font: inherit;
     border-radius: var(--radius);
     width: 100%;
+    /* color-scheme: dark tells the browser to render native UI bits
+       (checkbox boxes, scroll bars, autofill, calendar pickers) in
+       their dark variant, so the native checkbox squares come out
+       gray-on-dark instead of the default light gray. accent-color is
+       still set per-checkbox below to keep the orange tick. */
+    color-scheme: dark;
     transition:
         border-color var(--t-fast),
         background var(--t-fast),
@@ -246,13 +259,23 @@ input, textarea, select {
 input:focus, textarea:focus, select:focus {
     outline: none;
     border-color: var(--accent);
-    background: rgba(0, 0, 0, 0.45);
+    background: var(--input-bg-focus);
     box-shadow:
         0 0 0 3px rgba(255, 122, 31, 0.12),
         0 0 14px rgba(255, 122, 31, 0.08) inset;
 }
 input:hover:not(:focus), textarea:hover:not(:focus) {
     border-color: var(--border-2);
+}
+
+/* Checkboxes/radios: same dark-gray surface, orange accent for the
+   tick. width:auto undoes the 100% width inherited from the base
+   input rule (otherwise the box stretches across its container). */
+input[type="checkbox"],
+input[type="radio"] {
+    width: auto;
+    accent-color: var(--orange);
+    background: var(--input-bg);
 }
 input::placeholder, textarea::placeholder { color: var(--fg-muted); }
 
@@ -1979,12 +2002,12 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     min-height: 240px;
     border: none;
     border-radius: 0;
-    background: var(--panel);
+    background: var(--input-bg);
     resize: none;
     font-size: 0.94em;
     line-height: 1.5;
 }
-.compose-card textarea:focus { background: var(--panel); }
+.compose-card textarea:focus { background: var(--input-bg-focus); }
 .modal-foot {
     display: flex;
     justify-content: space-between;
