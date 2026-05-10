@@ -671,10 +671,12 @@ async function backgroundDecryptUncached() {
             const armored = new TextDecoder().decode(blob);
             const enc = extractPgpPart(armored);
             const message = await openpgp.readMessage({ armoredMessage: enc });
-            const { data: plaintext } = await openpgp.decrypt({
+            const { data: bytes } = await openpgp.decrypt({
                 message,
                 decryptionKeys: state.privkey,
+                format: "binary",
             });
+            const plaintext = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
             const parsed = parseRfc822(plaintext);
             await Search.indexMessage(msg.id, parsed);
 
@@ -907,10 +909,17 @@ async function openMessage(id) {
 
         const enc = extractPgpPart(armored);
         const message = await openpgp.readMessage({ armoredMessage: enc });
-        const { data: plaintextRfc822 } = await openpgp.decrypt({
+        // Decrypt to BINARY then decode as UTF-8 ourselves. If we let
+        // openpgp.js return a string it interprets the literal-data
+        // packet as Latin-1, mangling multi-byte UTF-8 sequences
+        // ("don't" -> "donâ€™t" etc).
+        const { data: plaintextBytes } = await openpgp.decrypt({
             message,
             decryptionKeys: state.privkey,
+            format: "binary",
         });
+        const plaintextRfc822 = new TextDecoder("utf-8", { fatal: false })
+            .decode(plaintextBytes);
 
         const parsed = parseRfc822(plaintextRfc822);
         // Fallback: if parsing returned an empty body (unusual MIME
@@ -1700,11 +1709,14 @@ function sanitiseHtml(html, { inlineImages = new Map(), allowRemoteImages = fals
                 const n = attr.name.toLowerCase();
                 if (n.startsWith("on")) { child.removeAttribute(n); continue; }
                 if (n === "style") {
-                    // Strip dangerous css. Keep only colour, font-*,
-                    // text-*, background-color (no urls), padding,
-                    // margin, border-*, line-height, list-style-*.
+                    // Strip dangerous css. Drop `color:` entirely
+                    // because senders almost always set it for a
+                    // white shell — on our dark surface their
+                    // dark-on-dark text becomes invisible. Keep
+                    // background-color (CTAs / branded boxes) and
+                    // structural properties (font, padding, etc).
                     const safe = (attr.value || "").split(";").map(s => s.trim()).filter(Boolean)
-                        .filter(decl => /^(color|font(-[a-z]+)?|text(-[a-z]+)?|background-color|padding(-[a-z]+)?|margin(-[a-z]+)?|border(-[a-z]+)?|line-height|list-style(-[a-z]+)?|width|max-width|min-width|height|max-height|min-height|display|vertical-align|text-align|opacity|letter-spacing)\s*:/i.test(decl))
+                        .filter(decl => /^(font(-[a-z]+)?|text(-[a-z]+)?|background-color|padding(-[a-z]+)?|margin(-[a-z]+)?|border(-[a-z]+)?|line-height|list-style(-[a-z]+)?|width|max-width|min-width|height|max-height|min-height|display|vertical-align|text-align|opacity|letter-spacing)\s*:/i.test(decl))
                         .filter(decl => !/url\s*\(|expression|behavior|@import|position\s*:\s*fixed/i.test(decl))
                         .join(";");
                     if (safe) child.setAttribute("style", safe);
@@ -1930,7 +1942,43 @@ function _parseHeaders(block) {
             }
         }
     }
+    // RFC 2047 decode for human-readable header values (Subject,
+    // From, To, Cc). =?charset?B?...?= or =?charset?Q?...?= replaced
+    // with the decoded UTF-8 string. Bare ASCII passes through.
+    for (const k of ["subject", "from", "to", "cc"]) {
+        if (headers[k]) headers[k] = _decodeMimeWords(headers[k]);
+    }
     return headers;
+}
+
+function _decodeMimeWords(s) {
+    return s.replace(
+        /=\?([^?]+)\?([BbQq])\?([^?]*)\?=(\s*)(?==\?|\s|$)/g,
+        (_, charset, enc, payload) => {
+            try {
+                let bytes;
+                if (enc.toUpperCase() === "B") {
+                    const bin = atob(payload.replace(/\s+/g, ""));
+                    bytes = new Uint8Array(bin.length);
+                    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i) & 0xff;
+                } else {
+                    // Q-encoding: like quoted-printable but `_` means space.
+                    const qp = payload.replace(/_/g, " ");
+                    const buf = [];
+                    for (let i = 0; i < qp.length; i++) {
+                        if (qp[i] === "=" && /^[0-9A-Fa-f]{2}$/.test(qp.substr(i + 1, 2))) {
+                            buf.push(parseInt(qp.substr(i + 1, 2), 16));
+                            i += 2;
+                        } else {
+                            buf.push(qp.charCodeAt(i) & 0xff);
+                        }
+                    }
+                    bytes = new Uint8Array(buf);
+                }
+                return new TextDecoder(charset.toLowerCase(), { fatal: false }).decode(bytes);
+            } catch { return _; }
+        }
+    );
 }
 
 // Walks a multipart/* body, recursively, populating the accumulator
@@ -2003,15 +2051,41 @@ function _walkMultipart(rawBody, ctypeHeader, acc) {
     }
 }
 
+// Transfer-encoding decode that produces a UTF-8 string. base64 and
+// quoted-printable both encode arbitrary BYTES, not characters; a
+// UTF-8 character may span 2-4 of those bytes. We must reassemble
+// the byte sequence then decode as UTF-8, otherwise multi-byte
+// codepoints (â / ' / é / non-ASCII anything) show up as mojibake
+// like "donâ€™t".
 function _decodeTransfer(body, enc) {
+    const utf8 = new TextDecoder("utf-8", { fatal: false });
     if (enc === "base64") {
-        try { return atob(body.replace(/\s+/g, "")); }
-        catch { return body; }
+        try {
+            const bin = atob(body.replace(/\s+/g, ""));
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i) & 0xff;
+            return utf8.decode(bytes);
+        } catch { return body; }
     }
     if (enc === "quoted-printable") {
-        return body.replace(/=\r?\n/g, "")
-                   .replace(/=([0-9A-Fa-f]{2})/g, (_, h) =>
-                       String.fromCharCode(parseInt(h, 16)));
+        // Strip soft line breaks, then walk the string assembling a
+        // byte buffer. Each =XX is one byte; everything else is its
+        // own char (assumed ASCII -> 1 byte).
+        const noSoftBreaks = body.replace(/=\r?\n/g, "");
+        const bytes = [];
+        for (let i = 0; i < noSoftBreaks.length; i++) {
+            const c = noSoftBreaks[i];
+            if (c === "=" && i + 2 < noSoftBreaks.length) {
+                const hex = noSoftBreaks.substr(i + 1, 2);
+                if (/^[0-9A-Fa-f]{2}$/.test(hex)) {
+                    bytes.push(parseInt(hex, 16));
+                    i += 2;
+                    continue;
+                }
+            }
+            bytes.push(c.charCodeAt(0) & 0xff);
+        }
+        return utf8.decode(new Uint8Array(bytes));
     }
     return body;
 }
