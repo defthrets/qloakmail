@@ -377,7 +377,11 @@ async function handleSignup(form) {
         });
 
         // Show recovery code, then auto-login on confirm.
-        $("#recovery-shown-code").textContent = recoveryCode;
+        const codeEl = $("#recovery-shown-code");
+        codeEl.textContent = recoveryCode;
+        // Auto-clear the clipboard 30s after the user copies the
+        // recovery code, so it doesn't sit in the OS paste buffer.
+        codeEl.addEventListener("copy", scheduleClipboardClear, { once: true });
         show("recovery-shown-view");
 
         const confirmBox = $("#recovery-shown-confirm");
@@ -464,6 +468,7 @@ async function handleRecovery(form) {
 async function enterMailbox() {
     show("mail-view");
     $("#who").textContent = state.account.email;
+    armIdleLock();
     try {
         await Search.open(state.account.account_id);
         await refreshSearchStats();
@@ -1107,6 +1112,101 @@ function bindRipples() {
     }, { capture: false });
 }
 
+// ----------------------------------------------------------------- idle auto-lock
+//
+// After IDLE_TIMEOUT_MS of no user activity in the mail view, drop the
+// in-memory plaintext private key and bounce the user to the unlock
+// view. This limits the post-compromise window — if someone walks away
+// from a logged-in session and someone else picks up the device, they
+// hit a password prompt rather than an open inbox.
+//
+// "Activity" is any pointer/keyboard/scroll event. We also pause the
+// timer when the tab is hidden so a backgrounded tab isn't constantly
+// "active" because of focus events firing in the background.
+//
+// 15 minutes balances "long enough to switch tabs and read a doc" vs
+// "short enough that a stolen unlocked laptop doesn't expose mail
+// indefinitely". Hardcoded — could be a per-user pref later.
+
+const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
+let _idleTimer = null;
+let _idleArmed = false;
+
+function armIdleLock() {
+    if (_idleArmed) return;
+    _idleArmed = true;
+    const reset = () => {
+        clearTimeout(_idleTimer);
+        if (document.hidden) return;          // don't tick while hidden
+        _idleTimer = setTimeout(triggerIdleLock, IDLE_TIMEOUT_MS);
+    };
+    ["mousemove", "keydown", "click", "scroll", "touchstart"].forEach(ev =>
+        document.addEventListener(ev, reset, { passive: true }));
+    document.addEventListener("visibilitychange", reset);
+    reset();
+}
+
+function disarmIdleLock() {
+    _idleArmed = false;
+    clearTimeout(_idleTimer);
+    _idleTimer = null;
+}
+
+function triggerIdleLock() {
+    // Only meaningful while the user is in the mailbox with a live key.
+    if (!state.privkey) return;
+    if (document.querySelector(".view.active")?.id !== "mail-view") return;
+
+    // Drop the plaintext key and any decrypted state. Keep the encrypted
+    // session blob intact so unlockSession() can re-derive after the
+    // user re-enters their password.
+    state.privkey = null;
+    state.pubkey = null;
+    state.messages = [];
+    state.selectedMessageId = null;
+    api.setToken(null);
+
+    // If the stored session has the encrypted blob, send the user to
+    // unlock; otherwise to a fresh sign-in.
+    const sess = loadSession();
+    if (sess && sess.encrypted_privkey_password) {
+        // Strip any cached plaintext key (from a remember-me window)
+        // so unlock has to re-derive from the password.
+        const { privkey_armored, expires_at, ...minimal } = sess;
+        const target = localStorage.getItem(SESSION_KEY) ? localStorage : sessionStorage;
+        target.setItem(SESSION_KEY, JSON.stringify(minimal));
+        $("#unlock-email").textContent = sess.email;
+        show("unlock-view");
+        toast("Locked due to inactivity — sign back in.", "");
+        setTimeout(() => $("#unlock-form input[name=password]").focus(), 50);
+    } else {
+        clearSession();
+        show("auth-view");
+        toast("Locked due to inactivity.", "");
+    }
+    disarmIdleLock();
+}
+
+// ----------------------------------------------------------------- clipboard auto-clear
+//
+// When the user copies sensitive material (recovery code, onion
+// address) we schedule a write of an empty string to the clipboard
+// AUTO_CLEAR_MS later. Defends against the "open recovery code, copy,
+// paste, walk away with it still in clipboard" mistake.
+//
+// Best-effort: if the user has copied something else in the meantime
+// we'll still overwrite that. Tradeoff: better to lose a clipboard
+// than leak a recovery code. Skip if Clipboard API not available.
+
+const CLIPBOARD_AUTO_CLEAR_MS = 30 * 1000;
+
+function scheduleClipboardClear() {
+    if (!navigator.clipboard?.writeText) return;
+    setTimeout(() => {
+        navigator.clipboard.writeText("").catch(() => { /* user navigated away — fine */ });
+    }, CLIPBOARD_AUTO_CLEAR_MS);
+}
+
 // ----------------------------------------------------------------- info-page nav
 //
 // Click handler for the [HOME]/[ABOUT]/[PRIVACY]/[TERMS] strip at the
@@ -1167,6 +1267,7 @@ function bindOnionNotice(onion) {
     btn.addEventListener("click", async () => {
         try {
             await navigator.clipboard.writeText(onion);
+            scheduleClipboardClear();
             $("#onion-copy-hint").textContent = "copied";
             notice.classList.add("copied");
             clearTimeout(resetTimer);
@@ -1251,6 +1352,7 @@ async function boot() {
         e.preventDefault(); handleRecovery(e.target);
     });
     $("#logout-btn").addEventListener("click", async () => {
+        disarmIdleLock();
         try { await api.post("/auth/logout", {}); } catch {}
         try { await Search.clear(); } catch {}
         clearSession();

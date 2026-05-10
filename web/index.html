@@ -8,8 +8,20 @@
   <title>qloak</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="/style.css">
-  <script src="/lib/openpgp.min.js"></script>
-  <script src="/lib/hash-wasm.umd.min.js"></script>
+  <!--
+    Subresource Integrity (SRI) on the bundled crypto libs. If a
+    compromised origin ever served a modified openpgp.js or hash-wasm,
+    the browser would refuse to execute it. Hashes are computed from
+    the exact files in /web/lib at commit time:
+        openssl dgst -sha384 -binary <file> | openssl base64 -A
+    Update both the file and the hash in lock-step.
+  -->
+  <script src="/lib/openpgp.min.js"
+          integrity="sha384-GSfnO+LcQAKSCm1NYG2u/acMR+jBE5ML42eWq3lKjR0Dglq3Zp4dWI3K319/7zmD"
+          crossorigin="anonymous"></script>
+  <script src="/lib/hash-wasm.umd.min.js"
+          integrity="sha384-vH5IYpGQ6IL2jsEVxeC79UYAz+rs+ZGfo/8s2+oZxDxBcJS8fpEShpxYn1T3pP8S"
+          crossorigin="anonymous"></script>
 </head>
 <body>
   <!-- Reusable logo glyph: a Q-ring with an envelope-flap chevron inside

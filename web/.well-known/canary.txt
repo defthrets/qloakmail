@@ -1,0 +1,38 @@
+QloakMail Warrant Canary
+========================
+
+As of the date below, QloakMail has:
+
+  * NEVER received a National Security Letter or other secret subpoena.
+  * NEVER been compelled to install backdoors or modify our software
+    in a way that weakens user security.
+  * NEVER handed over user plaintext, private keys, or any data we
+    are unable to decrypt — because by design we cannot.
+  * NEVER received a gag order preventing us from updating this canary.
+
+If this canary is not refreshed within 14 days of the timestamp below,
+or if it is removed entirely, treat that as a signal that something
+may have changed — and act accordingly.
+
+Refreshed:    PLACEHOLDER_DATE
+Bitcoin block height (anchor): PLACEHOLDER_BTC_HEIGHT
+Bitcoin block hash   (anchor): PLACEHOLDER_BTC_HASH
+
+Signed PGP statement follows. Verify with the QloakMail operator
+public key, fingerprint published at https://qloak.me/about and on
+the qloak.me DNS TXT record _qloakmail-canary-key.qloak.me.
+
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+This is a placeholder canary statement. Replace with a freshly-signed
+message every week. Recommended scripted refresh:
+
+  scripts/refresh-canary.sh
+
+which fetches the latest Bitcoin block hash, fills the placeholders,
+and signs with the operator key.
+
+-----BEGIN PGP SIGNATURE-----
+PLACEHOLDER_SIGNATURE
+-----END PGP SIGNATURE-----
