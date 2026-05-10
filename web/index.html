@@ -228,7 +228,27 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
     <!-- ============== Privacy ============== -->
     <section id="privacy-view" class="view">
       <div class="auth-card">
-        <nav class="brand-nav" aria-label="primary">
+        <header class="brand">
+          <pre class="brand-ascii" aria-label="qloak"
+><span aria-hidden="true">            ..                               ..
+            x .d88"                          &lt; .z@8"`
+             5888R          u.                !@88E
+    .u@u     '888R    ...ue888b        u      '888E   u
+ .zWF8888bx   888R    888R Y888r    us888u.    888E u@8NL
+.888  9888    888R    888R I888&gt; .@88 "8888"   888E`"88*"
+I888  9888    888R    888R I888&gt; 9888  9888    888E .dN.
+I888  9888    888R    888R I888&gt; 9888  9888    888E~8888
+I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
+`888Nx?888   .888B .  "*888*P"   9888  9888    888E  9888.
+ "88" '888   ^*888%     'Y"      "888*""888" '"888*" 4888"
+       88E     "%                 ^Y"   ^Y'     ""    ""
+       98&gt;
+       '8
+        `</span></pre>
+          <p class="tagline">Encrypted mail. No logs ever.</p>
+        </header>
+
+        <nav class="brand-nav brand-nav--under" aria-label="primary">
           <a href="#home" data-view="auth-view"><span class="bracket">[</span>HOME<span class="bracket">]</span></a>
           <a href="#about" data-view="about-view"><span class="bracket">[</span>ABOUT<span class="bracket">]</span></a>
           <a href="#privacy" data-view="privacy-view" class="active"><span class="bracket">[</span>PRIVACY<span class="bracket">]</span></a>
@@ -237,51 +257,179 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
         </nav>
         <article class="info-page">
           <h2><span class="bracket">[</span>PRIVACY<span class="bracket">]</span> <span class="prompt">&gt;</span> policy</h2>
-          <p class="info-meta">Last updated: <strong>10 May 2026</strong></p>
+          <p class="info-meta">Effective <strong>10 May 2026</strong>. We will publicly note any material change at least 30 days before it takes effect.</p>
 
-          <h3>What we don't collect</h3>
+          <p class="lede"><span class="prompt">&gt;</span> This policy describes what QloakMail collects, what we deliberately do not collect, and what happens to the information we have to handle in order to deliver mail. It applies to the webmail at <strong>qloak.me</strong>, the SMTP / IMAP servers operated under that domain, and the corresponding Tor v3 hidden service.</p>
+
+          <h3><span class="bracket">[</span>WHAT WE DO NOT COLLECT<span class="bracket">]</span></h3>
           <ul>
-            <li><strong>IP addresses</strong> — never written to a
-                persistent log; transient rate-limit keys are hashed
-                with a per-process secret and discarded on restart.</li>
-            <li><strong>User agents, fingerprints, devices.</strong></li>
-            <li><strong>Message contents.</strong> We can't — they're
-                encrypted to you before they reach our storage.</li>
-            <li><strong>Search queries.</strong> Search runs locally in
-                your browser; queries never reach the server.</li>
-            <li><strong>Behavioural analytics, cookies for tracking,
-                third-party scripts.</strong> None used.</li>
+            <li><strong>Your IP address.</strong> The API is configured
+                to suppress access logs entirely. Rate-limit keys are
+                derived as <code>HMAC(IP, per-process-secret)</code>
+                and discarded when the process restarts; the secret
+                itself is never written to disk.</li>
+            <li><strong>User agents, browser fingerprints, device IDs.</strong>
+                We do not run analytics, ad pixels, font probes, or
+                JavaScript that profiles your device.</li>
+            <li><strong>Message contents.</strong> We physically
+                cannot read them. Every inbound message is encrypted
+                to your OpenPGP public key before it touches the
+                mailstore. Outbound mail composed in the webmail is
+                encrypted in your browser to internal recipients.</li>
+            <li><strong>Search queries.</strong> Search runs entirely
+                in your browser against an IndexedDB index of
+                already-decrypted previews. Queries never reach the
+                server.</li>
+            <li><strong>Behavioural data.</strong> No tracking
+                cookies, no event pings, no third-party scripts.</li>
+            <li><strong>Payment identifiers</strong> (where the
+                service is paid). We accept anonymous payment methods
+                where available and never tie a payment to a mailbox
+                identity.</li>
           </ul>
 
-          <h3>What we keep</h3>
+          <h3><span class="bracket">[</span>WHAT WE STORE<span class="bracket">]</span></h3>
           <ul>
-            <li>Your <strong>email address</strong>, so we can route
-                mail to you.</li>
-            <li>An <strong>encrypted blob of your private key</strong>
-                — only you can decrypt it, with your password or
-                recovery code.</li>
-            <li>Your <strong>public key</strong>, used to encrypt
-                incoming mail before it touches storage.</li>
-            <li>The minimum routing metadata required to deliver mail
-                (envelope sender / recipient / size / received-at). No
-                MTA can avoid these.</li>
+            <li>Your <strong>email address</strong>, so mail can be
+                routed to you.</li>
+            <li>Your <strong>OpenPGP public key</strong>, used to
+                encrypt incoming mail at the moment of receipt.</li>
+            <li>An <strong>Argon2id-AES-GCM-encrypted blob of your
+                private key</strong>. Only you can decrypt it — with
+                your password or your one-time recovery code. The
+                server never holds the decryption key.</li>
+            <li>An <strong>SRP-6a verifier</strong> for password
+                authentication. The verifier cannot be inverted to
+                recover the password.</li>
+            <li>The <strong>minimum SMTP routing metadata</strong> a
+                mail server has to handle: envelope sender, envelope
+                recipient, message size, received-at timestamp. No
+                MTA on earth can avoid these — they are how mail is
+                delivered. The original <em>Subject</em> is encrypted
+                inside the PGP body; the outer envelope reads only
+                <code>[encrypted]</code>.</li>
+            <li><strong>Encrypted message blobs</strong> in your
+                mailbox until you delete them. Deleted mail is
+                purged from the mailstore on the next housekeeping
+                pass.</li>
           </ul>
 
-          <h3>Storage on your device</h3>
+          <h3><span class="bracket">[</span>RETENTION<span class="bracket">]</span></h3>
+          <ul>
+            <li><strong>Mail you keep:</strong> stored encrypted
+                indefinitely, until you delete it or close the
+                account.</li>
+            <li><strong>Mail you delete:</strong> purged within 30
+                days; in-flight backups and disaster-recovery snapshots
+                are encrypted and rotated on the same schedule.</li>
+            <li><strong>Account record:</strong> deleted on account
+                closure. We retain only what is necessary to honour
+                outstanding obligations (e.g. an unfinished bounce
+                queue) and even that is purged within 30 days of
+                closure.</li>
+            <li><strong>Logs:</strong> the only logs we keep are
+                postfix / dovecot delivery logs that go to a
+                volatile in-memory journal (lost on reboot). Nothing
+                is shipped off the host.</li>
+          </ul>
+
+          <h3><span class="bracket">[</span>SECURITY MEASURES<span class="bracket">]</span></h3>
+          <ul>
+            <li>End-to-end encryption via OpenPGP (RFC 4880 / RFC
+                3156) with keys generated client-side at signup.</li>
+            <li>SRP-6a authentication so the password never crosses
+                the wire.</li>
+            <li>Inbound and outbound TLS — STARTTLS on port 25,
+                modern AEAD ciphers only, MTA-STS in
+                <code>enforce</code> mode for senders that support
+                it. DANE/TLSA pinning where DNSSEC is in place.</li>
+            <li>Hardened web surface — strict
+                <code>Content-Security-Policy</code>,
+                <code>Cross-Origin-Opener-Policy</code>,
+                <code>Cross-Origin-Resource-Policy</code>,
+                <code>Cross-Origin-Embedder-Policy</code>,
+                <code>Permissions-Policy</code>,
+                Subresource-Integrity-pinned crypto libraries.</li>
+            <li>Idle auto-lock after 15 minutes of inactivity in the
+                webmail, dropping the in-memory private key.</li>
+            <li>Clipboard auto-clear 30 seconds after copying
+                sensitive material (recovery codes, .onion address).</li>
+            <li>Container isolation with <code>no-new-privileges</code>
+                and minimal Linux capabilities; database and cache
+                tiers reachable only on the internal Docker network.</li>
+          </ul>
+
+          <h3><span class="bracket">[</span>ON YOUR DEVICE<span class="bracket">]</span></h3>
           <p>The webmail uses <code>localStorage</code> /
-          <code>sessionStorage</code> for your session token (and, if
-          you opted in, an encrypted private-key blob bound to a
-          duration), plus an <code>IndexedDB</code> index of decrypted
-          message previews so search works locally. All of this clears
-          on sign-out.</p>
+          <code>sessionStorage</code> for your session token, your
+          public key, the SRP/Argon2 parameters, and — only if you
+          choose a "stay signed in" duration — an encrypted private
+          key blob bound to that expiry. An <code>IndexedDB</code>
+          index holds decrypted previews of messages you have opened,
+          so search can run locally. All of this is cleared on
+          sign-out, and the encrypted-blob storage is keyed to your
+          password — without it, the data is mathematically useless.</p>
 
-          <h3>Disclosure</h3>
+          <h3><span class="bracket">[</span>COOKIES<span class="bracket">]</span></h3>
+          <p>QloakMail does not set tracking cookies. It uses the
+          browser storage above (<code>localStorage</code> /
+          <code>sessionStorage</code> / <code>IndexedDB</code>) for
+          functional purposes only. There are no third-party cookies,
+          analytics cookies, or marketing cookies anywhere on the
+          site.</p>
+
+          <h3><span class="bracket">[</span>YOUR RIGHTS<span class="bracket">]</span></h3>
+          <p>Subject to applicable data-protection law (including
+          GDPR and similar regimes) you have the right to:</p>
+          <ul>
+            <li>Access the personal data we hold about you (in
+                practice: your email address, public key, and
+                encrypted private-key blob — that is the entirety
+                of your record).</li>
+            <li>Correct inaccurate data — primarily relevant to your
+                email address.</li>
+            <li>Erase your account and all associated data (use the
+                in-app delete flow or contact
+                <a href="mailto:privacy@qloak.me">privacy@qloak.me</a>).</li>
+            <li>Receive an export of your encrypted mailbox blob
+                (we cannot decrypt it for you, but you can take it
+                with you).</li>
+            <li>Lodge a complaint with a supervisory authority where
+                you reside.</li>
+          </ul>
+
+          <h3><span class="bracket">[</span>DISCLOSURE TO AUTHORITIES<span class="bracket">]</span></h3>
           <p>We respond to legitimate legal process to the limited
           extent required by law. The defence is what we don't have:
-          we cannot produce plaintext mail, IP histories, or
-          behavioural profiles, because we never collected them.</p>
+          even under compulsion we cannot produce plaintext mail, IP
+          histories, fingerprinting data, or behavioural profiles —
+          we never collected them, and the cryptographic blobs we do
+          hold are useless without your password. Where the law
+          allows it, we will notify you of any request affecting your
+          account.</p>
 
-          <h3>Contact</h3>
+          <h3><span class="bracket">[</span>INTERNATIONAL TRANSFERS<span class="bracket">]</span></h3>
+          <p>QloakMail's infrastructure is operated within the
+          European Economic Area in jurisdictions selected for their
+          strong privacy protections. We do not transfer user data
+          outside that footprint.</p>
+
+          <h3><span class="bracket">[</span>CHILDREN<span class="bracket">]</span></h3>
+          <p>QloakMail is not directed at children under 13 (or the
+          minimum age in your jurisdiction). We do not knowingly
+          collect data from children. If you believe a child has
+          created an account, contact us at
+          <a href="mailto:privacy@qloak.me">privacy@qloak.me</a> and
+          we will delete it.</p>
+
+          <h3><span class="bracket">[</span>CHANGES<span class="bracket">]</span></h3>
+          <p>We may update this policy. Material changes will be
+          announced inside the webmail at least 30 days before they
+          take effect; non-material changes (typo fixes, clarifying
+          wording) take effect on publication. The "Effective" date
+          at the top reflects the most recent revision.</p>
+
+          <h3><span class="bracket">[</span>CONTACT<span class="bracket">]</span></h3>
           <p>Questions or requests:
             <a href="mailto:privacy@qloak.me">privacy@qloak.me</a>.</p>
 
@@ -295,7 +443,27 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
     <!-- ============== Terms ============== -->
     <section id="terms-view" class="view">
       <div class="auth-card">
-        <nav class="brand-nav" aria-label="primary">
+        <header class="brand">
+          <pre class="brand-ascii" aria-label="qloak"
+><span aria-hidden="true">            ..                               ..
+            x .d88"                          &lt; .z@8"`
+             5888R          u.                !@88E
+    .u@u     '888R    ...ue888b        u      '888E   u
+ .zWF8888bx   888R    888R Y888r    us888u.    888E u@8NL
+.888  9888    888R    888R I888&gt; .@88 "8888"   888E`"88*"
+I888  9888    888R    888R I888&gt; 9888  9888    888E .dN.
+I888  9888    888R    888R I888&gt; 9888  9888    888E~8888
+I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
+`888Nx?888   .888B .  "*888*P"   9888  9888    888E  9888.
+ "88" '888   ^*888%     'Y"      "888*""888" '"888*" 4888"
+       88E     "%                 ^Y"   ^Y'     ""    ""
+       98&gt;
+       '8
+        `</span></pre>
+          <p class="tagline">Encrypted mail. No logs ever.</p>
+        </header>
+
+        <nav class="brand-nav brand-nav--under" aria-label="primary">
           <a href="#home" data-view="auth-view"><span class="bracket">[</span>HOME<span class="bracket">]</span></a>
           <a href="#about" data-view="about-view"><span class="bracket">[</span>ABOUT<span class="bracket">]</span></a>
           <a href="#privacy" data-view="privacy-view"><span class="bracket">[</span>PRIVACY<span class="bracket">]</span></a>
@@ -304,60 +472,141 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
         </nav>
         <article class="info-page">
           <h2><span class="bracket">[</span>TERMS<span class="bracket">]</span> <span class="prompt">&gt;</span> service</h2>
-          <p class="info-meta">Last updated: <strong>10 May 2026</strong></p>
+          <p class="info-meta">Effective <strong>10 May 2026</strong>. We will publicly note any material change at least 30 days before it takes effect.</p>
 
-          <h3>1. The service</h3>
-          <p>QloakMail provides encrypted email accounts. By creating
-          an account you agree to use the service in accordance with
-          these terms.</p>
+          <p class="lede"><span class="prompt">&gt;</span> These terms govern your use of QloakMail (the "Service"), operated at <strong>qloak.me</strong> and at our Tor v3 hidden service. By creating an account, you accept them. If you do not accept them, do not create an account.</p>
 
-          <h3>2. Your account</h3>
+          <h3><span class="bracket">[</span>1. ELIGIBILITY<span class="bracket">]</span></h3>
+          <p>You must be at least 13 years old (or the minimum age in
+          your jurisdiction, whichever is greater) to create an
+          account. By signing up you confirm that you meet this
+          requirement.</p>
+
+          <h3><span class="bracket">[</span>2. THE SERVICE<span class="bracket">]</span></h3>
+          <p>QloakMail provides end-to-end encrypted email mailboxes.
+          Inbound mail is encrypted to your OpenPGP public key before
+          it touches our storage; you decrypt it locally with your
+          password. The Service is provided on a best-effort basis;
+          we evolve it continuously and may add, change, or remove
+          features at any time.</p>
+
+          <h3><span class="bracket">[</span>3. YOUR ACCOUNT<span class="bracket">]</span></h3>
           <ul>
-            <li>You are responsible for the password and recovery code
-                you set during signup.</li>
-            <li>If you lose <em>both</em>, your account is mathematically
-                unrecoverable. We cannot reset it. This is a feature.</li>
-            <li>Don't share your account. Don't impersonate.</li>
+            <li>You are responsible for the password and one-time
+                recovery code you set during signup. Treat both as
+                irreplaceable.</li>
+            <li><strong>If you lose both, your account is
+                mathematically unrecoverable.</strong> We cannot
+                reset it, restore it, or decrypt your mail for you.
+                This is a feature of the architecture, not an
+                oversight.</li>
+            <li>You are responsible for activity on your account.
+                Do not share credentials, do not let others use your
+                account, do not impersonate other people or
+                organisations.</li>
+            <li>One person may operate multiple accounts. Bulk
+                automated registration is not permitted.</li>
           </ul>
 
-          <h3>3. Acceptable use</h3>
-          <p>The following are not allowed and may result in account
-          suspension or termination:</p>
+          <h3><span class="bracket">[</span>4. ACCEPTABLE USE<span class="bracket">]</span></h3>
+          <p>You agree not to use the Service to:</p>
           <ul>
-            <li>Sending spam, phishing or unsolicited bulk mail.</li>
-            <li>Distributing malware or content sexually exploiting
-                minors.</li>
-            <li>Targeted harassment or threats of violence.</li>
-            <li>Activity that knowingly burdens or disrupts the
-                service.</li>
+            <li>Send spam, phishing, scams, or unsolicited bulk
+                mail.</li>
+            <li>Distribute malware, ransomware, or any code intended
+                to compromise the recipient's device or data.</li>
+            <li>Distribute or solicit content that sexually exploits
+                minors. Reports involving CSAM are forwarded to the
+                relevant national authority and the originating
+                account is permanently terminated.</li>
+            <li>Carry out targeted harassment, doxxing, stalking, or
+                credible threats of violence.</li>
+            <li>Infringe intellectual-property rights you do not
+                hold.</li>
+            <li>Engage in activity that knowingly burdens, degrades,
+                or disrupts the Service or third-party systems
+                (including high-volume mailing without recipient
+                consent).</li>
+            <li>Circumvent our security or rate-limiting controls,
+                or probe / scan the Service without authorisation.</li>
           </ul>
-          <p>We do not read your mail to enforce this. We act on
-          reports, abuse signals at the SMTP envelope level, and
-          patterns visible to a mail relay (volume, bounce rates,
-          spam scores).</p>
+          <p>We do not read your mail to enforce these rules. We act
+          on user reports, abuse signals visible at the SMTP
+          envelope level, and traffic patterns visible to any mail
+          relay (volume, bounce rates, spam scores from inbound
+          filtering).</p>
 
-          <h3>4. No warranty</h3>
-          <p>The service is provided "as is", without warranty of any
-          kind. We do our best to keep it running, but we do not
-          guarantee uninterrupted service or that no message will be
-          lost.</p>
+          <h3><span class="bracket">[</span>5. PRIVACY<span class="bracket">]</span></h3>
+          <p>Your privacy is governed by the <a href="#privacy" data-view="privacy-view">Privacy Policy</a>,
+          which forms part of these Terms.</p>
 
-          <h3>5. Limitation of liability</h3>
-          <p>To the fullest extent permitted by law, our total liability
-          arising out of the service is limited to the fees you paid us
-          in the 12 months preceding the event.</p>
+          <h3><span class="bracket">[</span>6. NO WARRANTY<span class="bracket">]</span></h3>
+          <p>THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE",
+          WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+          WITHOUT LIMITATION THE WARRANTIES OF MERCHANTABILITY,
+          FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+          We do not warrant that the Service will be uninterrupted,
+          error-free, or that messages will not be lost or
+          delayed. End-to-end encryption is only as strong as the
+          endpoint that holds the key — keep your devices clean.</p>
 
-          <h3>6. Termination</h3>
-          <p>You can delete your account at any time. We can suspend
-          or terminate accounts that violate these terms; we will give
-          notice where possible.</p>
+          <h3><span class="bracket">[</span>7. LIMITATION OF LIABILITY<span class="bracket">]</span></h3>
+          <p>TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, IN
+          NO EVENT WILL QLOAKMAIL BE LIABLE FOR ANY INDIRECT,
+          INCIDENTAL, CONSEQUENTIAL, SPECIAL, OR EXEMPLARY DAMAGES
+          ARISING OUT OF OR IN CONNECTION WITH THE SERVICE,
+          INCLUDING WITHOUT LIMITATION LOSS OF DATA, LOSS OF
+          PROFITS, OR LOSS OF GOODWILL. OUR TOTAL CUMULATIVE
+          LIABILITY FOR ALL CLAIMS ARISING OUT OF OR RELATING TO
+          THE SERVICE WILL NOT EXCEED THE GREATER OF €100 OR THE
+          FEES YOU PAID US IN THE 12 MONTHS PRECEDING THE EVENT
+          GIVING RISE TO THE CLAIM. NOTHING IN THESE TERMS EXCLUDES
+          OR LIMITS LIABILITY THAT CANNOT BE EXCLUDED OR LIMITED
+          UNDER APPLICABLE LAW (FOR EXAMPLE LIABILITY FOR FRAUD OR
+          GROSS NEGLIGENCE).</p>
 
-          <h3>7. Changes</h3>
-          <p>We may update these terms. Material changes will be
-          announced via the webmail before taking effect.</p>
+          <h3><span class="bracket">[</span>8. INDEMNITY<span class="bracket">]</span></h3>
+          <p>You agree to indemnify and hold harmless QloakMail and
+          its operators from any claim arising out of your breach of
+          these Terms or your unlawful use of the Service.</p>
 
-          <h3>8. Contact</h3>
-          <p>Questions:
+          <h3><span class="bracket">[</span>9. TERMINATION<span class="bracket">]</span></h3>
+          <ul>
+            <li><strong>By you:</strong> you may delete your account
+                at any time from the webmail. On deletion, your
+                mailbox and account record are purged within 30
+                days.</li>
+            <li><strong>By us:</strong> we may suspend or terminate
+                accounts that violate these Terms. We will give
+                notice where reasonably possible; in cases of
+                serious abuse (e.g. CSAM, active malware
+                distribution) we may act immediately and notify
+                authorities as required.</li>
+            <li>Sections that by their nature should survive
+                termination (privacy, no-warranty, limitation of
+                liability, indemnity, governing law) survive.</li>
+          </ul>
+
+          <h3><span class="bracket">[</span>10. GOVERNING LAW<span class="bracket">]</span></h3>
+          <p>These Terms are governed by the laws of the
+          jurisdiction in which QloakMail is operated, excluding its
+          conflict-of-laws rules. Mandatory consumer-protection laws
+          of your country of residence still apply where they grant
+          you greater rights.</p>
+
+          <h3><span class="bracket">[</span>11. CHANGES<span class="bracket">]</span></h3>
+          <p>We may update these Terms. Material changes will be
+          announced inside the webmail at least 30 days before they
+          take effect; non-material changes (typo fixes, clarifying
+          wording) take effect on publication. Continued use after a
+          change constitutes acceptance.</p>
+
+          <h3><span class="bracket">[</span>12. SEVERABILITY<span class="bracket">]</span></h3>
+          <p>If any provision of these Terms is held unenforceable,
+          the remaining provisions remain in full force and effect.</p>
+
+          <h3><span class="bracket">[</span>13. CONTACT<span class="bracket">]</span></h3>
+          <p>Questions or notices:
             <a href="mailto:legal@qloak.me">legal@qloak.me</a>.</p>
 
           <p class="info-back">
