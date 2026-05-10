@@ -163,7 +163,7 @@ ufw allow 587/tcp
 ufw --force enable
 
 # 7. Clone and configure.
-git clone https://github.com/defthrets/voidmail.git /opt/voidmail
+git clone https://github.com/defthrets/qloakmail.git /opt/voidmail
 cd /opt/voidmail
 bash scripts/fetch-web-libs.sh
 
