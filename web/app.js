@@ -1492,6 +1492,13 @@ function openSettings() {
     const p = loadPrefs();
     $("#settings-email").textContent = state.account?.email || "";
     $("#settings-onion").textContent = state.config?.onion_address || "—";
+    // PGP fingerprint + key block. The pubkey is stored alongside the
+    // session and read back from openpgp.js so the format matches what
+    // other clients expect.
+    _renderSettingsPubkey().catch(e => {
+        console.warn("[QloakMail] pubkey display failed:", e);
+        $("#settings-fpr").textContent = "—";
+    });
     Search.stats().then(s => {
         $("#settings-index-count").textContent = s.messages
             ? `${s.messages} messages` : "empty";
@@ -1508,6 +1515,25 @@ function openSettings() {
     _renderAvatarPreview();
 
     $("#settings-modal").hidden = false;
+}
+
+// Format an OpenPGP fingerprint into the canonical 5x4-hex-group
+// layout that other PGP clients display (e.g. "ABCD 1234 ... "). Input
+// is the 40-char lowercase hex from openpgp.js getFingerprint().
+function _formatFpr(hex) {
+    const up = (hex || "").toUpperCase();
+    return up.match(/.{1,4}/g)?.join(" ") || up;
+}
+
+async function _renderSettingsPubkey() {
+    const armored = state.account?.pubkey_armored || "";
+    const fprEl = $("#settings-fpr");
+    if (!armored) { fprEl.textContent = "—"; return; }
+    const key = await openpgp.readKey({ armoredKey: armored });
+    const fpr = key.getFingerprint();
+    fprEl.textContent = _formatFpr(fpr);
+    fprEl.dataset.raw = fpr;
+    $("#settings-pubkey-armor").textContent = armored.trim();
 }
 
 function _renderAvatarPreview() {
@@ -1562,6 +1588,35 @@ function bindSettings() {
     $("#settings-signout-all")?.addEventListener("click", () => {
         $("#logout-btn")?.click();
         closeSettings();
+    });
+
+    // Pubkey controls.
+    $("#settings-pubkey-show")?.addEventListener("click", () => {
+        const d = $("#settings-pubkey-details");
+        d.hidden = false;
+        d.open = !d.open;
+    });
+    $("#settings-pubkey-copy")?.addEventListener("click", async () => {
+        const fpr = $("#settings-fpr").dataset.raw || $("#settings-fpr").textContent || "";
+        try {
+            await navigator.clipboard.writeText(fpr);
+            toast("Fingerprint copied to clipboard.", "ok");
+            scheduleClipboardClear();
+        } catch { toast("Clipboard copy failed.", "err"); }
+    });
+    $("#settings-pubkey-download")?.addEventListener("click", () => {
+        const armored = state.account?.pubkey_armored || "";
+        if (!armored) { toast("No public key loaded.", "err"); return; }
+        const fpr = $("#settings-fpr").dataset.raw || "key";
+        const blob = new Blob([armored], { type: "application/pgp-keys" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `qloak-${fpr.slice(0, 16).toLowerCase()}.asc`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
     });
 
     // Pref edits write back through savePrefs() so applyPrefsToDom

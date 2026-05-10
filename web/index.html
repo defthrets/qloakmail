@@ -133,7 +133,13 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
 
         <form id="recovery-form" class="auth-form" autocomplete="off">
           <label>Email
-            <input type="email" name="email" required>
+            <input type="email" name="email" required placeholder="you@qloak.me">
+            <small class="recovery-hint">
+              Forgot your @qloak.me handle? It's only stored here on
+              your devices and in your encrypted account record. Without
+              both the email and the recovery code we can't help you
+              recover.
+            </small>
           </label>
           <label>Recovery code
             <input type="text" name="recovery" required spellcheck="false" autocapitalize="characters">
@@ -929,6 +935,19 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
               <span class="settings-key">Onion address</span>
               <span class="settings-val mono" id="settings-onion">—</span>
             </div>
+            <div class="settings-row">
+              <span class="settings-key">PGP fingerprint</span>
+              <span class="settings-val mono" id="settings-fpr">—</span>
+            </div>
+            <div class="settings-actions">
+              <button type="button" class="link" id="settings-pubkey-show">Show public key</button>
+              <button type="button" class="link" id="settings-pubkey-copy">Copy fingerprint</button>
+              <button type="button" class="link" id="settings-pubkey-download">Download .asc</button>
+            </div>
+            <details id="settings-pubkey-details" hidden>
+              <summary class="settings-hint">Public key (paste into other PGP clients to send you encrypted mail)</summary>
+              <pre class="settings-pubkey" id="settings-pubkey-armor"></pre>
+            </details>
           </section>
 
           <section class="settings-section">
@@ -1065,7 +1084,7 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
   -->
   <script type="module"
           src="/app.js"
-          integrity="sha384-yiFcQ+H5qOQFKnTBDTyCei0tro3VEeDJo7HWbWY9cuBhTpdcZZBqckaM1HFNJjPr"
+          integrity="sha384-ii/FZNRvQe2FBG8P+LZSL2Dxq/E2D5DtCr41xvahDiZFXHGShjXhW48OV4wJzejh"
           crossorigin="anonymous"></script>
 </body>
 </html>

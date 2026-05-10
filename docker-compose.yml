@@ -248,6 +248,10 @@ services:
       - web
     volumes:
       - certs:/etc/letsencrypt
+      # Read-only mount so the entrypoint can read the .onion hostname
+      # and emit an Onion-Location header on the clearnet HTTPS server.
+      # Tor Browser auto-offers the .onion when the header is present.
+      - tor-keys:/var/lib/tor:ro
     ports:
       - "80:80"
       - "443:443"

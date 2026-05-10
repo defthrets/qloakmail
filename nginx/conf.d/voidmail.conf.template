@@ -177,6 +177,11 @@ server {
     # Block legacy Flash/Silverlight crossdomain.xml lookups (v3 L6).
     add_header X-Permitted-Cross-Domain-Policies "none" always;
 
+    # Onion-Location -- pulled in from /etc/nginx/conf.d/onion-location.inc
+    # rendered at entrypoint time. If the .onion hostname isn't known yet
+    # (Tor still bootstrapping), the include is empty.
+    include /etc/nginx/conf.d/onion-location.inc;
+
     # CSP — strict; SPA is self-hosted, OpenPGP.js is bundled, no inline scripts.
     # 'wasm-unsafe-eval' is needed for the Argon2id (hash-wasm) password-key
     # derivation. It's strictly narrower than 'unsafe-eval' — only WebAssembly

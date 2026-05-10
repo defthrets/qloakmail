@@ -2892,6 +2892,36 @@ body.density-compact #message-list li .snippet { display: none; }
     color: var(--accent-2);
 }
 
+/* PGP-key block in Account section: opens as a <details> below the
+   fingerprint row, holds the armored key in a scrollable pre. */
+#settings-pubkey-details {
+    margin-top: 0.6rem;
+    border: 1px dashed rgba(255, 122, 31, 0.2);
+    padding: 0.5rem 0.7rem;
+}
+#settings-pubkey-details summary {
+    cursor: pointer;
+    list-style: none;
+    color: var(--fg-muted);
+    font-size: 0.78em;
+}
+#settings-pubkey-details summary::-webkit-details-marker { display: none; }
+#settings-pubkey-details[open] summary { color: var(--accent); }
+.settings-pubkey {
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    color: var(--fg-dim);
+    font-family: var(--mono);
+    font-size: 0.7em;
+    line-height: 1.4;
+    margin: 0.6rem 0 0;
+    padding: 0.7rem 0.85rem;
+    max-height: 220px;
+    overflow: auto;
+    white-space: pre;
+    word-break: break-all;
+}
+
 
 /* ---------------- raw view ---------------- */
 .reader.raw-mode .body-content {

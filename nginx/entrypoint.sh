@@ -18,6 +18,30 @@ fi
 # Webroot for the ACME challenge (used in prod by certbot).
 mkdir -p /var/www/certbot
 
+# Onion-Location header snippet. If Tor has bootstrapped and exposed
+# the hidden-service hostname (read-only volume from the tor service),
+# emit an Onion-Location header on the clearnet HTTPS response so
+# Tor Browser auto-offers the .onion to users who visit via clearnet.
+# If the hostname file isn't present yet (first deploy, Tor still
+# bootstrapping), the snippet is empty and nginx serves clearnet only.
+# Restart nginx once after Tor finishes its first bootstrap to pick
+# up the header; afterwards keys persist in the tor-keys volume so
+# this is a one-time step.
+ONION_SNIPPET=/etc/nginx/conf.d/onion-location.inc
+ONION_FILE=/var/lib/tor/voidmail/hostname
+if [ -r "$ONION_FILE" ]; then
+    ONION_HOST=$(tr -d '[:space:]' < "$ONION_FILE")
+    if [ -n "$ONION_HOST" ]; then
+        echo "add_header Onion-Location \"http://${ONION_HOST}\$request_uri\" always;" > "$ONION_SNIPPET"
+        echo "[nginx] Onion-Location: http://${ONION_HOST}"
+    else
+        : > "$ONION_SNIPPET"
+    fi
+else
+    : > "$ONION_SNIPPET"
+    echo "[nginx] no onion hostname yet -- Onion-Location header disabled"
+fi
+
 # Re-render every container start so envvar changes take effect. Keep the
 # template in place — deleting it on first run made the script crash on
 # every subsequent container restart with "voidmail.conf.template: no
