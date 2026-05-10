@@ -420,8 +420,61 @@ async function selectFolder(folderId) {
     const input = $("#search-input");
     if (input.value) input.value = "";
     await refreshSearchStats();
-    renderMessageList();
+    await renderMessageList();
     renderEmptyReader();
+
+    // Kick off a background decrypt of un-cached messages so the list
+    // shows real previews instead of locked placeholders. Sequential
+    // and yieldy to keep the UI responsive.
+    backgroundDecryptUncached().catch(e =>
+        console.warn("[QloakMail] bg decrypt task error:", e));
+}
+
+let _bgDecryptToken = 0;
+async function backgroundDecryptUncached() {
+    const token = ++_bgDecryptToken;
+    const folderAtStart = state.activeFolderId;
+
+    const cached = await Search.getCachedBatch(state.messages.map(m => m.id));
+    const todo = state.messages
+        .filter(m => !cached.has(m.id))
+        .sort((a, b) =>
+            new Date(b.received_at).getTime() - new Date(a.received_at).getTime()
+        );
+    if (!todo.length) return;
+
+    for (const msg of todo) {
+        // Cancel if the user switched folders or logged out.
+        if (token !== _bgDecryptToken) return;
+        if (state.activeFolderId !== folderAtStart) return;
+        if (!state.privkey) return;
+
+        try {
+            const r = await api.get(`/mail/messages/${msg.id}`);
+            const blob = b64decode(r.encrypted_blob_b64);
+            const armored = new TextDecoder().decode(blob);
+            const enc = extractPgpPart(armored);
+            const message = await openpgp.readMessage({ armoredMessage: enc });
+            const { data: plaintext } = await openpgp.decrypt({
+                message,
+                decryptionKeys: state.privkey,
+            });
+            const parsed = parseRfc822(plaintext);
+            await Search.indexMessage(msg.id, parsed);
+
+            // Re-render only if still relevant.
+            if (token === _bgDecryptToken &&
+                state.activeFolderId === folderAtStart &&
+                !state.searchActive) {
+                await renderMessageList();
+            }
+        } catch (e) {
+            console.warn("[QloakMail] bg decrypt failed for", msg.id, e);
+        }
+        // Yield so clicks/typing stay snappy between decrypts.
+        await new Promise(r => setTimeout(r, 40));
+    }
+    if (token === _bgDecryptToken) await refreshSearchStats();
 }
 
 function renderEmptyReader() {
@@ -433,7 +486,7 @@ function renderEmptyReader() {
     `;
 }
 
-function renderMessageList() {
+async function renderMessageList() {
     const ul = $("#message-list");
     ul.innerHTML = "";
 
@@ -455,15 +508,41 @@ function renderMessageList() {
         return;
     }
 
+    // Pull cached previews for every visible message in one IndexedDB
+    // pass. Cached records come from past openMessage() decrypts.
+    let cached = new Map();
+    try {
+        cached = await Search.getCachedBatch(state.messages.map(m => m.id));
+    } catch (e) {
+        console.warn("[QloakMail] preview cache unavailable:", e);
+    }
+
     for (const m of state.messages) {
         const li = document.createElement("li");
         if (!m.flags.includes("\\Seen")) li.classList.add("unread");
         if (m.id === state.selectedMessageId) li.classList.add("active");
-        li.innerHTML = `
-            <span class="when">${escapeHtml(fmtRelative(m.received_at))}</span>
-            <div class="from">[encrypted]</div>
-            <div class="subject">${m.size_bytes} bytes</div>
-        `;
+
+        const c = cached.get(m.id);
+        if (c) {
+            // Decrypted preview available — show real from / subject / snippet.
+            const when = c.date ? fmtRelative(c.date) : fmtRelative(m.received_at);
+            li.innerHTML = `
+                <span class="when">${escapeHtml(when)}</span>
+                <div class="from">${escapeHtml(c.from || "(unknown sender)")}</div>
+                <div class="subject">${escapeHtml(c.subject || "(no subject)")}</div>
+                <div class="snippet">${escapeHtml(c.snippet || "")}</div>
+            `;
+        } else {
+            // Not yet decrypted on this device — render an encrypted
+            // placeholder. The lock dot is the "still encrypted" status
+            // light, the row stays clickable to decrypt on demand.
+            li.classList.add("locked");
+            li.innerHTML = `
+                <span class="when">${escapeHtml(fmtRelative(m.received_at))}</span>
+                <div class="from"><span class="lock-dot" title="encrypted — click to decrypt">●</span> Encrypted message</div>
+                <div class="subject muted">${m.size_bytes} bytes — click to decrypt</div>
+            `;
+        }
         li.addEventListener("click", () => openMessage(m.id));
         ul.appendChild(li);
     }

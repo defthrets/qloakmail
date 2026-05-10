@@ -190,3 +190,26 @@ export async function stats() {
     const count = await _wrap(tx.objectStore("messages").count());
     return { messages: count };
 }
+
+/** Single-message lookup. Returns the cached {subject,from,date,snippet}
+ * or null if the message hasn't been opened yet on this device. */
+export async function getCached(id) {
+    if (!_db) return null;
+    const tx = _db.transaction("messages", "readonly");
+    const r = await _wrap(tx.objectStore("messages").get(id));
+    return r || null;
+}
+
+/** Batch lookup. Returns a Map(id → record) for messages that ARE
+ * cached. Missing ids are simply absent from the map. */
+export async function getCachedBatch(ids) {
+    const out = new Map();
+    if (!_db || !ids.length) return out;
+    const tx = _db.transaction("messages", "readonly");
+    const store = tx.objectStore("messages");
+    for (const id of ids) {
+        const r = await _wrap(store.get(id));
+        if (r) out.set(id, r);
+    }
+    return out;
+}
