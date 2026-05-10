@@ -770,17 +770,29 @@ async function openMessage(id) {
             : plaintextRfc822;
         view.innerHTML = `
             <button class="reader-close" aria-label="Close" type="button">×</button>
+            <div class="reader-actions">
+                <button class="reader-action" data-action="reply">[ REPLY ]</button>
+                <button class="reader-action" data-action="reply-all">[ REPLY ALL ]</button>
+                <button class="reader-action" data-action="forward">[ FORWARD ]</button>
+                <button class="reader-action" data-action="delete">[ DELETE ]</button>
+                <button class="reader-action danger" data-action="spam">[ SPAM ]</button>
+                <button class="reader-action danger" data-action="block">[ BLOCK ]</button>
+            </div>
             <header>
                 <h2>${escapeHtml(parsed.subject || "(no subject)")}</h2>
                 <div class="meta">
                     <div><span class="field-tag">[FROM]</span><strong>${escapeHtml(parsed.from || "")}</strong></div>
                     <div><span class="field-tag">[TO]</span><strong>${escapeHtml(parsed.to || "")}</strong></div>
+                    ${parsed.cc ? `<div><span class="field-tag">[CC]</span><strong>${escapeHtml(parsed.cc)}</strong></div>` : ""}
                     <div><span class="field-tag">[DATE]</span>${escapeHtml(parsed.date || "")}</div>
                 </div>
             </header>
             <pre class="body-content"></pre>
         `;
         view.querySelector("pre").textContent = bodyToRender;
+        // Wire the action toolbar — fresh closure per render so the
+        // current `parsed` and `id` are captured.
+        bindReaderActions(view, id, parsed);
 
         if (!msg.flags.includes("\\Seen")) {
             await api.post(`/mail/messages/${id}/flags`, { add: ["\\Seen"], remove: [] });
@@ -803,6 +815,224 @@ async function openMessage(id) {
             </div>
         `;
     }
+}
+
+// ----------------------------------------------------------------- reader actions
+//
+// Per-message actions: reply, reply-all, forward, delete, spam, block.
+// `parsed` is the already-decoded RFC 822 (headers + body) so we can
+// build quoted replies and pull the sender for blocklist / reply-to.
+//
+// reply / reply-all / forward open the compose modal pre-filled.
+// delete calls api.del + refreshes the list.
+// spam tags the message with \Junk and removes it from the inbox.
+// block adds the sender to a per-account localStorage blocklist.
+
+function bindReaderActions(viewEl, msgId, parsed) {
+    viewEl.querySelectorAll(".reader-action[data-action]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+            const action = btn.dataset.action;
+            try {
+                if (action === "reply")     openReplyCompose(parsed, false);
+                else if (action === "reply-all") openReplyCompose(parsed, true);
+                else if (action === "forward")   openForwardCompose(parsed);
+                else if (action === "delete")    await deleteMessage(msgId);
+                else if (action === "spam")      await markSpam(msgId, parsed);
+                else if (action === "block")     await blockSender(parsed);
+            } catch (e) {
+                console.error("[QloakMail] reader action failed:", action, e);
+                toast(`${action} failed: ${e.message || e}`, "err");
+            }
+        });
+    });
+}
+
+function _stripReplyPrefix(s) {
+    return (s || "").replace(/^\s*(re|fwd?):\s*/gi, "").trim();
+}
+function _quotedBody(parsed) {
+    const intro = parsed.from
+        ? `\nOn ${parsed.date || "(unknown date)"}, ${parsed.from} wrote:\n`
+        : "";
+    const quoted = (parsed.body || "")
+        .split(/\r?\n/)
+        .map(l => "> " + l)
+        .join("\n");
+    return intro + quoted;
+}
+
+function openReplyCompose(parsed, replyAll) {
+    openCompose();
+    const form = $("#compose-form");
+    const me = state.account?.email?.toLowerCase() || "";
+
+    // To = original sender. Reply-all also fills Cc with the original
+    // To and Cc minus our own address.
+    form.elements.to.value = parsed.from || "";
+    if (replyAll) {
+        const others = [parsed.to, parsed.cc].filter(Boolean).join(", ");
+        const filtered = others.split(/\s*,\s*/)
+            .filter(Boolean)
+            .filter(addr => !addr.toLowerCase().includes(me))
+            .join(", ");
+        if (filtered) {
+            form.elements.cc.value = filtered;
+            _showCcBcc(true);
+        }
+    }
+    form.elements.subject.value = "Re: " + _stripReplyPrefix(parsed.subject);
+    form.elements.body.value = "\n\n" + _quotedBody(parsed);
+    form.dataset.inReplyTo = parsed.messageId || "";
+    setTimeout(() => form.elements.body.focus(), 60);
+}
+
+function openForwardCompose(parsed) {
+    openCompose();
+    const form = $("#compose-form");
+    form.elements.to.value = "";
+    form.elements.subject.value = "Fwd: " + _stripReplyPrefix(parsed.subject);
+    form.elements.body.value =
+        `\n\n---------- Forwarded message ----------\n` +
+        `From: ${parsed.from || ""}\n` +
+        `Date: ${parsed.date || ""}\n` +
+        `Subject: ${parsed.subject || ""}\n` +
+        `To: ${parsed.to || ""}\n` +
+        (parsed.cc ? `Cc: ${parsed.cc}\n` : "") +
+        `\n${parsed.body || ""}\n`;
+    delete form.dataset.inReplyTo;
+    setTimeout(() => form.elements.to.focus(), 60);
+}
+
+async function deleteMessage(id) {
+    await api.del(`/mail/messages/${id}`);
+    toast("Message deleted.", "ok");
+    try { await Search.forget(id); } catch {}
+    state.messages = state.messages.filter(m => m.id !== id);
+    state.selectedMessageId = null;
+    renderEmptyReader();
+    document.getElementById("message-view")?.classList.remove("open");
+    await renderMessageList();
+    await loadFolders();
+}
+
+async function markSpam(id, parsed) {
+    // No move-to-spam endpoint yet; flag with \Junk and remove from
+    // inbox via delete. The server keeps it as ciphertext only, so
+    // marking-spam is essentially "discard with a flag attached".
+    try {
+        await api.post(`/mail/messages/${id}/flags`,
+            { add: ["\\Junk"], remove: [] });
+    } catch (e) { console.warn("[QloakMail] junk flag failed:", e); }
+    await api.del(`/mail/messages/${id}`);
+    toast("Marked as spam.", "ok");
+    try { await Search.forget(id); } catch {}
+    // Auto-add to blocklist if we know who sent it.
+    if (parsed?.from) _addToBlocklist(_extractEmail(parsed.from));
+    state.messages = state.messages.filter(m => m.id !== id);
+    state.selectedMessageId = null;
+    renderEmptyReader();
+    document.getElementById("message-view")?.classList.remove("open");
+    await renderMessageList();
+    await loadFolders();
+}
+
+async function blockSender(parsed) {
+    const addr = _extractEmail(parsed?.from || "");
+    if (!addr) {
+        toast("No sender address to block.", "err");
+        return;
+    }
+    _addToBlocklist(addr);
+    toast(`Blocked ${addr}. Future messages will be dropped client-side.`, "ok");
+}
+
+function _extractEmail(s) {
+    if (!s) return "";
+    const m = /<([^>]+)>/.exec(s);
+    return (m ? m[1] : s).trim().toLowerCase();
+}
+
+function _blocklistKey() {
+    return "qloakmail.blocklist." + (state.account?.account_id || "anon");
+}
+function _readBlocklist() {
+    try { return JSON.parse(localStorage.getItem(_blocklistKey()) || "[]"); }
+    catch { return []; }
+}
+function _addToBlocklist(addr) {
+    if (!addr) return;
+    const list = new Set(_readBlocklist());
+    list.add(addr.toLowerCase());
+    localStorage.setItem(_blocklistKey(), JSON.stringify([...list]));
+}
+function _removeFromBlocklist(addr) {
+    const list = _readBlocklist().filter(a => a !== addr.toLowerCase());
+    localStorage.setItem(_blocklistKey(), JSON.stringify(list));
+}
+
+function _showCcBcc(showCc) {
+    $(".cc-row").hidden = !showCc;
+    $(".bcc-row").hidden = !showCc;
+    $("#cc-toggle").classList.toggle("active", showCc);
+}
+
+// ----------------------------------------------------------------- settings
+function openSettings() {
+    $("#settings-email").textContent = state.account?.email || "";
+    $("#settings-onion").textContent = state.config?.onion_address || "—";
+    Search.stats().then(s => {
+        $("#settings-index-count").textContent = s.messages
+            ? `${s.messages} messages` : "empty";
+    }).catch(() => { $("#settings-index-count").textContent = "—"; });
+    _renderBlocklist();
+    $("#settings-modal").hidden = false;
+}
+function closeSettings() { $("#settings-modal").hidden = true; }
+
+function _renderBlocklist() {
+    const ul = $("#settings-blocklist");
+    const list = _readBlocklist();
+    if (!list.length) {
+        ul.innerHTML = `<li class="empty"><em>No blocked senders.</em></li>`;
+        return;
+    }
+    ul.innerHTML = list.map(addr =>
+        `<li><span>${escapeHtml(addr)}</span>` +
+        `<button class="unblock" data-addr="${escapeHtml(addr)}" type="button">Unblock</button></li>`
+    ).join("");
+    ul.querySelectorAll(".unblock").forEach(btn => {
+        btn.addEventListener("click", () => {
+            _removeFromBlocklist(btn.dataset.addr);
+            _renderBlocklist();
+        });
+    });
+}
+
+function bindSettings() {
+    $("#settings-btn")?.addEventListener("click", openSettings);
+    $$("#settings-modal [data-close]").forEach(el =>
+        el.addEventListener("click", closeSettings));
+    $("#settings-clear-index")?.addEventListener("click", async () => {
+        try { await Search.clear(); await Search.open(state.account.account_id); }
+        catch (e) { console.warn("clear-index failed:", e); }
+        $("#settings-index-count").textContent = "empty";
+        toast("Local search index cleared.", "ok");
+    });
+    $("#settings-signout-all")?.addEventListener("click", () => {
+        // Same flow as the topbar logout; "all devices" semantics
+        // require server-side support which doesn't exist yet, so for
+        // now this just logs out this device cleanly.
+        $("#logout-btn")?.click();
+        closeSettings();
+    });
+}
+
+// ----------------------------------------------------------------- compose extras
+function bindComposeExtras() {
+    $("#cc-toggle")?.addEventListener("click", () => {
+        const showing = !$(".cc-row").hidden;
+        _showCcBcc(!showing);
+    });
 }
 
 function extractPgpPart(rfc822) {
@@ -837,10 +1067,13 @@ function parseRfc822(raw) {
     }
 
     return {
-        from:    headers.from    || "",
-        to:      headers.to      || "",
-        subject: headers.subject || "",
-        date:    headers.date    || "",
+        from:    headers.from       || "",
+        to:      headers.to         || "",
+        cc:      headers.cc         || "",
+        subject: headers.subject    || "",
+        date:    headers.date       || "",
+        messageId: headers["message-id"] || "",
+        references: headers.references   || headers["in-reply-to"] || "",
         body,
     };
 }
@@ -1031,36 +1264,53 @@ function bindCompose() {
         e.preventDefault();
         const status = $("#compose-status");
         const fd = new FormData(e.target);
-        const to = fd.get("to").split(",").map(s => s.trim()).filter(Boolean);
+        const splitAddrs = (s) => (s || "").split(",").map(x => x.trim()).filter(Boolean);
+        const to  = splitAddrs(fd.get("to"));
+        const cc  = splitAddrs(fd.get("cc"));
+        const bcc = splitAddrs(fd.get("bcc"));
         const subject = fd.get("subject") || "";
         const body = fd.get("body") || "";
+        const inReplyTo = e.target.dataset.inReplyTo || "";
 
         setStatus(status, "Sending...");
         try {
             const internalDomains = new Set((state.config?.domains || []).map(d => d.toLowerCase()));
             const isInternal = (addr) => internalDomains.has(addr.split("@")[1]?.toLowerCase());
 
-            const headers = [
+            // Header order matters less than completeness — assemble
+            // To, Cc (visible), and skip Bcc on the wire (the whole
+            // point). Bcc recipients still go in the rcpt_to list so
+            // SMTP delivers them; they just never appear in headers.
+            const headerLines = [
                 `From: ${state.account.email}`,
                 `To: ${to.join(", ")}`,
-                `Subject: ${subject}`,
-                `Date: ${new Date().toUTCString()}`,
-                `Message-ID: <${crypto.randomUUID()}@${state.account.email.split("@")[1]}>`,
-                `MIME-Version: 1.0`,
-                `Content-Type: text/plain; charset=utf-8`,
-            ].join("\r\n");
+            ];
+            if (cc.length)  headerLines.push(`Cc: ${cc.join(", ")}`);
+            headerLines.push(`Subject: ${subject}`);
+            headerLines.push(`Date: ${new Date().toUTCString()}`);
+            headerLines.push(`Message-ID: <${crypto.randomUUID()}@${state.account.email.split("@")[1]}>`);
+            if (inReplyTo) {
+                headerLines.push(`In-Reply-To: ${inReplyTo}`);
+                headerLines.push(`References: ${inReplyTo}`);
+            }
+            headerLines.push(`MIME-Version: 1.0`);
+            headerLines.push(`Content-Type: text/plain; charset=utf-8`);
+            const headers = headerLines.join("\r\n");
             const rfc822 = headers + "\r\n\r\n" + body;
 
+            const allRcpt = [...to, ...cc, ...bcc];
             await api.post("/mail/send", {
                 rfc822_b64: b64encode(new TextEncoder().encode(rfc822)),
-                rcpt_to: to,
-                is_internal_only: to.every(isInternal),
+                rcpt_to: allRcpt,
+                is_internal_only: allRcpt.every(isInternal),
             });
             setStatus(status, "Sent.", "ok");
             toast("Message sent", "ok");
             setTimeout(() => {
                 closeCompose();
                 e.target.reset();
+                _showCcBcc(false);              // collapse Cc/Bcc rows
+                delete e.target.dataset.inReplyTo;
             }, 600);
         } catch (err) {
             console.error(err);
@@ -1512,6 +1762,8 @@ async function boot() {
     startFeaturesLogLoop();
     bindStatusScroller();
     bindBrandNav();
+    bindSettings();
+    bindComposeExtras();
     // Initial state is auth-view → matrix-on
     document.body.classList.add("matrix-on");
 

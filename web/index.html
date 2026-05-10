@@ -721,7 +721,11 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
           <button id="compose-btn" class="primary compose-btn"><span class="compose-prompt">&gt;</span> NEW MESSAGE</button>
           <ul id="folder-list" class="folder-list"></ul>
           <div class="sidebar-foot">
-            <span class="onion-hint" title="Tor v3 hidden service available — same SPA over Tor">Onion ready</span>
+            <button id="settings-btn" class="settings-btn" type="button"
+                    aria-label="Settings" title="Settings">
+              <span class="settings-icon" aria-hidden="true">⚙</span>
+              <span class="settings-label">SETTINGS</span>
+            </button>
           </div>
         </aside>
 
@@ -737,6 +741,67 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
         </article>
       </main>
 
+      <!-- Settings modal -->
+      <div id="settings-modal" class="modal" hidden>
+        <div class="modal-backdrop" data-close></div>
+        <div class="modal-card settings-card">
+          <header class="modal-head">
+            <h3>
+              <span class="bracket">[</span>SETTINGS<span class="bracket">]</span>
+              <span class="prompt">&gt;</span> account
+            </h3>
+            <button type="button" class="link" data-close aria-label="Close">×</button>
+          </header>
+
+          <section class="settings-section">
+            <h4><span class="bracket">[</span>ACCOUNT<span class="bracket">]</span></h4>
+            <div class="settings-row">
+              <span class="settings-key">Email</span>
+              <span class="settings-val" id="settings-email"></span>
+            </div>
+            <div class="settings-row">
+              <span class="settings-key">Onion address</span>
+              <span class="settings-val mono" id="settings-onion">—</span>
+            </div>
+          </section>
+
+          <section class="settings-section">
+            <h4><span class="bracket">[</span>SECURITY<span class="bracket">]</span></h4>
+            <div class="settings-row">
+              <span class="settings-key">Idle auto-lock</span>
+              <span class="settings-val">15 minutes</span>
+            </div>
+            <div class="settings-row">
+              <span class="settings-key">Local search index</span>
+              <span class="settings-val" id="settings-index-count">—</span>
+            </div>
+            <div class="settings-actions">
+              <button type="button" class="link" id="settings-clear-index">Clear local index</button>
+            </div>
+          </section>
+
+          <section class="settings-section">
+            <h4><span class="bracket">[</span>BLOCKED SENDERS<span class="bracket">]</span></h4>
+            <ul class="settings-blocklist" id="settings-blocklist">
+              <li class="empty"><em>No blocked senders.</em></li>
+            </ul>
+          </section>
+
+          <section class="settings-section danger">
+            <h4><span class="bracket">[</span>SESSION<span class="bracket">]</span></h4>
+            <div class="settings-actions">
+              <button type="button" class="link danger" id="settings-signout-all">Sign out from all devices</button>
+            </div>
+          </section>
+
+          <footer class="modal-foot">
+            <div class="modal-buttons">
+              <button type="button" class="primary" data-close>Done</button>
+            </div>
+          </footer>
+        </div>
+      </div>
+
       <!-- Compose modal -->
       <div id="compose-modal" class="modal" hidden>
         <div class="modal-backdrop" data-close></div>
@@ -751,6 +816,13 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
           <label><span class="field-label"><span class="bracket">[</span>TO<span class="bracket">]</span></span>
             <input type="text" name="to" required placeholder="alice@qloak.me, ...">
           </label>
+          <label class="cc-row" hidden><span class="field-label"><span class="bracket">[</span>CC<span class="bracket">]</span></span>
+            <input type="text" name="cc" placeholder="...">
+          </label>
+          <label class="bcc-row" hidden><span class="field-label"><span class="bracket">[</span>BCC<span class="bracket">]</span></span>
+            <input type="text" name="bcc" placeholder="...">
+          </label>
+          <button type="button" id="cc-toggle" class="cc-toggle">+ Cc / Bcc</button>
           <label><span class="field-label"><span class="bracket">[</span>SUBJECT<span class="bracket">]</span></span>
             <input type="text" name="subject">
           </label>
