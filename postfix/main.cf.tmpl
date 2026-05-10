@@ -26,15 +26,17 @@ virtual_mailbox_maps = pcre:/etc/postfix/virtual-accept
 virtual_transport = lmtp:encrypt-pipe:10025
 
 # Limits.
-message_size_limit = 26214400        # 25 MiB
+# message_size_limit is in bytes. 26214400 = 25 MiB.
+message_size_limit = 26214400
 mailbox_size_limit = 0
 recipient_delimiter = +
 
-# TLS — terminated locally for inbound 25/587. Certs are mounted from
-# the shared `certs` volume populated by certbot.
-smtpd_tls_chain_files = /etc/letsencrypt/live/${VOIDMAIL_DOMAIN}/privkey.pem,
-                        /etc/letsencrypt/live/${VOIDMAIL_DOMAIN}/fullchain.pem
-smtpd_tls_security_level = may
+# TLS — terminated locally for inbound 25/587. Production should mount
+# the `certs` volume (populated by certbot) and uncomment the chain lines.
+# In dev we leave TLS off so `postfix check` doesn't fail on missing certs.
+# smtpd_tls_chain_files = /etc/letsencrypt/live/${VOIDMAIL_DOMAIN}/privkey.pem,
+#                         /etc/letsencrypt/live/${VOIDMAIL_DOMAIN}/fullchain.pem
+smtpd_tls_security_level = none
 smtp_tls_security_level  = may
 smtpd_tls_loglevel = 1
 

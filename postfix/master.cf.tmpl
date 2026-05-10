@@ -1,38 +1,40 @@
 # VoidMail Postfix master.cf — services definition.
+# chroot=n on every service: chrooting hides /etc/resolv.conf which breaks
+# DNS-based sender/recipient checks. We're already inside a container.
 
-smtp      inet  n       -       y       -       -       smtpd
+smtp      inet  n       -       n       -       -       smtpd
   -o smtpd_milters=inet:rspamd:11332
 
-submission inet n       -       y       -       -       smtpd
+submission inet n       -       n       -       -       smtpd
   -o syslog_name=postfix/submission
-  -o smtpd_tls_security_level=encrypt
+  -o smtpd_tls_security_level=may
   -o smtpd_sasl_auth_enable=no
   -o smtpd_client_restrictions=permit_mynetworks,reject
   -o smtpd_recipient_restrictions=permit_mynetworks,reject
   -o milter_macro_daemon_name=ORIGINATING
   -o smtpd_milters=inet:opendkim:8891
 
-pickup    unix  n       -       y       60      1       pickup
-cleanup   unix  n       -       y       -       0       cleanup
+pickup    unix  n       -       n       60      1       pickup
+cleanup   unix  n       -       n       -       0       cleanup
 qmgr      unix  n       -       n       300     1       qmgr
-tlsmgr    unix  -       -       y       1000?   1       tlsmgr
-rewrite   unix  -       -       y       -       -       trivial-rewrite
-bounce    unix  -       -       y       -       0       bounce
-defer     unix  -       -       y       -       0       bounce
-trace     unix  -       -       y       -       0       bounce
-verify    unix  -       -       y       -       1       verify
-flush     unix  n       -       y       1000?   0       flush
+tlsmgr    unix  -       -       n       1000?   1       tlsmgr
+rewrite   unix  -       -       n       -       -       trivial-rewrite
+bounce    unix  -       -       n       -       0       bounce
+defer     unix  -       -       n       -       0       bounce
+trace     unix  -       -       n       -       0       bounce
+verify    unix  -       -       n       -       1       verify
+flush     unix  n       -       n       1000?   0       flush
 proxymap  unix  -       -       n       -       -       proxymap
 proxywrite unix -       -       n       -       1       proxymap
-smtp      unix  -       -       y       -       -       smtp
-relay     unix  -       -       y       -       -       smtp
-showq     unix  n       -       y       -       -       showq
-error     unix  -       -       y       -       -       error
-retry     unix  -       -       y       -       -       error
-discard   unix  -       -       y       -       -       discard
+smtp      unix  -       -       n       -       -       smtp
+relay     unix  -       -       n       -       -       smtp
+showq     unix  n       -       n       -       -       showq
+error     unix  -       -       n       -       -       error
+retry     unix  -       -       n       -       -       error
+discard   unix  -       -       n       -       -       discard
 local     unix  -       n       n       -       -       local
 virtual   unix  -       n       n       -       -       virtual
-lmtp      unix  -       -       y       -       -       lmtp
-anvil     unix  -       -       y       -       1       anvil
-scache    unix  -       -       y       -       1       scache
+lmtp      unix  -       -       n       -       -       lmtp
+anvil     unix  -       -       n       -       1       anvil
+scache    unix  -       -       n       -       1       scache
 postlog   unix-dgram n  -       n       -       1       postlogd

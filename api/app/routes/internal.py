@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +17,7 @@ from .. import schemas
 from ..db import get_session
 from ..deps import require_internal_token
 from ..models import Account, Folder, Message
+from ..schemas import EmailStr
 
 router = APIRouter(
     prefix="/internal",

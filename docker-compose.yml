@@ -58,6 +58,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - mailstore:/var/mail
     networks: [voidnet]
     # Exposed via nginx; uncomment the next line for direct dev access.
     ports:
@@ -71,6 +73,8 @@ services:
     env_file: .env
     depends_on:
       - api
+    volumes:
+      - mailstore:/var/mail
     networks: [voidnet]
 
   postfix:
@@ -123,7 +127,6 @@ services:
       - web
     volumes:
       - certs:/etc/letsencrypt
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
     ports:
       - "80:80"
       - "443:443"

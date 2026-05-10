@@ -199,20 +199,19 @@ class EncryptHandler:
             return "451 4.0.0 internal error"
 
 
-def _factory(handler):
-    def make(*a, **kw):
-        return LMTP(handler, *a, **kw)
-    return make
+class _LMTPController(Controller):
+    """aiosmtpd's Controller defaults to SMTP; override factory() so the
+    server uses the LMTP protocol that Postfix expects."""
+    def factory(self):
+        return LMTP(self.handler, enable_SMTPUTF8=True)
 
 
 def main() -> int:
     handler = EncryptHandler()
-    controller = Controller(
+    controller = _LMTPController(
         handler,
         hostname=BIND_HOST,
         port=BIND_PORT,
-        server_class=LMTP,
-        server_kwargs={"enable_SMTPUTF8": True},
     )
     log.info("encrypt-pipe listening on %s:%d (LMTP)", BIND_HOST, BIND_PORT)
     log.info("local domains: %s", ", ".join(sorted(DOMAINS)))

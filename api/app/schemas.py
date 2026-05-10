@@ -2,9 +2,30 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Annotated, Optional
 
-from pydantic import BaseModel, EmailStr, Field
+import re
+
+from pydantic import AfterValidator, BaseModel, Field
+
+# Pragmatic email regex. We DON'T use email_validator's EmailStr because
+# its 2.x line hard-bans special-use TLDs (.local, .test, .example) which
+# breaks dev and any operator running on internal-only domains. The mail
+# stack itself enforces domain whitelisting via VOIDMAIL_DOMAIN.
+_EMAIL_RE = re.compile(
+    r"^[A-Za-z0-9!#$%&'*+/=?^_`{|}~.-]+@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?"
+    r"(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)+$"
+)
+
+
+def _valid_email(v: str) -> str:
+    v = v.strip()
+    if len(v) > 254 or not _EMAIL_RE.match(v):
+        raise ValueError("not a valid email address")
+    return v.lower()
+
+
+EmailStr = Annotated[str, AfterValidator(_valid_email)]
 
 
 # ---------- registration ----------
