@@ -984,8 +984,9 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 }
 .brand-mini {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.7rem;
+    gap: 0.25rem;
     font-family: var(--mono);
 }
 /* Topbar wordmark — same flicker + glitch animations as the home-
