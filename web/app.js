@@ -637,8 +637,8 @@ async function renderMessageList() {
             li.classList.add("locked");
             li.innerHTML = `
                 <span class="when">${escapeHtml(fmtRelative(m.received_at))}</span>
-                <div class="from"><span class="lock-dot" title="encrypted — click to decrypt">●</span> Encrypted message</div>
-                <div class="subject muted">${m.size_bytes} bytes — click to decrypt</div>
+                <div class="from"><span class="lock-dot" title="encrypted — click to decrypt">●</span> <span class="enc-tag">[ENCRYPTED]</span></div>
+                <div class="subject muted">${m.size_bytes}b · tap to decrypt</div>
             `;
         }
         li.addEventListener("click", () => openMessage(m.id));
@@ -674,9 +674,9 @@ async function openMessage(id) {
             <header>
                 <h2>${escapeHtml(parsed.subject || "(no subject)")}</h2>
                 <div class="meta">
-                    From <strong>${escapeHtml(parsed.from || "")}</strong>
-                    to <strong>${escapeHtml(parsed.to || "")}</strong><br>
-                    ${escapeHtml(parsed.date || "")}
+                    <div><span class="field-tag">[FROM]</span><strong>${escapeHtml(parsed.from || "")}</strong></div>
+                    <div><span class="field-tag">[TO]</span><strong>${escapeHtml(parsed.to || "")}</strong></div>
+                    <div><span class="field-tag">[DATE]</span>${escapeHtml(parsed.date || "")}</div>
                 </div>
             </header>
             <pre class="body-content"></pre>

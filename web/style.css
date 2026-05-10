@@ -846,15 +846,68 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
         transparent, rgba(77, 255, 133, 0.25), transparent);
 }
 .brand-mini {
-    color: var(--accent);
-    font-family: var(--mono);
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    font-size: 1.1em;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.7rem;
+    font-family: var(--mono);
+}
+/* Topbar wordmark — same flicker + glitch animations as the home-
+   page ASCII logo, condensed to a single glowing word that fits
+   the 56px topbar. */
+.brand-mini-mark {
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    font-size: 1.1em;
+    text-shadow:
+        0 0 6px var(--accent-glow),
+        0 0 14px rgba(77, 255, 133, 0.25);
+    animation:
+        brand-flicker 9s infinite,
+        brand-glitch  7.3s infinite;
+    will-change: text-shadow, transform;
+}
+@media (prefers-reduced-motion: reduce) {
+    .brand-mini-mark { animation: none; }
+}
+
+/* Small status pill next to the wordmark: [● ENCRYPTED] in dual-tone */
+.topbar-status {
+    color: var(--accent);
+    font-size: 0.7em;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    text-shadow: 0 0 4px var(--accent-glow);
+    opacity: 0.85;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25em;
+    padding: 0.2em 0.5em;
+    border: 1px solid rgba(77, 255, 133, 0.18);
+}
+.topbar-status .bracket { color: var(--magenta); text-shadow: 0 0 4px var(--magenta-glow); }
+.topbar-status .dot {
+    color: var(--accent);
+    margin-right: 0.3em;
     text-shadow: 0 0 6px var(--accent-glow);
+    animation: pulse-dot 2.4s ease-in-out infinite;
+    font-size: 0.85em;
+}
+
+.topbar-sep { color: var(--fg-muted); margin: 0 0.15rem; }
+.account-info .link {
+    color: var(--accent);
+    text-shadow: 0 0 4px var(--accent-glow);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-size: 0.78em;
+    font-weight: 600;
+}
+.account-info #who {
+    color: var(--fg);
+    font-family: var(--mono);
+    font-size: 0.88em;
+    letter-spacing: 0.04em;
 }
 .search-bar {
     display: flex;
@@ -890,6 +943,20 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     grid-template-columns: 240px 360px 1fr;
     min-height: 0;
 }
+/* Stagger the three-pane entrance so the mail view feels like it
+   "boots" rather than just appearing all at once. */
+.mail-shell > .sidebar  { animation: pane-in 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both;            animation-delay: 40ms; }
+.mail-shell > .msg-pane { animation: pane-in 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both;            animation-delay: 120ms; }
+.mail-shell > .reader   { animation: pane-in 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both;            animation-delay: 200ms; }
+@keyframes pane-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .mail-shell > .sidebar,
+    .mail-shell > .msg-pane,
+    .mail-shell > .reader { animation: none; }
+}
 
 /* sidebar */
 .sidebar {
@@ -903,8 +970,16 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 .compose-btn {
     width: 100%;
     padding: 0.7rem;
-    font-size: 0.95em;
+    font-size: 0.85em;
     margin-bottom: 1rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+.compose-btn .compose-prompt {
+    color: var(--magenta);
+    text-shadow: 0 0 6px var(--magenta-glow);
+    margin-right: 0.4em;
+    font-weight: 700;
 }
 .folder-list {
     flex: 1;
@@ -926,8 +1001,25 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
         transform var(--t-fast),
         box-shadow var(--t-fast);
     margin: 0.1rem 0;
-    font-size: 0.92em;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
     position: relative;
+}
+/* Bracketed folder name — the visual frame is via pseudo-elements
+   so the underlying data stays clean ("Inbox"), but the user sees
+   `[ INBOX ]` in the magenta+green dual-tone. */
+.folder-list li > span:first-child::before {
+    content: "[";
+    color: var(--magenta);
+    margin-right: 0.45em;
+    text-shadow: 0 0 4px var(--magenta-glow);
+}
+.folder-list li > span:first-child::after {
+    content: "]";
+    color: var(--magenta);
+    margin-left: 0.4em;
+    text-shadow: 0 0 4px var(--magenta-glow);
 }
 .folder-list li:hover {
     background: rgba(77, 255, 133, 0.06);
@@ -1050,11 +1142,22 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
    light; the row stays clickable to decrypt on demand. */
 #message-list li.locked .from {
     color: var(--fg-dim);
-    font-style: italic;
+    font-style: normal;
+    letter-spacing: 0.04em;
 }
 #message-list li.locked .subject.muted {
     color: var(--fg-muted);
     font-size: 0.84em;
+    letter-spacing: 0.06em;
+    text-transform: lowercase;
+}
+#message-list li.locked .enc-tag {
+    color: var(--magenta);
+    text-shadow: 0 0 4px var(--magenta-glow);
+    font-size: 0.78em;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 600;
 }
 .lock-dot {
     color: var(--accent);
@@ -1116,21 +1219,46 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 .reader-empty p { margin: 0; font-size: 0.9em; }
 
 .reader header {
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px dashed rgba(77, 255, 133, 0.2);
     padding: 1.25rem 1.5rem;
-    background: var(--panel);
+    background: rgba(15, 22, 20, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    position: relative;
+}
+.reader header::before {
+    content: "[ MESSAGE ] > decrypt --read";
+    display: block;
+    color: var(--accent);
+    font-size: 0.7em;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    text-shadow: 0 0 6px var(--accent-glow);
+    opacity: 0.85;
+    margin-bottom: 0.6rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px dashed rgba(77, 255, 133, 0.12);
 }
 .reader header h2 {
-    margin: 0 0 0.4rem;
+    margin: 0 0 0.5rem;
     font-size: 1.1em;
-    font-weight: 600;
+    font-weight: 700;
+    letter-spacing: 0.01em;
 }
 .reader header .meta {
     color: var(--fg-dim);
     font-size: 0.85em;
-    line-height: 1.5;
+    line-height: 1.7;
+    font-family: var(--mono);
 }
-.reader header .meta strong { color: var(--fg); font-weight: 500; }
+.reader header .meta strong { color: var(--fg); font-weight: 600; }
+.reader header .meta .field-tag {
+    color: var(--magenta);
+    text-shadow: 0 0 4px var(--magenta-glow);
+    margin-right: 0.55em;
+    font-size: 0.85em;
+    letter-spacing: 0.08em;
+}
 .reader pre, .reader .body-content {
     white-space: pre-wrap;
     word-wrap: break-word;
@@ -1190,10 +1318,52 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     justify-content: space-between;
     align-items: center;
     padding: 0.85rem 1.25rem;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px dashed rgba(77, 255, 133, 0.18);
 }
-.modal-head h3 { margin: 0; font-size: 1.02em; font-weight: 600; }
-.modal-head .link { font-size: 1.2em; padding: 0.2rem 0.55rem; }
+.modal-head h3 {
+    margin: 0;
+    font-size: 0.78em;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    text-shadow: 0 0 5px var(--accent-glow);
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+}
+.modal-head h3 .bracket { color: var(--magenta); text-shadow: 0 0 5px var(--magenta-glow); }
+.modal-head h3 .dim { color: var(--fg-muted); }
+.modal-head h3 .prompt { color: var(--magenta); margin-right: 0.25em; text-shadow: 0 0 4px var(--magenta-glow); }
+.modal-head .link {
+    font-size: 1.4em;
+    padding: 0.05rem 0.55rem;
+    color: var(--fg-dim);
+    line-height: 1;
+}
+.modal-head .link:hover { color: var(--accent); }
+
+/* Bracketed [TO] / [SUBJECT] field labels in the compose modal */
+.compose-card .field-label {
+    color: var(--accent);
+    font-size: 0.85em;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    text-shadow: 0 0 4px var(--accent-glow);
+    margin-right: 0.5em;
+}
+.compose-card .field-label .bracket {
+    color: var(--magenta);
+    text-shadow: 0 0 4px var(--magenta-glow);
+}
+.compose-card label { display: block; }
+.compose-card label > .field-label + input { margin-top: 0.4rem; }
+.modal-buttons .link {
+    color: var(--fg-dim);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-size: 0.78em;
+}
 
 .compose-card label,
 .compose-card textarea { padding-left: 1.25rem; padding-right: 1.25rem; }

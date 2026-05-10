@@ -258,21 +258,25 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
     <section id="mail-view" class="view">
       <header class="topbar">
         <div class="brand-mini">
-          <span>qloak</span>
+          <span class="brand-mini-mark">qloak</span>
+          <span class="topbar-status" aria-label="status">
+            <span class="bracket">[</span><span class="dot">●</span>ENCRYPTED<span class="bracket">]</span>
+          </span>
         </div>
         <div class="search-bar">
-          <input id="search-input" type="search" placeholder="Search decrypted mail..." autocomplete="off" spellcheck="false">
+          <input id="search-input" type="search" placeholder="search decrypted mail..." autocomplete="off" spellcheck="false">
           <span id="search-stats" class="search-stats"></span>
         </div>
         <div class="account-info">
           <span id="who"></span>
-          <button id="logout-btn" class="link" title="Sign out">Sign out</button>
+          <span class="topbar-sep">·</span>
+          <button id="logout-btn" class="link" title="Sign out">SIGN OUT</button>
         </div>
       </header>
 
       <main class="mail-shell">
         <aside class="sidebar">
-          <button id="compose-btn" class="primary compose-btn">+ Compose</button>
+          <button id="compose-btn" class="primary compose-btn"><span class="compose-prompt">&gt;</span> NEW MESSAGE</button>
           <ul id="folder-list" class="folder-list"></ul>
           <div class="sidebar-foot">
             <span class="onion-hint" title="Tor v3 hidden service available — same SPA over Tor">Onion ready</span>
@@ -296,20 +300,23 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
         <div class="modal-backdrop" data-close></div>
         <form id="compose-form" class="modal-card compose-card">
           <header class="modal-head">
-            <h3>New message</h3>
+            <h3>
+              <span class="bracket">[</span>NEW<span class="dim">·</span>MESSAGE<span class="bracket">]</span>
+              <span class="prompt">&gt;</span> compose
+            </h3>
             <button type="button" id="compose-close" class="link" data-close aria-label="Close">×</button>
           </header>
-          <label>To
+          <label><span class="field-label"><span class="bracket">[</span>TO<span class="bracket">]</span></span>
             <input type="text" name="to" required placeholder="alice@qloak.me, ...">
           </label>
-          <label>Subject
+          <label><span class="field-label"><span class="bracket">[</span>SUBJECT<span class="bracket">]</span></span>
             <input type="text" name="subject">
           </label>
-          <textarea name="body" rows="14" placeholder="Write your message"></textarea>
+          <textarea name="body" rows="14" placeholder="// write your message..."></textarea>
           <footer class="modal-foot">
             <p class="status" id="compose-status"></p>
             <div class="modal-buttons">
-              <button type="button" class="link" data-close>Cancel</button>
+              <button type="button" class="link" data-close>CANCEL</button>
               <button type="submit" class="primary">Send</button>
             </div>
           </footer>
