@@ -40,6 +40,11 @@
 
 html {
     background: var(--bg);
+    /* Force a scrollbar slot on every view so cards centre on the
+       same horizontal axis whether the page overflows (privacy/terms)
+       or not (auth/about/unlock). Without this, content shifts ~10px
+       left when the scrollbar appears. */
+    overflow-y: scroll;
 }
 html, body {
     margin: 0; padding: 0;
@@ -287,7 +292,12 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 
 /* ---------------- auth ---------------- */
 
-#auth-view.active {
+#auth-view.active,
+#unlock-view.active,
+#about-view.active,
+#privacy-view.active,
+#terms-view.active,
+#recovery-shown-view.active {
     display: flex;
     flex-direction: column;
     align-items: center;
