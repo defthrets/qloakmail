@@ -2740,35 +2740,37 @@ body.density-compact #message-list li .snippet { display: none; }
 .reader-header-row .avatar { margin-top: 0.2rem; }
 .reader-header-text { flex: 1; min-width: 0; }
 
-/* ---------------- HTML message body ---------------- */
+/* ---------------- HTML message body ----------------
+   Inbound HTML mail is rendered on a WHITE "paper" surface inside the
+   reader rather than our dark cyberpunk backdrop. Senders write their
+   HTML against a default white background — Gmail's grey, Outlook's
+   blue links, retailers' brand colours, "color: #333333" text — all
+   of that goes invisible or unreadable on a dark surface. Mirroring
+   ProtonMail / Gmail by giving HTML mail its own light surface lets
+   sender styling work as intended; our chrome (toolbar, header,
+   attachments) keeps the dark cyberpunk theme. */
 .body-content.html-body {
     padding: 1.5rem;
-    color: var(--fg);
-    line-height: 1.6;
+    background: #ffffff;
+    color: #1a1a1a;
+    line-height: 1.55;
     overflow-wrap: break-word;
     word-break: break-word;
+    /* A faint inset glow so the white slab visually belongs to the
+       dark reader rather than feeling like a popup. */
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 122, 31, 0.18),
+        inset 0 12px 24px rgba(0, 0, 0, 0.08);
 }
 .body-content.html-body * {
-    /* HTML messages frequently come in dark text; we render on a dark
-       backdrop. Force a readable colour while keeping any sender-set
-       background. Can be overridden by inline style on the element. */
     max-width: 100%;
 }
-.body-content.html-body p,
-.body-content.html-body div,
-.body-content.html-body td,
-.body-content.html-body li,
-.body-content.html-body span:not([style*="color"]) {
-    color: inherit;
-}
 .body-content.html-body a {
-    color: var(--accent-2);
+    color: #0a4ea8;
     text-decoration: underline;
-    text-decoration-color: rgba(255, 122, 31, 0.5);
 }
 .body-content.html-body a:hover {
-    color: var(--accent);
-    text-decoration-color: var(--accent);
+    color: #062f66;
 }
 .body-content.html-body img {
     max-width: 100%;
@@ -2778,8 +2780,8 @@ body.density-compact #message-list li .snippet { display: none; }
 .body-content.html-body img.blocked-image {
     width: 80px;
     height: 60px;
-    background: rgba(255, 122, 31, 0.08);
-    border: 1px dashed rgba(255, 122, 31, 0.35);
+    background: rgba(255, 122, 31, 0.12);
+    border: 1px dashed rgba(255, 122, 31, 0.4);
     object-fit: contain;
 }
 .body-content.html-body table {
@@ -2789,18 +2791,18 @@ body.density-compact #message-list li .snippet { display: none; }
 .body-content.html-body th,
 .body-content.html-body td {
     padding: 0.3em 0.5em;
-    border: 1px solid rgba(255, 122, 31, 0.18);
 }
 .body-content.html-body blockquote {
-    border-left: 3px solid rgba(255, 122, 31, 0.4);
+    border-left: 3px solid #ccc;
     padding-left: 0.85rem;
     margin: 0.6rem 0;
-    color: var(--fg-dim);
+    color: #555;
 }
 .body-content.html-body pre,
 .body-content.html-body code {
     font-family: var(--mono);
-    background: rgba(255, 122, 31, 0.06);
+    background: #f4f4f4;
+    color: #1a1a1a;
     padding: 0.15em 0.35em;
     font-size: 0.94em;
 }
@@ -2810,8 +2812,16 @@ body.density-compact #message-list li .snippet { display: none; }
 }
 .body-content.html-body hr {
     border: 0;
-    border-top: 1px dashed rgba(255, 122, 31, 0.22);
+    border-top: 1px solid #ddd;
     margin: 1rem 0;
+}
+/* Belt-and-braces for senders that set color but no background, or
+   vice versa — prevents the "white text on white" or "black text on
+   black" failure modes from sender stylesheets that assumed Gmail's
+   white shell. */
+.body-content.html-body[style*="background"],
+.body-content.html-body [style*="background-color"] {
+    color: inherit;
 }
 .body-content.text-body pre {
     white-space: pre-wrap;
