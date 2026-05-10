@@ -421,9 +421,38 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     font-size: 0.92em;
 }
 .brand-nav .meta-dot {
-    color: var(--accent);
-    animation: pulse-dot 2.4s ease-in-out infinite;
+    color: #4dff85;
+    text-shadow:
+        0 0 4px rgba(77, 255, 133, 0.7),
+        0 0 10px rgba(77, 255, 133, 0.45);
+    animation: online-flicker 3.7s steps(1) infinite;
     margin-right: 0.4em;
+    will-change: opacity, text-shadow;
+}
+/* Erratic LED flicker for the online indicator — long stable phases
+   broken by short irregular dips so it reads as a real status light
+   rather than a steady pulse. */
+@keyframes online-flicker {
+    0%, 18%, 22%, 41%, 56%, 72%, 100% {
+        opacity: 1;
+        text-shadow:
+            0 0 4px rgba(77, 255, 133, 0.7),
+            0 0 10px rgba(77, 255, 133, 0.45);
+    }
+    19%        { opacity: 0.35; text-shadow: 0 0 2px rgba(77, 255, 133, 0.35); }
+    20%        { opacity: 0.85; }
+    21%        { opacity: 0.4; }
+    42%        { opacity: 0.5; text-shadow: 0 0 2px rgba(77, 255, 133, 0.35); }
+    43%        { opacity: 0.2; }
+    44%        { opacity: 0.9; }
+    73%        { opacity: 0.6; }
+    74%        { opacity: 0.3; }
+    75%, 78%   { opacity: 0.95; }
+    76%        { opacity: 0.45; }
+    77%        { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .brand-nav .meta-dot { animation: none; opacity: 0.85; }
 }
 
 /* Static info pages (about / privacy / terms) — same auth-card shell
@@ -612,14 +641,15 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     gap: 0.7rem;
     margin: 1rem 0 0.25rem !important;
     cursor: default;
-    color: var(--fg-dim);
-    font-size: 0.84em;
+    color: var(--fg-muted);
+    font-size: 0.7em;
     text-transform: uppercase;
     letter-spacing: 0.1em;
 }
 .duration-row .duration-label {
     flex: 1;
-    color: var(--fg-dim);
+    color: var(--fg-muted);
+    opacity: 0.78;
 }
 .duration-row select {
     flex: 0 0 auto;
