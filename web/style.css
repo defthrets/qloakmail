@@ -966,17 +966,45 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     white-space: nowrap;
     color: var(--fg);
     padding: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 0.45em;
+    overflow: hidden;
 }
 .status-scroller .status-line::before {
-    content: "$ ";
+    content: "$";
     color: var(--orange);
     text-shadow: 0 0 4px var(--orange-glow);
-    margin-right: 0.2em;
+    flex: 0 0 auto;
     opacity: 0.85;
+    font-weight: 700;
 }
-.status-scroller .status-line .ok    { color: var(--accent);   text-shadow: 0 0 4px var(--accent-glow); }
-.status-scroller .status-line .pass  { color: var(--orange);   text-shadow: 0 0 4px var(--orange-glow); }
-.status-scroller .status-line .num   { color: var(--accent-2); }
+.status-scroller .status-key {
+    flex: 0 0 auto;
+    color: var(--fg);
+}
+/* The dotted leader. flex:1 makes it span whatever width is left
+   between the key and the result tag, so the dots always touch the
+   right edge of the box regardless of viewport size. Background dots
+   stay vertically aligned with the surrounding text x-height. */
+.status-scroller .status-dots {
+    flex: 1 1 auto;
+    align-self: center;
+    height: 1em;
+    min-width: 1.5em;
+    background-image: radial-gradient(circle, var(--fg-muted) 0.55px, transparent 0.7px);
+    background-size: 4px 1em;
+    background-position: 0 50%;
+    background-repeat: repeat-x;
+    opacity: 0.55;
+}
+.status-scroller .status-result {
+    flex: 0 0 auto;
+    color: var(--fg);
+}
+.status-scroller .status-result.ok   { color: var(--accent);   text-shadow: 0 0 4px var(--accent-glow); }
+.status-scroller .status-result.pass { color: var(--orange);   text-shadow: 0 0 4px var(--orange-glow); }
+.status-scroller .status-result.num  { color: var(--accent-2); }
 @keyframes status-feed {
     from { transform: translateY(0); }
     to   { transform: translateY(-50%); }

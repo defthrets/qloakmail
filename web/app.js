@@ -990,17 +990,22 @@ function initMatrix() {
 // Skipped under prefers-reduced-motion; quietly no-ops if the element
 // isn't in the current view (recovery view + mail view don't render it).
 
+// Each line is rendered as a three-part flex row in the status box:
+// [key] [dotted leader that flex-grows to fill] [result tag].
+// The CSS dotted-border on .status-dots stretches to whatever width
+// is left, so the dots always reach the result tag regardless of the
+// box width.
 const FEATURES_LOG_LINES = [
-    "scan: probing all checks ................. [PASS]",
-    "verify: key wrap integrity ............... [OK]",
-    "audit: ciphertext-only mailstore ......... [OK]",
-    "ping:  session token rotation ............ [OK]",
-    "trace: zero log retention ............ [CONFIRMED]",
-    "probe: auth verifier ..................... [PASS]",
-    "watch: hidden service reach .............. [UP]",
-    "audit: client integrity .................. [MATCH]",
-    "ping:  privacy edge node ............ [83ms]",
-    "scan:  outbound rate-limit ............... [ARMED]",
+    { key: "scan:   probing all checks",     result: "[PASS]" },
+    { key: "verify: key wrap integrity",     result: "[OK]" },
+    { key: "audit:  ciphertext mailstore",   result: "[OK]" },
+    { key: "ping:   session token rotation", result: "[OK]" },
+    { key: "trace:  zero log retention",     result: "[CONFIRMED]" },
+    { key: "probe:  auth verifier",          result: "[PASS]" },
+    { key: "watch:  hidden service reach",   result: "[UP]" },
+    { key: "audit:  client integrity",       result: "[MATCH]" },
+    { key: "ping:   privacy edge node",      result: "[83ms]" },
+    { key: "scan:   outbound rate-limit",    result: "[ARMED]" },
 ];
 
 function startFeaturesLogLoop() {
@@ -1009,8 +1014,9 @@ function startFeaturesLogLoop() {
     // when we drop the panel back in on the about page.
     const el = document.getElementById("features-log-line");
     if (!el) return;
+    const asLine = ({ key, result }) => `${key} ........ ${result}`;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        el.textContent = FEATURES_LOG_LINES[0];
+        el.textContent = asLine(FEATURES_LOG_LINES[0]);
         return;
     }
 
@@ -1034,7 +1040,7 @@ function startFeaturesLogLoop() {
 
     (async function loop() {
         while (!stopped) {
-            const line = FEATURES_LOG_LINES[idx % FEATURES_LOG_LINES.length];
+            const line = asLine(FEATURES_LOG_LINES[idx % FEATURES_LOG_LINES.length]);
             await typewrite(line, 22);
             await new Promise(r => setTimeout(r, 1900));
             await backspace(8);
@@ -1045,23 +1051,30 @@ function startFeaturesLogLoop() {
 }
 
 // Populates the vertical terminal-feed box at the bottom of the auth
-// card. Each FEATURES_LOG_LINE becomes its own <li class="status-line">
-// styled as a $ prompt log entry; the two .status-track-half lists hold
-// identical content so the CSS animation (translateY 0 -> -50%) loops
-// seamlessly upward.
+// card. Each entry becomes a three-part <li class="status-line">:
+//   <span class="status-key">…label…</span>
+//   <span class="status-dots"></span>      <- flex-grow dotted leader
+//   <span class="status-result">[TAG]</span>
+// The CSS dotted-border on .status-dots stretches to fill whatever
+// width is left so the dots always reach the result tag. The two
+// .status-track-half lists hold identical content so the CSS
+// animation (translateY 0 -> -50%) loops seamlessly upward.
 function bindStatusScroller() {
     const halves = document.querySelectorAll(".status-scroller .status-track-half");
     if (!halves.length) return;
-    const colour = (s) => s
-        .replace(/\[OK\]/g,        '<span class="ok">[OK]</span>')
-        .replace(/\[PASS\]/g,      '<span class="pass">[PASS]</span>')
-        .replace(/\[CONFIRMED\]/g, '<span class="ok">[CONFIRMED]</span>')
-        .replace(/\[MATCH\]/g,     '<span class="ok">[MATCH]</span>')
-        .replace(/\[UP\]/g,        '<span class="ok">[UP]</span>')
-        .replace(/\[ARMED\]/g,     '<span class="ok">[ARMED]</span>')
-        .replace(/\[(\d+ms)\]/g,   '<span class="num">[$1]</span>');
+    const tagClass = (tag) => {
+        if (tag === "[PASS]") return "pass";
+        if (/^\[\d+ms\]$/.test(tag)) return "num";
+        return "ok";
+    };
+    const escape = s => s
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     const itemsHtml = FEATURES_LOG_LINES
-        .map(line => `<li class="status-line">${colour(line)}</li>`)
+        .map(({ key, result }) => `<li class="status-line">` +
+            `<span class="status-key">${escape(key)}</span>` +
+            `<span class="status-dots" aria-hidden="true"></span>` +
+            `<span class="status-result ${tagClass(result)}">${escape(result)}</span>` +
+            `</li>`)
         .join("");
     halves.forEach(el => { el.innerHTML = itemsHtml; });
 }
