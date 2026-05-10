@@ -872,9 +872,11 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
    .status-track-half halves carry identical content so the translateY
    0 -> -50% loop has no visible seam. */
 .status-scroller {
-    /* Sits at the bottom of the auth-card, sharing the same content
-       width as the form inputs above it. */
-    margin: 0.85rem 0 0.6rem;
+    /* Stand-alone box below the auth-card, constrained to the same
+       max-width so the two read as a stacked pair. */
+    width: 100%;
+    max-width: 480px;
+    margin: 0.85rem auto 0.6rem;
     background: rgba(8, 11, 10, 0.78);
     border: 1px solid rgba(255, 122, 31, 0.22);
     box-shadow:
@@ -1158,8 +1160,8 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
    already on the .onion (no point telling them to switch). */
 .onion-notice {
     width: 100%;
-    max-width: 460px;
-    margin: 1rem 0 0;
+    max-width: 480px;
+    margin: 1rem auto 0;
     padding: 0.7rem 0.85rem;
     background: rgba(15, 22, 20, 0.55);
     backdrop-filter: blur(10px);

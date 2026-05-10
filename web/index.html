@@ -120,38 +120,38 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
           <button type="submit" class="primary">Recover account</button>
           <p class="status" id="recovery-status"></p>
         </form>
+      </div>
 
-        <div class="status-scroller" aria-hidden="true">
-          <header class="status-head">
-            <span class="status-prefix">[STATUS]</span>
-            <span class="status-prompt">&gt;</span>
-            <span class="status-title">live feed</span>
-            <span class="status-blink">_</span>
-          </header>
-          <div class="status-window">
-            <div class="status-track">
-              <!-- two halves with identical lines so the vertical loop seam
-                   is invisible; populated by bindStatusScroller(). -->
-              <ul class="status-track-half" role="list"></ul>
-              <ul class="status-track-half" role="list"></ul>
-            </div>
+      <div class="status-scroller" aria-hidden="true">
+        <header class="status-head">
+          <span class="status-prefix">[STATUS]</span>
+          <span class="status-prompt">&gt;</span>
+          <span class="status-title">live feed</span>
+          <span class="status-blink">_</span>
+        </header>
+        <div class="status-window">
+          <div class="status-track">
+            <!-- two halves with identical lines so the vertical loop seam
+                 is invisible; populated by bindStatusScroller(). -->
+            <ul class="status-track-half" role="list"></ul>
+            <ul class="status-track-half" role="list"></ul>
           </div>
         </div>
-
-        <div id="onion-notice" class="onion-notice" hidden>
-          <span class="onion-dot"></span>
-          <span class="onion-label">Tor users:</span>
-          <button type="button" id="onion-copy" class="onion-address" data-onion=""
-                  title="Click to copy. Open in Tor Browser to use the hidden service.">
-            <span id="onion-text">loading...</span>
-            <span class="onion-copy-hint" id="onion-copy-hint">copy</span>
-          </button>
-        </div>
-
-        <footer class="auth-footer">
-          Zero-access. End-to-end encrypted.
-        </footer>
       </div>
+
+      <div id="onion-notice" class="onion-notice" hidden>
+        <span class="onion-dot"></span>
+        <span class="onion-label">Tor users:</span>
+        <button type="button" id="onion-copy" class="onion-address" data-onion=""
+                title="Click to copy. Open in Tor Browser to use the hidden service.">
+          <span id="onion-text">loading...</span>
+          <span class="onion-copy-hint" id="onion-copy-hint">copy</span>
+        </button>
+      </div>
+
+      <footer class="auth-footer">
+        Zero-access. End-to-end encrypted.
+      </footer>
     </section>
 
     <!-- ============== About ============== -->
