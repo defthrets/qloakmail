@@ -513,7 +513,32 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     font-size: 0.84em;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    margin: 1.4rem 0 0.55rem;
+    margin: 1.6rem 0 0.7rem;
+    padding-top: 1rem;
+    border-top: 1px dashed rgba(255, 122, 31, 0.18);
+}
+.info-page h3 .bracket {
+    color: var(--orange);
+    text-shadow: 0 0 6px var(--orange-glow);
+    margin: 0 0.2em;
+}
+/* First-paragraph "lede" — prompt prefix + slightly bigger text so it
+   reads as an intro line, matching the terminal feel of the home
+   page's tagline. */
+.info-page .lede {
+    color: var(--fg);
+    font-size: 1em;
+    line-height: 1.6;
+    margin: 0 0 1.1rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px dashed rgba(255, 122, 31, 0.18);
+}
+.info-page .lede .prompt {
+    color: var(--orange);
+    text-shadow: 0 0 6px var(--orange-glow);
+    margin-right: 0.45em;
+    font-family: var(--mono);
+    font-weight: 700;
 }
 .info-page p { margin: 0 0 0.85rem; color: var(--fg); }
 .info-page ul {
