@@ -75,8 +75,8 @@ body { background: transparent; }
 body.matrix-on #matrix-bg { opacity: 0.85; }
 /* Mail-view tones the rain way down — panels are translucent so the
    matrix bleeds through, but at full intensity it would compete with
-   actual content. */
-body.matrix-on.in-mail #matrix-bg { opacity: 0.32; }
+   actual content. Mail surface keeps just a faint hint of motion. */
+body.matrix-on.in-mail #matrix-bg { opacity: 0.1; }
 @media (prefers-reduced-motion: reduce) {
     #matrix-bg { display: none !important; }
 }

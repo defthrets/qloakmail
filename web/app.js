@@ -688,6 +688,13 @@ async function openMessage(id) {
         });
 
         const parsed = parseRfc822(plaintextRfc822);
+        // Fallback: if parsing returned an empty body (unusual MIME
+        // structure, transfer-encoding we don't handle), show the raw
+        // decrypted source so the user at least sees their mail rather
+        // than an empty pane.
+        const bodyToRender = parsed.body && parsed.body.trim()
+            ? parsed.body
+            : plaintextRfc822;
         view.innerHTML = `
             <header>
                 <h2>${escapeHtml(parsed.subject || "(no subject)")}</h2>
@@ -699,7 +706,7 @@ async function openMessage(id) {
             </header>
             <pre class="body-content"></pre>
         `;
-        view.querySelector("pre").textContent = parsed.body;
+        view.querySelector("pre").textContent = bodyToRender;
 
         if (!msg.flags.includes("\\Seen")) {
             await api.post(`/mail/messages/${id}/flags`, { add: ["\\Seen"], remove: [] });
@@ -730,13 +737,45 @@ function extractPgpPart(rfc822) {
 }
 
 function parseRfc822(raw) {
-    const eol = raw.indexOf("\r\n\r\n");
+    // Header/body separator. Try CRLFCRLF (RFC 5322 strict), fall back
+    // to LFLF (any sender that didn't bother). OpenPGP "text mode"
+    // literal-data packets normalise to LF on decrypt, so this is the
+    // common case once decrypted, NOT the rare case.
+    let eol = raw.indexOf("\r\n\r\n");
+    let sepLen = 4;
+    if (eol < 0) { eol = raw.indexOf("\n\n"); sepLen = 2; }
+
     const headerBlock = eol >= 0 ? raw.slice(0, eol) : raw;
-    const body = eol >= 0 ? raw.slice(eol + 4) : "";
+    const rawBody     = eol >= 0 ? raw.slice(eol + sepLen) : "";
+    const headers = _parseHeaders(headerBlock);
+
+    // Body decoding: walk multipart, decode transfer-encoding.
+    const ctype       = headers["content-type"] || "text/plain";
+    const transferEnc = (headers["content-transfer-encoding"] || "7bit").toLowerCase();
+    let body;
+    if (/^multipart\//i.test(ctype)) {
+        body = _extractTextFromMultipart(rawBody, ctype) || rawBody;
+    } else if (/^text\/html/i.test(ctype)) {
+        body = _htmlToText(_decodeTransfer(rawBody, transferEnc));
+    } else {
+        body = _decodeTransfer(rawBody, transferEnc);
+    }
+
+    return {
+        from:    headers.from    || "",
+        to:      headers.to      || "",
+        subject: headers.subject || "",
+        date:    headers.date    || "",
+        body,
+    };
+}
+
+function _parseHeaders(block) {
     const headers = {};
     let cur = "";
-    for (const line of headerBlock.split(/\r?\n/)) {
-        if (/^\s/.test(line) && cur) {
+    for (const line of block.split(/\r?\n/)) {
+        if (/^[ \t]/.test(line) && cur) {
+            // RFC 5322 header continuation.
             headers[cur] += " " + line.trim();
         } else {
             const i = line.indexOf(":");
@@ -746,13 +785,82 @@ function parseRfc822(raw) {
             }
         }
     }
-    return {
-        from: headers.from || "",
-        to: headers.to || "",
-        subject: headers.subject || "",
-        date: headers.date || "",
-        body,
-    };
+    return headers;
+}
+
+// Pull the readable body from a multipart/* envelope. Prefers the first
+// text/plain part it can find; falls back to text/html (stripped of
+// tags). Recurses into nested multipart (multipart/alternative inside
+// multipart/mixed is common).
+function _extractTextFromMultipart(rawBody, ctypeHeader) {
+    const m = /boundary=("([^"]+)"|([^;\s]+))/i.exec(ctypeHeader);
+    if (!m) return "";
+    const boundary = m[2] || m[3];
+    // Each part is delimited by --boundary; the last one is --boundary--.
+    const parts = rawBody.split(new RegExp(`--${boundary.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:--)?`));
+
+    let textPlain = null;
+    let textHtml  = null;
+
+    for (const p of parts) {
+        if (!p.trim()) continue;
+        const sepMatch = /\r\n\r\n|\n\n/.exec(p);
+        if (!sepMatch) continue;
+
+        const partHeaderBlock = p.slice(0, sepMatch.index);
+        const partBodyRaw     = p.slice(sepMatch.index + sepMatch[0].length).replace(/\r?\n*$/, "");
+        const partHeaders     = _parseHeaders(partHeaderBlock);
+        const partCtype       = partHeaders["content-type"] || "";
+        const partEnc         = (partHeaders["content-transfer-encoding"] || "7bit").toLowerCase();
+
+        if (/^multipart\//i.test(partCtype)) {
+            const nested = _extractTextFromMultipart(partBodyRaw, partCtype);
+            if (nested && textPlain === null) textPlain = nested;
+        } else if (/^text\/plain/i.test(partCtype)) {
+            if (textPlain === null) textPlain = _decodeTransfer(partBodyRaw, partEnc);
+        } else if (/^text\/html/i.test(partCtype)) {
+            if (textHtml === null) textHtml = _decodeTransfer(partBodyRaw, partEnc);
+        }
+    }
+    if (textPlain) return textPlain;
+    if (textHtml)  return _htmlToText(textHtml);
+    return "";
+}
+
+function _decodeTransfer(body, enc) {
+    if (enc === "base64") {
+        try { return atob(body.replace(/\s+/g, "")); }
+        catch { return body; }
+    }
+    if (enc === "quoted-printable") {
+        return body.replace(/=\r?\n/g, "")
+                   .replace(/=([0-9A-Fa-f]{2})/g, (_, h) =>
+                       String.fromCharCode(parseInt(h, 16)));
+    }
+    return body;
+}
+
+// Tag stripper for text/html parts. Not a sanitiser — the result is
+// rendered as plaintext via .textContent on a <pre>, so any residual
+// markup will display as text, not be parsed.
+function _htmlToText(html) {
+    return html
+        .replace(/<style[\s\S]*?<\/style>/gi, "")
+        .replace(/<script[\s\S]*?<\/script>/gi, "")
+        .replace(/<br\s*\/?>/gi, "\n")
+        .replace(/<\/(p|div|h[1-6]|li|tr|blockquote)>/gi, "\n")
+        .replace(/<[^>]+>/g, "")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&amp;/g, "&")
+        .replace(/&quot;/g, '"')
+        .replace(/&#0?39;/g, "'")
+        .replace(/&apos;/g, "'")
+        .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n))
+        .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
 }
 
 // ----------------------------------------------------------------- search
