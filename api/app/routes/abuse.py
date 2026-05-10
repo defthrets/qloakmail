@@ -11,6 +11,7 @@ from .. import schemas
 from ..db import get_session
 from ..deps import get_redis
 from ..models import AbuseReport
+from ..utils.privacy import rate_limit_key
 from ..utils.rate_limit import hit as rl_hit
 
 router = APIRouter(prefix="/abuse", tags=["abuse"])
@@ -23,8 +24,10 @@ async def report(
     session: AsyncSession = Depends(get_session),
     redis_client: aioredis.Redis = Depends(get_redis),
 ):
-    ip = request.client.host if request.client else "0.0.0.0"
-    allowed, _ = await rl_hit(redis_client, f"rl:abuse:{ip}", limit=10, window_seconds=3600)
+    allowed, _ = await rl_hit(
+        redis_client, rate_limit_key(request, "abuse"),
+        limit=10, window_seconds=3600,
+    )
     if not allowed:
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "rate limit")
 

@@ -15,4 +15,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app ./app
 
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
+# --no-access-log: every uvicorn access line includes the client IP. We
+# cannot log what we don't capture. Errors and structured app logs still
+# go to stdout but contain no IPs.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", \
+     "--proxy-headers", "--no-access-log"]

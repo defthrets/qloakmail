@@ -68,13 +68,14 @@ CREATE TABLE IF NOT EXISTS messages (
 CREATE INDEX IF NOT EXISTS messages_account_folder_idx
     ON messages(account_id, folder_id, received_at DESC);
 
--- ---------- sessions (also held in redis; this is a fallback / audit) ----------
+-- ---------- sessions ----------
+-- Sessions live in redis (TTL'd, opaque tokens). This table is intentionally
+-- minimal: an account_id pointer and an expiry, no IP, no user-agent. We
+-- can't subpoena what we don't store.
 CREATE TABLE IF NOT EXISTS sessions (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     account_id      UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     token_hash      BYTEA NOT NULL,
-    user_agent      TEXT,
-    ip              INET,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     expires_at      TIMESTAMPTZ NOT NULL,
     revoked_at      TIMESTAMPTZ

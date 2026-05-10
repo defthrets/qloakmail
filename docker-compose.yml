@@ -4,6 +4,15 @@ version: "3.9"
 # Single-host stack. All services on internal "voidnet" network;
 # only nginx, postfix and dovecot expose ports to the host.
 
+# Cap docker log retention so request/connection logs don't accumulate
+# indefinitely on disk. 10 MB x 3 files = 30 MB max per container.
+# Anything older is dropped.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 networks:
   voidnet:
     driver: bridge
@@ -14,6 +23,7 @@ volumes:
   mailstore:
   rspamd-data:
   certs:
+  tor-keys:
 
 services:
 
@@ -27,6 +37,7 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    logging: *default-logging
     networks: [voidnet]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
@@ -40,6 +51,7 @@ services:
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redis-data:/data
+    logging: *default-logging
     networks: [voidnet]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -60,6 +72,7 @@ services:
         condition: service_healthy
     volumes:
       - mailstore:/var/mail
+    logging: *default-logging
     networks: [voidnet]
     # Exposed via nginx; uncomment the next line for direct dev access.
     ports:
@@ -75,6 +88,7 @@ services:
       - api
     volumes:
       - mailstore:/var/mail
+    logging: *default-logging
     networks: [voidnet]
 
   postfix:
@@ -90,6 +104,7 @@ services:
     ports:
       - "25:25"
       - "587:587"
+    logging: *default-logging
     networks: [voidnet]
 
   dovecot:
@@ -101,6 +116,7 @@ services:
     ports:
       - "143:143"
       - "993:993"
+    logging: *default-logging
     networks: [voidnet]
 
   rspamd:
@@ -109,6 +125,7 @@ services:
     env_file: .env
     volumes:
       - rspamd-data:/var/lib/rspamd
+    logging: *default-logging
     networks: [voidnet]
 
   web:
@@ -116,6 +133,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./web:/usr/share/nginx/html:ro
+    logging: *default-logging
     networks: [voidnet]
 
   nginx:
@@ -131,6 +149,21 @@ services:
       - "80:80"
       - "443:443"
       - "8080:8080"      # plain HTTP dev port
+    logging: *default-logging
+    networks: [voidnet]
+
+  # Tor hidden service — exposes the webmail at a v3 .onion address so
+  # users never reveal their clearnet IP to us. The keys persist in the
+  # tor-keys volume so the address is stable across redeploys; back that
+  # volume up if you want to keep the same .onion forever.
+  tor:
+    build: ./tor
+    restart: unless-stopped
+    depends_on:
+      - nginx
+    volumes:
+      - tor-keys:/var/lib/tor
+    logging: *default-logging
     networks: [voidnet]
 
   # Optional: certbot for Let's Encrypt issuance/renewal.

@@ -1,0 +1,27 @@
+## VoidMail Tor hidden service.
+##
+## On first boot tor generates an ed25519 keypair under
+## /var/lib/tor/voidmail/ and the .onion address appears in
+## /var/lib/tor/voidmail/hostname. Persist that directory via the
+## tor-keys volume so the address is stable across container restarts.
+
+DataDirectory /var/lib/tor
+
+# v3 hidden services (56-char .onion). Routes onion:80 to nginx:80
+# inside the docker network — Tor provides the encryption end-to-end,
+# so no TLS is needed on the hop from tor → nginx.
+HiddenServiceDir /var/lib/tor/voidmail/
+HiddenServiceVersion 3
+HiddenServicePort 80 nginx:80
+
+# Don't open a SOCKS port — we only run as a hidden-service backend.
+SOCKSPort 0
+
+# Minimal logging. Anything beyond NOTICE leaks circuit metadata.
+Log notice stdout
+SafeLogging 1
+
+# Don't relay other people's traffic; we only host one service.
+ClientOnly 0
+ExitRelay 0
+PublishServerDescriptor 0

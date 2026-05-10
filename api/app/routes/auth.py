@@ -17,6 +17,7 @@ from ..db import get_session
 from ..deps import current_account, get_redis
 from ..models import Account, Folder, InviteCode
 from ..utils.captcha import verify_captcha
+from ..utils.privacy import rate_limit_key
 from ..utils.rate_limit import hit as rl_hit
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -49,9 +50,11 @@ async def register(
     redis_client: aioredis.Redis = Depends(get_redis),
 ):
     settings = get_settings()
-    ip = request.client.host if request.client else "0.0.0.0"
 
-    allowed, _ = await rl_hit(redis_client, f"rl:register:{ip}", limit=5, window_seconds=3600)
+    allowed, _ = await rl_hit(
+        redis_client, rate_limit_key(request, "register"),
+        limit=5, window_seconds=3600,
+    )
     if not allowed:
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "registration rate limit")
 
@@ -130,8 +133,10 @@ async def login_init(
     session: AsyncSession = Depends(get_session),
     redis_client: aioredis.Redis = Depends(get_redis),
 ):
-    ip = request.client.host if request.client else "0.0.0.0"
-    allowed, _ = await rl_hit(redis_client, f"rl:loginit:{ip}", limit=20, window_seconds=600)
+    allowed, _ = await rl_hit(
+        redis_client, rate_limit_key(request, "loginit"),
+        limit=20, window_seconds=600,
+    )
     if not allowed:
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "rate limit")
 
@@ -184,8 +189,10 @@ async def login_verify(
     session: AsyncSession = Depends(get_session),
     redis_client: aioredis.Redis = Depends(get_redis),
 ):
-    ip = request.client.host if request.client else "0.0.0.0"
-    allowed, _ = await rl_hit(redis_client, f"rl:loginv:{ip}", limit=30, window_seconds=600)
+    allowed, _ = await rl_hit(
+        redis_client, rate_limit_key(request, "loginv"),
+        limit=30, window_seconds=600,
+    )
     if not allowed:
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "rate limit")
 
@@ -254,8 +261,10 @@ async def recovery_login(
     """Hands back the recovery-code-encrypted privkey blob. The client
     proves possession of the recovery code by successfully decrypting it
     locally; then calls /auth/reset-password to rewrap with a new password."""
-    ip = request.client.host if request.client else "0.0.0.0"
-    allowed, _ = await rl_hit(redis_client, f"rl:recover:{ip}", limit=5, window_seconds=3600)
+    allowed, _ = await rl_hit(
+        redis_client, rate_limit_key(request, "recover"),
+        limit=5, window_seconds=3600,
+    )
     if not allowed:
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "rate limit")
     if not await verify_captcha(req.captcha_token):

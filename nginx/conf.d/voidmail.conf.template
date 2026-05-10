@@ -12,7 +12,7 @@ upstream voidmail_web {
     keepalive 16;
 }
 
-# ---- Local dev ----
+# ---- Local dev (HTTP on :8080) ----
 server {
     listen 8080 default_server;
     server_name _;
@@ -27,6 +27,39 @@ server {
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header Connection        "";
+    }
+
+    location / {
+        proxy_pass http://voidmail_web;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+    }
+}
+
+# ---- Tor hidden service (HTTP on :80, anything ending in .onion) ----
+# Tor provides E2E encryption between client and the hidden-service
+# rendezvous, so no TLS on the hop from tor -> nginx -> upstream. We
+# strip every header that could correlate the request to a clearnet
+# identity (X-Forwarded-For, X-Real-IP), and we don't pass $host
+# through to the API so it can't log the .onion either.
+server {
+    listen 80;
+    server_name "~^.+\.onion$";
+
+    client_max_body_size 30m;
+
+    # Block the internal-only API surface from the public side.
+    location /api/v1/internal/ { return 404; }
+
+    location /api/ {
+        proxy_pass http://voidmail_api;
+        proxy_http_version 1.1;
+        # Pass a fixed Host so logs/templates can't pick up the onion.
+        proxy_set_header Host                ${VOIDMAIL_DOMAIN};
+        proxy_set_header X-Real-IP           "";
+        proxy_set_header X-Forwarded-For     "";
+        proxy_set_header X-Forwarded-Proto   "https";
+        proxy_set_header Connection          "";
     }
 
     location / {

@@ -87,34 +87,24 @@ To inject a test message into the encryption pipe (skips the public internet):
 
 ---
 
-## Deployment to FlokiNET Iceland VPS
+## Production deployment
 
-1. `apt install docker.io docker-compose-plugin` and clone this repo.
-2. Point your domain's `MX`, `A/AAAA` and reverse `PTR` records at the VPS.
-   The VPS ISP must let you set the rDNS — FlokiNET does on request.
-3. Fill `.env` with the production domain and a strong `API_SECRET_KEY`.
-4. Generate DKIM: `./scripts/generate-dkim.sh yourdomain.tld mail`.
-5. Print the DNS records you need: `./scripts/dns-records.sh yourdomain.tld`.
-6. `docker compose up -d` and obtain certs:
-   ```bash
-   docker compose run --rm certbot certonly --webroot \
-       -w /var/www/certbot -d yourdomain.tld -d mail.yourdomain.tld
-   ```
+The production target is **FlokiNET Iceland + Njalla registrar + Monero
+payment + Tor onion service**. The full step-by-step is in
+[docs/deploy-flokinet.md](docs/deploy-flokinet.md). High level:
 
-### Required DNS records
-
-The `scripts/dns-records.sh` helper prints these populated for your domain:
-
-| Type   | Name                              | Value                                        |
-| ------ | --------------------------------- | -------------------------------------------- |
-| A      | `voidmail.tld`                    | `<vps ipv4>`                                 |
-| AAAA   | `voidmail.tld`                    | `<vps ipv6>`                                 |
-| MX     | `voidmail.tld`                    | `10 mx.voidmail.tld.`                        |
-| A      | `mx.voidmail.tld`                 | `<vps ipv4>`                                 |
-| PTR    | `<reverse>.in-addr.arpa`          | `mx.voidmail.tld.` (set with VPS provider)   |
-| TXT    | `voidmail.tld`                    | `v=spf1 mx -all`                             |
-| TXT    | `mail._domainkey.voidmail.tld`    | `v=DKIM1; k=rsa; p=<from generate-dkim.sh>`  |
-| TXT    | `_dmarc.voidmail.tld`             | `v=DMARC1; p=quarantine; rua=mailto:dmarc@voidmail.tld; adkim=s; aspf=s` |
+1. Buy XMR non-KYC; register a domain at Njalla; order a FlokiNET
+   Iceland VPS — all payable in Monero, no ID required.
+2. Set rDNS on the VPS IP to `mx.<yourdomain>` (FlokiNET does this
+   from a support ticket).
+3. SSH in and paste the bootstrap script from the deploy doc — it
+   installs Docker, sets volatile journald, opens UFW, clones this
+   repo, generates a fresh `.env` with strong random secrets, and
+   brings the stack up.
+4. Add MX / A / AAAA / SPF / DKIM / DMARC at Njalla.
+5. Issue a Let's Encrypt cert via the bundled certbot service.
+6. Tor publishes the .onion address ~60s after first boot; pull it
+   from `docker compose logs tor`.
 
 ---
 
@@ -147,24 +137,45 @@ voidmail/
 
 ---
 
-## Security threat model (summary)
+## Security threat model
 
 VoidMail protects against:
 
-* Server compromise stealing **plaintext mail** at rest (mail is encrypted to
-  the user's public key on delivery).
-* Server compromise stealing **passwords** (SRP — server holds verifier only).
-* Server compromise stealing **private keys** (only encrypted blobs are stored).
+* **Server-side mail-content disclosure.** The server only ever holds
+  ciphertext — the encrypt-pipe wraps every inbound RFC822 message in
+  RFC 3156 multipart/encrypted before it touches the mailstore.
+* **Password disclosure.** SRP-6a authentication; the server holds the
+  verifier only and the password never crosses the wire.
+* **Private-key disclosure.** The server holds private keys only as
+  Argon2id-AES-GCM-encrypted blobs that the server cannot derive the
+  key for.
+* **User-IP correlation by us.** No API access logs, rate-limit keys
+  are HMAC(IP) with a per-process secret, sessions table holds no IP
+  or user-agent, systemd journal is volatile (RAM, lost on reboot),
+  bash history disabled, wtmp/lastlog/btmp linked to /dev/null. See
+  the "what we don't log" matrix in
+  [docs/deploy-flokinet.md](docs/deploy-flokinet.md).
+* **User-IP correlation by anyone.** A built-in Tor v3 hidden service
+  is exposed in `docker-compose.yml`. Clients that connect via the
+  .onion never reveal a clearnet IP to us *or* our host.
 
 VoidMail does **not** protect against:
 
-* Active server compromise injecting malicious JS into the SPA. Pin the script
-  hashes via Subresource Integrity if you can; consider a desktop client for
-  high-threat users.
-* Metadata leakage — message envelope (From/To/Subject/timestamps for headers
-  delivered before encryption) is necessarily server-visible. The pipe encrypts
-  the **whole** RFC822 body but the SMTP envelope cannot be hidden from the MTA.
-* Endpoint compromise. If the user's device is owned, the attacker has the keys.
+* **Active server compromise injecting malicious JS into the SPA.** An
+  attacker who controls the API can serve a backdoored OpenPGP.js. Pin
+  the script hashes via SRI if you can; high-threat users should use a
+  desktop OpenPGP client and treat the SPA as untrusted UI.
+* **Metadata leakage.** The SMTP envelope (From / To / received-at /
+  message size) is read by Postfix to route the message — no MTA can
+  hide this. The encryption pipe writes a fixed `Subject: [encrypted]`
+  on the outer envelope and encrypts the original Subject inside the
+  PGP body, so internal observers see only the routing minimum.
+* **Endpoint compromise.** If the user's device is owned, the attacker
+  has the keys. There is no server-side fix for this.
+* **Court orders.** No host has a "no-log" policy in any meaningful
+  sense. The defense is *not collecting things in the first place* —
+  which is what the privacy-hardening above does. There is nothing
+  for a subpoena to compel us to hand over except encrypted blobs.
 
 ---
 
