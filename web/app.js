@@ -13,6 +13,16 @@ import * as Search from "/search.js";
 
 const { b64encode, b64decode } = _internals;
 
+// Text-only folder icons (no emojis per house style).
+const FOLDER_ICONS = {
+    inbox:  "▼",
+    sent:   "▶",
+    drafts: "●",
+    trash:  "▪",
+    spam:   "▲",
+};
+const FOLDER_FALLBACK_ICON = "·";
+
 // ----------------------------------------------------------------- state
 const state = {
     config: null,
@@ -40,16 +50,32 @@ function setStatus(el, text, kind = "") {
     el.className = "status" + (kind ? " " + kind : "");
 }
 
+let _toastTimer;
+function toast(text, kind = "") {
+    const el = $("#toast");
+    el.textContent = text;
+    el.className = "toast" + (kind ? " " + kind : "");
+    el.hidden = false;
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => { el.hidden = true; }, 4000);
+}
+
 function fmtRelative(iso) {
     if (!iso) return "";
     const d = new Date(iso);
-    const now = new Date();
-    const sec = (now - d) / 1000;
+    if (isNaN(d)) return "";
+    const sec = (Date.now() - d.getTime()) / 1000;
     if (sec < 60) return "just now";
     if (sec < 3600) return Math.floor(sec / 60) + "m";
     if (sec < 86400) return Math.floor(sec / 3600) + "h";
     if (sec < 86400 * 7) return Math.floor(sec / 86400) + "d";
     return d.toLocaleDateString();
+}
+
+function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    }[c]));
 }
 
 // ----------------------------------------------------------------- auth tabs
@@ -61,6 +87,45 @@ function bindAuthTabs() {
             $$(".auth-form").forEach(f => f.classList.toggle("active", f.id === target + "-form"));
         });
     });
+}
+
+// ----------------------------------------------------------------- login (shared)
+async function performLogin(email, password) {
+    const init = await api.post("/auth/login/init", { email });
+    const session = await SRP.startClient(email, password);
+    const { M1Hex } = await session.processChallenge(init.srp_salt, init.srp_B);
+    const A = session.getA();
+    const v = await api.post("/auth/login/verify", {
+        session_id: init.session_id,
+        srp_A: A,
+        srp_M1: M1Hex,
+    });
+    if (!session.verifyServer(v.srp_M2)) {
+        throw new Error("server proof failed — possible MITM");
+    }
+    const privArmored = await unwrapPrivateKey(
+        v.encrypted_privkey_password, password, v.argon2_params
+    );
+    api.setToken(v.session_token);
+    state.account = { account_id: v.account_id, email: v.email };
+    state.pubkey = await openpgp.readKey({ armoredKey: v.pubkey_armored });
+    state.privkey = await openpgp.readPrivateKey({ armoredKey: privArmored });
+    await enterMailbox();
+}
+
+async function handleLogin(form) {
+    const status = $("#login-status");
+    const fd = new FormData(form);
+    const email = fd.get("email").trim();
+    const password = fd.get("password");
+
+    setStatus(status, "Authenticating...");
+    try {
+        await performLogin(email, password);
+    } catch (e) {
+        console.error(e);
+        setStatus(status, "Sign-in failed: " + (e.message || e), "err");
+    }
 }
 
 // ----------------------------------------------------------------- signup
@@ -80,7 +145,6 @@ async function handleSignup(form) {
     }
 
     try {
-        // 1) OpenPGP keypair
         const { privateKey, publicKey } = await openpgp.generateKey({
             type: "ecc",
             curve: "ed25519",
@@ -90,18 +154,14 @@ async function handleSignup(form) {
         const pubObj = await openpgp.readKey({ armoredKey: publicKey });
         const fpr = pubObj.getFingerprint();
 
-        // 2) Recovery code
         const recoveryCode = generateRecoveryCode();
 
-        // 3) Wrap private key with both password and recovery code
         const wrappedPwd = await wrapPrivateKey(privateKey, password);
         const wrappedRec = await wrapPrivateKey(privateKey, recoveryCode, {
             ...wrappedPwd.argon2_params,
-            // Different salt for the recovery wrap.
             salt_b64: b64encode(_internals.randomBytes(16)),
         });
 
-        // 4) SRP verifier
         const { saltHex, verifierHex } = await SRP.generateVerifier(email, password);
 
         setStatus(status, "Submitting registration...");
@@ -118,65 +178,35 @@ async function handleSignup(form) {
             captcha_token: null,
         });
 
-        // 5) Show recovery code (one-time)
+        // Show recovery code, then auto-login on confirm.
         $("#recovery-shown-code").textContent = recoveryCode;
         show("recovery-shown-view");
-        $("#recovery-shown-confirm").addEventListener("change", e => {
-            $("#recovery-shown-continue").disabled = !e.target.checked;
-        }, { once: true });
-        $("#recovery-shown-continue").addEventListener("click", () => {
-            show("auth-view");
-            // Pre-fill login form.
-            $("#login-form input[name=email]").value = email;
-            $("#login-form input[name=password]").focus();
-        }, { once: true });
+
+        const confirmBox = $("#recovery-shown-confirm");
+        const continueBtn = $("#recovery-shown-continue");
+        const recoveryStatus = $("#recovery-shown-status");
+
+        confirmBox.checked = false;
+        continueBtn.disabled = true;
+        setStatus(recoveryStatus, "");
+
+        confirmBox.onchange = e => { continueBtn.disabled = !e.target.checked; };
+        continueBtn.onclick = async () => {
+            continueBtn.disabled = true;
+            setStatus(recoveryStatus, "Signing you in...");
+            try {
+                await performLogin(email, password);
+            } catch (e) {
+                console.error("[QloakMail] auto-login after signup failed:", e);
+                setStatus(recoveryStatus, "Auto sign-in failed. Use the form below.", "err");
+                show("auth-view");
+                $("#login-form input[name=email]").value = email;
+                $("#login-form input[name=password]").focus();
+            }
+        };
     } catch (e) {
         console.error(e);
         setStatus(status, "Failed: " + (e.message || e), "err");
-    }
-}
-
-// ----------------------------------------------------------------- login
-async function handleLogin(form) {
-    const status = $("#login-status");
-    const fd = new FormData(form);
-    const email = fd.get("email").trim();
-    const password = fd.get("password");
-
-    setStatus(status, "Authenticating...");
-    try {
-        // 1) /login/init
-        const init = await api.post("/auth/login/init", { email });
-
-        // 2) Build SRP session, compute A and M1
-        const session = await SRP.startClient(email, password);
-        const { M1Hex } = await session.processChallenge(init.srp_salt, init.srp_B);
-        const A = session.getA();
-
-        // 3) /login/verify
-        const v = await api.post("/auth/login/verify", {
-            session_id: init.session_id,
-            srp_A: A,
-            srp_M1: M1Hex,
-        });
-        if (!session.verifyServer(v.srp_M2)) {
-            throw new Error("server proof failed — possible MITM");
-        }
-
-        // 4) Decrypt the private-key blob
-        const privArmored = await unwrapPrivateKey(
-            v.encrypted_privkey_password, password, v.argon2_params
-        );
-
-        api.setToken(v.session_token);
-        state.account = { account_id: v.account_id, email: v.email };
-        state.pubkey = await openpgp.readKey({ armoredKey: v.pubkey_armored });
-        state.privkey = await openpgp.readPrivateKey({ armoredKey: privArmored });
-
-        await enterMailbox();
-    } catch (e) {
-        console.error(e);
-        setStatus(status, "Sign-in failed: " + (e.message || e), "err");
     }
 }
 
@@ -195,7 +225,6 @@ async function handleRecovery(form) {
             r.encrypted_privkey_recovery, recoveryCode, r.argon2_params
         );
 
-        // Re-wrap with the new password and rotate SRP verifier.
         const wrappedPwd = await wrapPrivateKey(privArmored, newPassword);
         const wrappedRec = await wrapPrivateKey(privArmored, recoveryCode, {
             ...wrappedPwd.argon2_params,
@@ -214,10 +243,16 @@ async function handleRecovery(form) {
             argon2_params: wrappedPwd.argon2_params,
         });
 
-        setStatus(status, "Password reset. Sign in with the new password.", "ok");
-        $$(".auth-tabs .tab").forEach(b => b.classList.toggle("active", b.dataset.tab === "login"));
-        $$(".auth-form").forEach(f => f.classList.toggle("active", f.id === "login-form"));
-        $("#login-form input[name=email]").value = email;
+        setStatus(status, "Recovered. Signing you in...", "ok");
+        try {
+            await performLogin(email, newPassword);
+        } catch (e) {
+            console.error(e);
+            setStatus(status, "Password reset, please sign in.", "ok");
+            $$(".auth-tabs .tab").forEach(b => b.classList.toggle("active", b.dataset.tab === "login"));
+            $$(".auth-form").forEach(f => f.classList.toggle("active", f.id === "login-form"));
+            $("#login-form input[name=email]").value = email;
+        }
     } catch (e) {
         console.error(e);
         setStatus(status, "Recovery failed: " + (e.message || e), "err");
@@ -234,10 +269,18 @@ async function enterMailbox() {
     } catch (e) {
         console.warn("[QloakMail] search index unavailable:", e);
     }
-    await loadFolders();
-    if (state.folders.length) {
-        const inbox = state.folders.find(f => f.system_kind === "inbox") || state.folders[0];
-        await selectFolder(inbox.id);
+    try {
+        await loadFolders();
+        if (state.folders.length) {
+            const inbox = state.folders.find(f => f.system_kind === "inbox") || state.folders[0];
+            await selectFolder(inbox.id);
+        } else {
+            renderEmptyReader();
+        }
+    } catch (e) {
+        console.error("[QloakMail] failed to load mailbox:", e);
+        toast("Failed to load mailbox: " + (e.message || e), "err");
+        renderEmptyReader();
     }
 }
 
@@ -255,13 +298,15 @@ async function loadFolders() {
     ul.innerHTML = "";
     for (const f of state.folders) {
         const li = document.createElement("li");
-        li.textContent = f.name;
+        const icon = FOLDER_ICONS[f.system_kind] || FOLDER_FALLBACK_ICON;
+        const showCount = f.unread_count > 0
+            ? f.unread_count
+            : (f.total_count || "");
+        li.innerHTML = `
+            <span><span class="icon">${escapeHtml(icon)}</span>${escapeHtml(f.name)}</span>
+            <span class="count">${escapeHtml(String(showCount))}</span>
+        `;
         if (f.id === state.activeFolderId) li.classList.add("active");
-        const count = document.createElement("span");
-        count.className = "count";
-        count.textContent = f.unread_count
-            ? `${f.unread_count}/${f.total_count}` : `${f.total_count}`;
-        li.appendChild(count);
         li.addEventListener("click", () => selectFolder(f.id));
         ul.appendChild(li);
     }
@@ -269,49 +314,87 @@ async function loadFolders() {
 
 async function selectFolder(folderId) {
     state.activeFolderId = folderId;
+    state.selectedMessageId = null;
     $$("#folder-list li").forEach((li, i) =>
-        li.classList.toggle("active", state.folders[i].id === folderId));
-    state.messages = await api.get(`/mail/folders/${folderId}/messages`);
-    // Leaving search context — reset the box.
+        li.classList.toggle("active", state.folders[i]?.id === folderId));
+
+    try {
+        state.messages = await api.get(`/mail/folders/${folderId}/messages`);
+    } catch (e) {
+        console.error(e);
+        toast("Failed to load messages: " + (e.message || e), "err");
+        state.messages = [];
+    }
+
     state.searchActive = false;
     const input = $("#search-input");
     if (input.value) input.value = "";
     await refreshSearchStats();
     renderMessageList();
-    $("#message-view").innerHTML = `<p style="color:var(--fg-dim)">Select a message.</p>`;
+    renderEmptyReader();
+}
+
+function renderEmptyReader() {
+    $("#message-view").innerHTML = `
+        <div class="reader-empty">
+            <h3>Select a message</h3>
+            <p>Choose an email from the list, or compose a new one.</p>
+        </div>
+    `;
 }
 
 function renderMessageList() {
     const ul = $("#message-list");
     ul.innerHTML = "";
+
+    if (!state.messages.length) {
+        const folder = state.folders.find(f => f.id === state.activeFolderId);
+        const isInbox = folder?.system_kind === "inbox";
+        const userEmail = state.account?.email || "";
+        ul.innerHTML = isInbox ? `
+            <li class="empty-state">
+                <h4>Your inbox is empty</h4>
+                <p>Have a friend send a test to <code>${escapeHtml(userEmail)}</code> — it'll show up here, decrypted in your browser.</p>
+            </li>
+        ` : `
+            <li class="empty-state">
+                <h4>Empty folder</h4>
+                <p>No messages here yet.</p>
+            </li>
+        `;
+        return;
+    }
+
     for (const m of state.messages) {
         const li = document.createElement("li");
         if (!m.flags.includes("\\Seen")) li.classList.add("unread");
-        // We don't decrypt every preview eagerly — show placeholder + size.
+        if (m.id === state.selectedMessageId) li.classList.add("active");
         li.innerHTML = `
-            <span class="when">${fmtRelative(m.received_at)}</span>
+            <span class="when">${escapeHtml(fmtRelative(m.received_at))}</span>
             <div class="from">[encrypted]</div>
             <div class="subject">${m.size_bytes} bytes</div>
         `;
         li.addEventListener("click", () => openMessage(m.id));
         ul.appendChild(li);
     }
-    if (!state.messages.length) {
-        ul.innerHTML = `<li style="color:var(--fg-dim);cursor:default">Empty folder.</li>`;
-    }
 }
 
 async function openMessage(id) {
     state.selectedMessageId = id;
+    // Re-render to set active class on the right li.
+    if (!state.searchActive) renderMessageList();
+
     const view = $("#message-view");
-    view.innerHTML = `<p style="color:var(--fg-dim)">Decrypting...</p>`;
+    view.innerHTML = `
+        <div class="reader-empty">
+            <p>Decrypting...</p>
+        </div>
+    `;
     try {
         const msg = await api.get(`/mail/messages/${id}`);
         const blob = b64decode(msg.encrypted_blob_b64);
         const armored = new TextDecoder().decode(blob);
 
-        // The blob is an RFC 3156 multipart/encrypted MIME message. Pull
-        // the application/octet-stream part out and ask OpenPGP to decrypt.
         const enc = extractPgpPart(armored);
         const message = await openpgp.readMessage({ armoredMessage: enc });
         const { data: plaintextRfc822 } = await openpgp.decrypt({
@@ -324,13 +407,12 @@ async function openMessage(id) {
             <header>
                 <h2>${escapeHtml(parsed.subject || "(no subject)")}</h2>
                 <div class="meta">
-                    <strong>${escapeHtml(parsed.from || "")}</strong>
-                    &nbsp;->&nbsp; ${escapeHtml(parsed.to || "")}
-                    <br>
-                    <span>${escapeHtml(parsed.date || "")}</span>
+                    From <strong>${escapeHtml(parsed.from || "")}</strong>
+                    to <strong>${escapeHtml(parsed.to || "")}</strong><br>
+                    ${escapeHtml(parsed.date || "")}
                 </div>
             </header>
-            <pre></pre>
+            <pre class="body-content"></pre>
         `;
         view.querySelector("pre").textContent = parsed.body;
 
@@ -339,8 +421,6 @@ async function openMessage(id) {
             await loadFolders();
         }
 
-        // Add to the local IndexedDB search index. Best-effort — never
-        // block the read.
         try {
             await Search.indexMessage(id, parsed);
             await refreshSearchStats();
@@ -349,13 +429,16 @@ async function openMessage(id) {
         }
     } catch (e) {
         console.error(e);
-        view.innerHTML = `<p style="color:var(--warn)">Decryption failed: ${escapeHtml(e.message || String(e))}</p>`;
+        view.innerHTML = `
+            <div class="reader-empty">
+                <h3>Decryption failed</h3>
+                <p>${escapeHtml(e.message || String(e))}</p>
+            </div>
+        `;
     }
 }
 
 function extractPgpPart(rfc822) {
-    // The PGP part begins with "-----BEGIN PGP MESSAGE-----" and ends
-    // with "-----END PGP MESSAGE-----".
     const m = rfc822.match(/-----BEGIN PGP MESSAGE-----[\s\S]+?-----END PGP MESSAGE-----/);
     if (!m) throw new Error("no PGP block found in message");
     return m[0];
@@ -385,12 +468,6 @@ function parseRfc822(raw) {
         date: headers.date || "",
         body,
     };
-}
-
-function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => ({
-        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-    }[c]));
 }
 
 // ----------------------------------------------------------------- search
@@ -433,16 +510,19 @@ async function runSearch(query) {
         : "no matches";
 
     if (!results.length) {
-        ul.innerHTML = `<li style="color:var(--fg-dim);cursor:default;padding:0.7rem 0.9rem">
-            No matches in your locally indexed mail.<br>
-            <small>Open messages once to add them to the search index.</small>
-        </li>`;
+        ul.innerHTML = `
+            <li class="empty-state">
+                <h4>No matches</h4>
+                <p>Search runs only on messages you've already opened in this browser.</p>
+            </li>
+        `;
         return;
     }
 
     for (const r of results) {
         const li = document.createElement("li");
         li.className = "search-result";
+        if (r.id === state.selectedMessageId) li.classList.add("active");
         const when = r.date ? fmtRelative(r.date) : "";
         li.innerHTML = `
             <span class="when">${escapeHtml(when)}</span>
@@ -456,14 +536,29 @@ async function runSearch(query) {
 }
 
 // ----------------------------------------------------------------- compose
+function openCompose() {
+    $("#compose-modal").hidden = false;
+    setTimeout(() => $("#compose-form input[name=to]").focus(), 50);
+}
+function closeCompose() {
+    $("#compose-modal").hidden = true;
+    setStatus($("#compose-status"), "");
+}
+
 function bindCompose() {
-    $("#compose-btn").addEventListener("click", () => {
-        $("#compose-modal").hidden = false;
-        $("#compose-form input[name=to]").focus();
+    $("#compose-btn").addEventListener("click", openCompose);
+
+    // Backdrop, X button, and any [data-close] element close the modal.
+    $$("#compose-modal [data-close]").forEach(el => {
+        el.addEventListener("click", closeCompose);
     });
-    $("#compose-close").addEventListener("click", () => {
-        $("#compose-modal").hidden = true;
+
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && !$("#compose-modal").hidden) {
+            closeCompose();
+        }
     });
+
     $("#compose-form").addEventListener("submit", async (e) => {
         e.preventDefault();
         const status = $("#compose-status");
@@ -474,11 +569,7 @@ function bindCompose() {
 
         setStatus(status, "Sending...");
         try {
-            // Build the RFC822 message. For internal recipients, encrypt the
-            // entire body+headers with their pubkey (we let the encrypt-pipe
-            // do the actual delivery encryption — but if EVERY recipient is
-            // internal we can also pre-encrypt to provide deniability).
-            const internalDomains = new Set(state.config.domains.map(d => d.toLowerCase()));
+            const internalDomains = new Set((state.config?.domains || []).map(d => d.toLowerCase()));
             const isInternal = (addr) => internalDomains.has(addr.split("@")[1]?.toLowerCase());
 
             const headers = [
@@ -498,11 +589,11 @@ function bindCompose() {
                 is_internal_only: to.every(isInternal),
             });
             setStatus(status, "Sent.", "ok");
+            toast("Message sent", "ok");
             setTimeout(() => {
-                $("#compose-modal").hidden = true;
+                closeCompose();
                 e.target.reset();
-                setStatus(status, "");
-            }, 800);
+            }, 600);
         } catch (err) {
             console.error(err);
             setStatus(status, "Send failed: " + (err.message || err), "err");
@@ -517,7 +608,7 @@ async function boot() {
     bindSearch();
 
     state.config = await api.config().catch(() => ({
-        domain: "voidmail.local", domains: ["voidmail.local"],
+        domain: "qloak.me", domains: ["qloak.me"],
         invite_required: false, captcha_provider: "none",
     }));
     $("#signup-domain-hint").textContent =

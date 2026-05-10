@@ -4,129 +4,158 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#0b0c0e">
   <title>QloakMail</title>
   <link rel="stylesheet" href="/style.css">
-
-  <!-- Vendored libraries — see web/lib/README for fetch instructions. -->
   <script src="/lib/openpgp.min.js"></script>
   <script src="/lib/hash-wasm.umd.min.js"></script>
 </head>
 <body>
   <div id="app">
-    <!-- Auth view -->
+
+    <!-- ============== Auth ============== -->
     <section id="auth-view" class="view active">
-      <header class="brand">
-        <h1>QloakMail</h1>
-        <p class="tagline">Encrypted email we can't read.</p>
+      <div class="auth-card">
+        <header class="brand">
+          <h1>QloakMail</h1>
+          <p class="tagline">Encrypted email we can't read.</p>
+        </header>
+
+        <nav class="auth-tabs">
+          <button class="tab active" data-tab="login">Sign in</button>
+          <button class="tab" data-tab="signup">Create account</button>
+          <button class="tab" data-tab="recovery">Recovery</button>
+        </nav>
+
+        <form id="login-form" class="auth-form active" autocomplete="on">
+          <label>Email
+            <input type="email" name="email" autocomplete="username" required>
+          </label>
+          <label>Password
+            <input type="password" name="password" autocomplete="current-password" required>
+          </label>
+          <button type="submit" class="primary">Sign in</button>
+          <p class="status" id="login-status"></p>
+        </form>
+
+        <form id="signup-form" class="auth-form" autocomplete="off">
+          <label>Email
+            <input type="email" name="email" required>
+            <small id="signup-domain-hint"></small>
+          </label>
+          <label>Password (12+ chars)
+            <input type="password" name="password" minlength="12" required>
+          </label>
+          <label>Confirm password
+            <input type="password" name="password2" minlength="12" required>
+          </label>
+          <label id="invite-row" hidden>Invite code
+            <input type="text" name="invite">
+          </label>
+          <button type="submit" class="primary">Create account</button>
+          <p class="status" id="signup-status"></p>
+        </form>
+
+        <form id="recovery-form" class="auth-form" autocomplete="off">
+          <label>Email
+            <input type="email" name="email" required>
+          </label>
+          <label>Recovery code
+            <input type="text" name="recovery" required spellcheck="false" autocapitalize="characters">
+          </label>
+          <label>New password (12+ chars)
+            <input type="password" name="password" minlength="12" required>
+          </label>
+          <button type="submit" class="primary">Recover account</button>
+          <p class="status" id="recovery-status"></p>
+        </form>
+      </div>
+      <footer class="auth-footer">
+        Zero-access. End-to-end encrypted. <a href="https://github.com/defthrets/qloakmail" target="_blank" rel="noopener">Open source</a>.
+      </footer>
+    </section>
+
+    <!-- ============== Recovery code reveal ============== -->
+    <section id="recovery-shown-view" class="view">
+      <div class="auth-card recovery-card">
+        <h2>Save your recovery code</h2>
+        <p class="warn">
+          This is the <strong>only</strong> way to recover your account if you forget
+          your password. We can't regenerate it. Write it down and store it offline.
+        </p>
+        <pre id="recovery-shown-code"></pre>
+        <label class="confirm">
+          <input type="checkbox" id="recovery-shown-confirm">
+          <span>I have saved my recovery code in a safe place.</span>
+        </label>
+        <button id="recovery-shown-continue" class="primary" disabled>Continue to inbox</button>
+        <p class="status" id="recovery-shown-status"></p>
+      </div>
+    </section>
+
+    <!-- ============== Mail ============== -->
+    <section id="mail-view" class="view">
+      <header class="topbar">
+        <div class="brand-mini">QloakMail</div>
+        <div class="search-bar">
+          <input id="search-input" type="search" placeholder="Search decrypted mail..." autocomplete="off" spellcheck="false">
+          <span id="search-stats" class="search-stats"></span>
+        </div>
+        <div class="account-info">
+          <span id="who"></span>
+          <button id="logout-btn" class="link" title="Sign out">Sign out</button>
+        </div>
       </header>
 
-      <div class="auth-tabs">
-        <button class="tab active" data-tab="login">Sign in</button>
-        <button class="tab" data-tab="signup">Create account</button>
-        <button class="tab" data-tab="recovery">Use recovery code</button>
-      </div>
-
-      <form id="login-form" class="auth-form active">
-        <label>Email
-          <input type="email" name="email" autocomplete="username" required>
-        </label>
-        <label>Password
-          <input type="password" name="password" autocomplete="current-password" required>
-        </label>
-        <button type="submit">Sign in</button>
-        <p class="status" id="login-status"></p>
-      </form>
-
-      <form id="signup-form" class="auth-form">
-        <label>Email
-          <input type="email" name="email" required>
-          <small id="signup-domain-hint"></small>
-        </label>
-        <label>Password (12+ chars)
-          <input type="password" name="password" minlength="12" required>
-        </label>
-        <label>Confirm password
-          <input type="password" name="password2" minlength="12" required>
-        </label>
-        <label id="invite-row" hidden>Invite code
-          <input type="text" name="invite">
-        </label>
-        <button type="submit">Create account</button>
-        <p class="status" id="signup-status"></p>
-      </form>
-
-      <form id="recovery-form" class="auth-form">
-        <label>Email
-          <input type="email" name="email" required>
-        </label>
-        <label>Recovery code
-          <input type="text" name="recovery" required spellcheck="false">
-        </label>
-        <label>New password (12+ chars)
-          <input type="password" name="password" minlength="12" required>
-        </label>
-        <button type="submit">Recover account</button>
-        <p class="status" id="recovery-status"></p>
-      </form>
-    </section>
-
-    <!-- Recovery code shown once at signup -->
-    <section id="recovery-shown-view" class="view">
-      <h2>Save your recovery code</h2>
-      <p class="warn">
-        This is the <strong>only</strong> way to recover your account if you forget
-        your password. We cannot regenerate it. Write it down and store it offline.
-      </p>
-      <pre id="recovery-shown-code"></pre>
-      <label class="confirm">
-        <input type="checkbox" id="recovery-shown-confirm">
-        I have saved my recovery code in a safe place.
-      </label>
-      <button id="recovery-shown-continue" disabled>Continue</button>
-    </section>
-
-    <!-- Mail view -->
-    <section id="mail-view" class="view">
-      <aside class="sidebar">
-        <div class="account-line">
-          <span id="who"></span>
-          <button id="compose-btn">Compose</button>
-          <button id="logout-btn" class="link">Sign out</button>
-        </div>
-        <ul id="folder-list"></ul>
-      </aside>
-      <main class="mail-main">
-        <div class="msg-pane">
-          <div class="search-bar">
-            <input id="search-input" type="search" placeholder="Search decrypted mail..." autocomplete="off" spellcheck="false">
-            <span id="search-stats" class="search-stats"></span>
+      <main class="mail-shell">
+        <aside class="sidebar">
+          <button id="compose-btn" class="primary compose-btn">+ Compose</button>
+          <ul id="folder-list" class="folder-list"></ul>
+          <div class="sidebar-foot">
+            <span class="onion-hint" title="Tor v3 hidden service available — same SPA over Tor">Onion ready</span>
           </div>
+        </aside>
+
+        <section class="msg-pane">
           <ul id="message-list"></ul>
-        </div>
-        <article id="message-view"></article>
+        </section>
+
+        <article id="message-view" class="reader">
+          <div class="reader-empty">
+            <h3>Select a message</h3>
+            <p>Choose an email from the list, or compose a new one.</p>
+          </div>
+        </article>
       </main>
 
       <!-- Compose modal -->
-      <div id="compose-modal" hidden>
-        <form id="compose-form">
-          <header>
+      <div id="compose-modal" class="modal" hidden>
+        <div class="modal-backdrop" data-close></div>
+        <form id="compose-form" class="modal-card compose-card">
+          <header class="modal-head">
             <h3>New message</h3>
-            <button type="button" id="compose-close" class="link">close</button>
+            <button type="button" id="compose-close" class="link" data-close aria-label="Close">×</button>
           </header>
           <label>To
-            <input type="text" name="to" required placeholder="alice@voidmail.local, ...">
+            <input type="text" name="to" required placeholder="alice@qloak.me, ...">
           </label>
           <label>Subject
             <input type="text" name="subject">
           </label>
-          <textarea name="body" rows="14" placeholder="Message"></textarea>
-          <footer>
+          <textarea name="body" rows="14" placeholder="Write your message"></textarea>
+          <footer class="modal-foot">
             <p class="status" id="compose-status"></p>
-            <button type="submit">Send</button>
+            <div class="modal-buttons">
+              <button type="button" class="link" data-close>Cancel</button>
+              <button type="submit" class="primary">Send</button>
+            </div>
           </footer>
         </form>
       </div>
     </section>
+
+    <!-- Toast notification (errors / status) -->
+    <div id="toast" class="toast" hidden></div>
   </div>
 
   <script type="module" src="/app.js"></script>
