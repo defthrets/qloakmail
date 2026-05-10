@@ -993,6 +993,9 @@ const FEATURES_LOG_LINES = [
 ];
 
 function startFeaturesLogLoop() {
+    // Compact version (was the typewriter strip) — no longer in the
+    // markup, but kept as a no-op so the boot() call site doesn't break
+    // when we drop the panel back in on the about page.
     const el = document.getElementById("features-log-line");
     if (!el) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -1006,7 +1009,6 @@ function startFeaturesLogLoop() {
     async function typewrite(text, speed) {
         for (let i = 0; i < text.length && !stopped; i++) {
             el.textContent = text.slice(0, i + 1);
-            // Slight per-char jitter — feels like an actual typist.
             await new Promise(r => setTimeout(r, speed + (Math.random() * 14 - 7)));
         }
     }
@@ -1029,10 +1031,26 @@ function startFeaturesLogLoop() {
             idx++;
         }
     })();
+}
 
-    // No need to expose stop() — the element is replaced when the SPA
-    // navigates away from auth-view, and the loop's awaits naturally
-    // continue against a detached node (harmless DOM writes).
+// Populates the thin terminal scroller at the bottom of the auth card.
+// Builds one stream of all FEATURES_LOG_LINES separated by ` // `, then
+// duplicates it across the two .status-line spans so the CSS marquee
+// (translateX 0 -> -50%) loops seamlessly.
+function bindStatusScroller() {
+    const lines = document.querySelectorAll(".status-scroller .status-line");
+    if (!lines.length) return;
+    const stream = FEATURES_LOG_LINES
+        .map(s => s
+            .replace(/\[OK\]/g,        '<span class="ok">[OK]</span>')
+            .replace(/\[PASS\]/g,      '<span class="pass">[PASS]</span>')
+            .replace(/\[CONFIRMED\]/g, '<span class="ok">[CONFIRMED]</span>')
+            .replace(/\[MATCH\]/g,     '<span class="ok">[MATCH]</span>')
+            .replace(/\[UP\]/g,        '<span class="ok">[UP]</span>')
+            .replace(/\[ARMED\]/g,     '<span class="ok">[ARMED]</span>')
+            .replace(/\[(\d+ms)\]/g,   '<span class="num">[$1]</span>'))
+        .join(" ·· ");
+    lines.forEach(el => { el.innerHTML = stream; });
 }
 
 // ----------------------------------------------------------------- ripple effect
@@ -1148,6 +1166,7 @@ async function boot() {
     bindRipples();
     initMatrix();
     startFeaturesLogLoop();
+    bindStatusScroller();
     // Initial state is auth-view → matrix-on
     document.body.classList.add("matrix-on");
 
