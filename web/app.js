@@ -923,10 +923,10 @@ function initMatrix() {
             requestAnimationFrame(draw);
             return;
         }
-        // Step every other frame — slows the rain to ~30fps and reduces
+        // Step every third frame — slows the rain to ~20fps and reduces
         // GPU pressure while keeping motion smooth.
         frame++;
-        if (frame % 2) {
+        if (frame % 3) {
             requestAnimationFrame(draw);
             return;
         }
@@ -960,8 +960,8 @@ function initMatrix() {
 
             // Reset to top with random delay; longer streams look
             // organic.
-            if (y > h && Math.random() > 0.972) drops[i] = 0;
-            drops[i]++;
+            if (y > h && Math.random() > 0.985) drops[i] = 0;
+            drops[i] += 0.55;
         }
 
         requestAnimationFrame(draw);
@@ -1033,24 +1033,26 @@ function startFeaturesLogLoop() {
     })();
 }
 
-// Populates the thin terminal scroller at the bottom of the auth card.
-// Builds one stream of all FEATURES_LOG_LINES separated by ` // `, then
-// duplicates it across the two .status-line spans so the CSS marquee
-// (translateX 0 -> -50%) loops seamlessly.
+// Populates the vertical terminal-feed box at the bottom of the auth
+// card. Each FEATURES_LOG_LINE becomes its own <li class="status-line">
+// styled as a $ prompt log entry; the two .status-track-half lists hold
+// identical content so the CSS animation (translateY 0 -> -50%) loops
+// seamlessly upward.
 function bindStatusScroller() {
-    const lines = document.querySelectorAll(".status-scroller .status-line");
-    if (!lines.length) return;
-    const stream = FEATURES_LOG_LINES
-        .map(s => s
-            .replace(/\[OK\]/g,        '<span class="ok">[OK]</span>')
-            .replace(/\[PASS\]/g,      '<span class="pass">[PASS]</span>')
-            .replace(/\[CONFIRMED\]/g, '<span class="ok">[CONFIRMED]</span>')
-            .replace(/\[MATCH\]/g,     '<span class="ok">[MATCH]</span>')
-            .replace(/\[UP\]/g,        '<span class="ok">[UP]</span>')
-            .replace(/\[ARMED\]/g,     '<span class="ok">[ARMED]</span>')
-            .replace(/\[(\d+ms)\]/g,   '<span class="num">[$1]</span>'))
-        .join(" ·· ");
-    lines.forEach(el => { el.innerHTML = stream; });
+    const halves = document.querySelectorAll(".status-scroller .status-track-half");
+    if (!halves.length) return;
+    const colour = (s) => s
+        .replace(/\[OK\]/g,        '<span class="ok">[OK]</span>')
+        .replace(/\[PASS\]/g,      '<span class="pass">[PASS]</span>')
+        .replace(/\[CONFIRMED\]/g, '<span class="ok">[CONFIRMED]</span>')
+        .replace(/\[MATCH\]/g,     '<span class="ok">[MATCH]</span>')
+        .replace(/\[UP\]/g,        '<span class="ok">[UP]</span>')
+        .replace(/\[ARMED\]/g,     '<span class="ok">[ARMED]</span>')
+        .replace(/\[(\d+ms)\]/g,   '<span class="num">[$1]</span>');
+    const itemsHtml = FEATURES_LOG_LINES
+        .map(line => `<li class="status-line">${colour(line)}</li>`)
+        .join("");
+    halves.forEach(el => { el.innerHTML = itemsHtml; });
 }
 
 // ----------------------------------------------------------------- ripple effect
