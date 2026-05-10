@@ -16,6 +16,7 @@ from ..config import get_settings
 from ..db import get_session
 from ..deps import current_account, get_redis
 from ..models import Account, Folder
+from ..utils import stats
 from ..utils.captcha import verify_captcha
 from ..utils.ip_blocks import is_ip_blocked
 from ..utils.privacy import rate_limit_key
@@ -65,6 +66,7 @@ async def register(
     if await is_ip_blocked(session, client_ip):
         # Match the rate-limit response so we don't confirm the IP is
         # the reason we refused.
+        await stats.incr(redis_client, stats.SCOPE_RL_HIT)
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "registration rate limit")
 
     allowed, _ = await rl_hit(
@@ -72,6 +74,7 @@ async def register(
         limit=5, window_seconds=3600,
     )
     if not allowed:
+        await stats.incr(redis_client, stats.SCOPE_RL_HIT)
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "registration rate limit")
 
     if not await verify_captcha(req.captcha_token):
@@ -122,6 +125,7 @@ async def register(
         ))
 
     await session.commit()
+    await stats.incr(redis_client, stats.SCOPE_SIGNUP)
     return schemas.RegisterResponse(account_id=account.id, email=account.email)
 
 
@@ -137,6 +141,7 @@ async def login_init(
     # per-IP bucket reset window.
     client_ip = request.client.host if request.client else ""
     if await is_ip_blocked(session, client_ip):
+        await stats.incr(redis_client, stats.SCOPE_RL_HIT)
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "rate limit")
 
     allowed, _ = await rl_hit(
@@ -144,6 +149,7 @@ async def login_init(
         limit=10, window_seconds=600,
     )
     if not allowed:
+        await stats.incr(redis_client, stats.SCOPE_RL_HIT)
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "rate limit")
 
     res = await session.execute(select(Account).where(Account.email == req.email))
@@ -205,6 +211,7 @@ async def login_verify(
         limit=10, window_seconds=600,
     )
     if not allowed:
+        await stats.incr(redis_client, stats.SCOPE_RL_HIT)
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "rate limit")
 
     blob = await redis_client.get(f"login:{req.session_id}")
@@ -213,6 +220,7 @@ async def login_verify(
     await redis_client.delete(f"login:{req.session_id}")
     state = json.loads(blob)
     if state.get("fake"):
+        await stats.incr(redis_client, stats.SCOPE_LOGIN_FAIL)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "authentication failed")
 
     # Per-target throttle: 15 verify hits per real account per hour.
@@ -223,11 +231,13 @@ async def login_verify(
         redis_client, target_key, limit=15, window_seconds=3600,
     )
     if not allowed:
+        await stats.incr(redis_client, stats.SCOPE_RL_HIT)
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "rate limit")
 
     res = await session.execute(select(Account).where(Account.id == uuid.UUID(state["account_id"])))
     account = res.scalar_one_or_none()
     if not account or account.status != "active":
+        await stats.incr(redis_client, stats.SCOPE_LOGIN_FAIL)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "authentication failed")
 
     A_bytes = _hex_to_bytes(req.srp_A)
@@ -240,6 +250,7 @@ async def login_verify(
             A_bytes=A_bytes, B_bytes=B_bytes, b_bytes=b_bytes, verifier=account.srp_verifier
         )
     except ValueError:
+        await stats.incr(redis_client, stats.SCOPE_LOGIN_FAIL)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "authentication failed")
 
     M1_expected = srp.compute_M1(
@@ -248,6 +259,7 @@ async def login_verify(
         A_bytes=A_bytes, B_bytes=B_bytes, K=K,
     )
     if not secrets.compare_digest(M1_expected, M1_client):
+        await stats.incr(redis_client, stats.SCOPE_LOGIN_FAIL)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "authentication failed")
 
     M2 = srp.compute_M2(A_bytes=A_bytes, M1=M1_client, K=K)
@@ -260,6 +272,7 @@ async def login_verify(
         update(Account).where(Account.id == account.id).values(last_login_at=datetime.now(timezone.utc))
     )
     await session.commit()
+    await stats.incr(redis_client, stats.SCOPE_LOGIN_OK)
 
     return schemas.LoginVerifyResponse(
         session_token=token,
@@ -284,6 +297,7 @@ async def recovery_login(
     locally; then calls /auth/reset-password to rewrap with a new password."""
     client_ip = request.client.host if request.client else ""
     if await is_ip_blocked(session, client_ip):
+        await stats.incr(redis_client, stats.SCOPE_RL_HIT)
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "rate limit")
 
     allowed, _ = await rl_hit(
@@ -291,6 +305,7 @@ async def recovery_login(
         limit=5, window_seconds=3600,
     )
     if not allowed:
+        await stats.incr(redis_client, stats.SCOPE_RL_HIT)
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "rate limit")
     if not await verify_captcha(req.captcha_token):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "captcha failed")

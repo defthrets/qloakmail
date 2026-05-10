@@ -788,19 +788,36 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
             <div class="stats-grid" id="admin-stats-grid">
               <div class="stat-card"><div class="stat-label">Accounts</div><div class="stat-value" id="stat-accounts-total">—</div><div class="stat-sub" id="stat-accounts-breakdown"></div></div>
               <div class="stat-card"><div class="stat-label">Signups · 24h</div><div class="stat-value" id="stat-signups-24h">—</div><div class="stat-sub">7d <span id="stat-signups-7d">—</span> / 30d <span id="stat-signups-30d">—</span></div></div>
-              <div class="stat-card"><div class="stat-label">Messages</div><div class="stat-value" id="stat-messages-total">—</div><div class="stat-sub">24h <span id="stat-messages-24h">—</span></div></div>
+              <div class="stat-card"><div class="stat-label">Visitors · 24h</div><div class="stat-value" id="stat-boot-24h">—</div><div class="stat-sub">7d <span id="stat-boot-7d">—</span></div></div>
+              <div class="stat-card"><div class="stat-label">Active sessions</div><div class="stat-value" id="stat-active-sessions">—</div><div class="stat-sub">live</div></div>
+              <div class="stat-card"><div class="stat-label">Logins · 24h</div><div class="stat-value" id="stat-login-ok-24h">—</div><div class="stat-sub"><span id="stat-login-fail-24h">—</span> failed</div></div>
+              <div class="stat-card"><div class="stat-label">Rate limit hits · 24h</div><div class="stat-value" id="stat-rl-24h">—</div><div class="stat-sub">429s served</div></div>
+              <div class="stat-card"><div class="stat-label">Mail received</div><div class="stat-value" id="stat-msgrx-24h">—</div><div class="stat-sub">24h · 7d <span id="stat-msgrx-7d">—</span></div></div>
+              <div class="stat-card"><div class="stat-label">Messages</div><div class="stat-value" id="stat-messages-total">—</div><div class="stat-sub">total stored · <span id="stat-messages-24h">—</span> last 24h</div></div>
               <div class="stat-card"><div class="stat-label">Storage</div><div class="stat-value" id="stat-storage">—</div><div class="stat-sub">total used</div></div>
               <div class="stat-card"><div class="stat-label">IP bans</div><div class="stat-value" id="stat-ip-bans">—</div><div class="stat-sub">active</div></div>
             </div>
 
             <div class="admin-charts">
               <figure class="chart-card">
+                <figcaption><span class="bracket">[</span>VISITORS · 30d<span class="bracket">]</span></figcaption>
+                <div class="chart-host" id="chart-visitors"></div>
+              </figure>
+              <figure class="chart-card">
                 <figcaption><span class="bracket">[</span>SIGNUPS · 30d<span class="bracket">]</span></figcaption>
                 <div class="chart-host" id="chart-signups"></div>
               </figure>
               <figure class="chart-card">
-                <figcaption><span class="bracket">[</span>MESSAGES · 30d<span class="bracket">]</span></figcaption>
+                <figcaption><span class="bracket">[</span>LOGINS · 30d <span class="legend-ok">●ok</span> <span class="legend-fail">●fail</span><span class="bracket">]</span></figcaption>
+                <div class="chart-host" id="chart-logins"></div>
+              </figure>
+              <figure class="chart-card">
+                <figcaption><span class="bracket">[</span>MAIL RECEIVED · 30d<span class="bracket">]</span></figcaption>
                 <div class="chart-host" id="chart-messages"></div>
+              </figure>
+              <figure class="chart-card">
+                <figcaption><span class="bracket">[</span>RATE-LIMIT HITS · 30d<span class="bracket">]</span></figcaption>
+                <div class="chart-host" id="chart-rate-limit"></div>
               </figure>
             </div>
 
@@ -1028,7 +1045,7 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
   -->
   <script type="module"
           src="/app.js"
-          integrity="sha384-rVTvmccTYxEAeOfNBrPTKMTm6l52WAUsQnWcBtPoWJGnOpte+YzAV/FJglO16UaJ"
+          integrity="sha384-t7QJRFj2NXV2ygc+UTdhB8W7Zfi/6lPOBrfwBSu1m8WxuJf1ebmsPMHa+5f5J2qs"
           crossorigin="anonymous"></script>
 </body>
 </html>

@@ -2754,12 +2754,17 @@ function _fmtDate(s) {
 
 async function loadAdminStats() {
     try {
-        const [s, sigs, msgs, storage] = await Promise.all([
+        const [s, visitors, sigs, loginOk, loginFail, msgs, rl, storage] = await Promise.all([
             api.get("/admin/stats"),
+            api.get("/admin/timeseries/visitors?days=30"),
             api.get("/admin/timeseries/signups?days=30"),
+            api.get("/admin/timeseries/login-ok?days=30"),
+            api.get("/admin/timeseries/login-fail?days=30"),
             api.get("/admin/timeseries/messages?days=30"),
+            api.get("/admin/timeseries/rate-limit?days=30"),
             api.get("/admin/top-storage?limit=10"),
         ]);
+        // Existing tiles.
         $("#stat-accounts-total").textContent = s.accounts_total;
         $("#stat-accounts-breakdown").textContent =
             `${s.accounts_active} active · ${s.accounts_banned} banned · ${s.accounts_pending} pending`;
@@ -2770,13 +2775,80 @@ async function loadAdminStats() {
         $("#stat-messages-24h").textContent   = s.messages_24h;
         $("#stat-storage").textContent  = _fmtBytes(s.storage_bytes_used);
         $("#stat-ip-bans").textContent  = s.ip_blocks_active;
+        // New aggregate-counter tiles (zero-init if backend hasn't been
+        // upgraded yet, so older deploys don't blow up).
+        $("#stat-boot-24h").textContent       = s.boot_pings_24h ?? 0;
+        $("#stat-boot-7d").textContent        = s.boot_pings_7d ?? 0;
+        $("#stat-active-sessions").textContent= s.active_sessions ?? 0;
+        $("#stat-login-ok-24h").textContent   = s.login_ok_24h ?? 0;
+        $("#stat-login-fail-24h").textContent = s.login_fail_24h ?? 0;
+        $("#stat-rl-24h").textContent         = s.rate_limit_hits_24h ?? 0;
+        $("#stat-msgrx-24h").textContent      = s.msg_rx_24h ?? 0;
+        $("#stat-msgrx-7d").textContent       = s.msg_rx_7d ?? 0;
 
-        renderTimeChart($("#chart-signups"),  sigs);
-        renderTimeChart($("#chart-messages"), msgs);
+        renderTimeChart($("#chart-visitors"),   visitors);
+        renderTimeChart($("#chart-signups"),    sigs);
+        renderStackedLoginChart($("#chart-logins"), loginOk, loginFail);
+        renderTimeChart($("#chart-messages"),   msgs);
+        renderTimeChart($("#chart-rate-limit"), rl);
         renderTopStorage($("#admin-top-storage"), storage, s.storage_bytes_used);
     } catch (e) {
         _adminToast("Stats load failed: " + (e.message || e), "err");
     }
+}
+
+// Two-series stacked chart for login outcomes. Same skeleton as
+// renderTimeChart but draws the failure series in red ON TOP of the
+// success series in orange so an admin can spot brute-force days
+// (red dominates) at a glance.
+function renderStackedLoginChart(host, okPoints, failPoints) {
+    if (!host) return;
+    const len = Math.max(okPoints.length, failPoints.length);
+    if (!len) { host.innerHTML = ""; return; }
+    const merged = [];
+    for (let i = 0; i < len; i++) {
+        const o = okPoints[i]?.count || 0;
+        const f = failPoints[i]?.count || 0;
+        merged.push({ date: okPoints[i]?.date || failPoints[i]?.date, count: o + f, _ok: o, _fail: f });
+    }
+    const w = host.clientWidth || 320;
+    const h = 200;
+    const pad = { l: 36, r: 14, t: 16, b: 28 };
+    const innerW = w - pad.l - pad.r;
+    const innerH = h - pad.t - pad.b;
+    const max = Math.max(1, ...merged.map(p => p.count));
+    const stepX = merged.length > 1 ? innerW / (merged.length - 1) : 0;
+    const yOf = v => pad.t + innerH - (v / max) * innerH;
+
+    const bars = merged.map((p, i) => {
+        const bw = Math.max(1, stepX * 0.55);
+        const x  = pad.l + i * stepX - bw / 2;
+        const yTop  = yOf(p.count);
+        const yFail = yOf(p._fail);
+        const okH   = pad.t + innerH - yFail;
+        const failH = yFail - yTop;
+        return `<rect x="${x}" y="${yFail}" width="${bw}" height="${okH}" fill="rgba(255,138,61,0.55)"></rect>` +
+               `<rect x="${x}" y="${yTop}"  width="${bw}" height="${failH}" fill="rgba(255,100,100,0.7)"></rect>`;
+    }).join("");
+    const yTicks = [0, max / 2, max].map(v => `
+        <line x1="${pad.l}" x2="${pad.l + innerW}" y1="${yOf(v)}" y2="${yOf(v)}"
+              stroke="rgba(255,122,31,0.12)" stroke-dasharray="2 4"/>
+        <text x="${pad.l - 6}" y="${yOf(v) + 3}" fill="#7a8088"
+              font-family="ui-monospace,monospace" font-size="9"
+              text-anchor="end">${Math.round(v)}</text>
+    `).join("");
+    const fmtDay = s => s ? s.slice(5) : "";
+    host.innerHTML = `
+        <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}"
+             xmlns="http://www.w3.org/2000/svg">
+          ${yTicks}
+          ${bars}
+          <text x="${pad.l}" y="${h - 8}" fill="#7a8088"
+                font-family="ui-monospace,monospace" font-size="9">${fmtDay(merged[0]?.date)}</text>
+          <text x="${pad.l + innerW}" y="${h - 8}" fill="#7a8088"
+                font-family="ui-monospace,monospace" font-size="9" text-anchor="end">${fmtDay(merged[merged.length - 1]?.date)}</text>
+        </svg>
+    `;
 }
 
 // Pure-SVG line chart for {date, count} arrays. Designed to fit a

@@ -15,9 +15,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import schemas
 from ..db import get_session
-from ..deps import require_internal_token
+from ..deps import get_redis, require_internal_token
 from ..models import Account, Folder, Message
 from ..schemas import EmailStr
+from ..utils import stats
 
 router = APIRouter(
     prefix="/internal",
@@ -85,4 +86,9 @@ async def record_delivery(
     )
     session.add(msg)
     await session.commit()
+    try:
+        redis_client = await get_redis()
+        await stats.incr(redis_client, stats.SCOPE_MSG_RX)
+    except Exception:
+        pass
     return {"ok": True, "message_id": str(msg.id)}

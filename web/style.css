@@ -3243,6 +3243,8 @@ body.density-compact #message-list li .snippet { display: none; }
     color: var(--orange); margin: 0 0.18em;
     text-shadow: 0 0 4px var(--orange-glow);
 }
+.chart-card figcaption .legend-ok   { color: var(--orange); margin-left: 0.6em; }
+.chart-card figcaption .legend-fail { color: var(--warn);   margin-left: 0.4em; }
 .chart-host { width: 100%; }
 
 /* Top-storage list */

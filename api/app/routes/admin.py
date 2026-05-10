@@ -38,6 +38,7 @@ from ..config import get_settings
 from ..db import get_session
 from ..deps import current_admin, get_redis
 from ..models import Account, AdminAction, IPBlock, Message
+from ..utils import stats as st
 from ..utils.ip_blocks import hmac_ip, is_ip_blocked  # noqa: F401 (re-export)
 
 # include_in_schema=False keeps the admin surface out of /api/openapi.json
@@ -73,6 +74,16 @@ class AdminStats(BaseModel):
     messages_24h: int
     storage_bytes_used: int
     ip_blocks_active: int
+    # Aggregate-only event counters (no per-IP / per-user attribution).
+    # Sourced from redis daily buckets that auto-expire after 60 days.
+    boot_pings_24h: int = 0
+    boot_pings_7d: int = 0
+    login_ok_24h: int = 0
+    login_fail_24h: int = 0
+    rate_limit_hits_24h: int = 0
+    msg_rx_24h: int = 0
+    msg_rx_7d: int = 0
+    active_sessions: int = 0
 
 
 class AccountListResponse(BaseModel):
@@ -137,6 +148,7 @@ async def _audit(
 async def admin_stats(
     _admin: Account = Depends(current_admin),
     session: AsyncSession = Depends(get_session),
+    redis_client=Depends(get_redis),
 ):
     now = _now()
     cutoff_24h = now - timedelta(hours=24)
@@ -167,6 +179,18 @@ async def admin_stats(
         )
     )
 
+    # Aggregate event counters from redis (24h = today's bucket only,
+    # 7d = sum of last 7 daily buckets). These are best-effort -- if
+    # redis is down the values return as 0 and the panel still loads.
+    boot_24h = await st.total(redis_client, st.SCOPE_BOOT, 1)
+    boot_7d  = await st.total(redis_client, st.SCOPE_BOOT, 7)
+    loginok_24h = await st.total(redis_client, st.SCOPE_LOGIN_OK, 1)
+    loginfail_24h = await st.total(redis_client, st.SCOPE_LOGIN_FAIL, 1)
+    rl_24h = await st.total(redis_client, st.SCOPE_RL_HIT, 1)
+    msgrx_24h = await st.total(redis_client, st.SCOPE_MSG_RX, 1)
+    msgrx_7d  = await st.total(redis_client, st.SCOPE_MSG_RX, 7)
+    sessions_live = await st.active_sessions(redis_client)
+
     return AdminStats(
         accounts_total=accounts_total,
         accounts_active=accounts_active,
@@ -179,6 +203,14 @@ async def admin_stats(
         messages_24h=messages_24h,
         storage_bytes_used=storage_used,
         ip_blocks_active=ip_blocks_active,
+        boot_pings_24h=boot_24h,
+        boot_pings_7d=boot_7d,
+        login_ok_24h=loginok_24h,
+        login_fail_24h=loginfail_24h,
+        rate_limit_hits_24h=rl_24h,
+        msg_rx_24h=msgrx_24h,
+        msg_rx_7d=msgrx_7d,
+        active_sessions=sessions_live,
     )
 
 
@@ -464,6 +496,56 @@ async def timeseries_messages(
     for i in range(days):
         d = (cutoff + timedelta(days=i)).date()
         out.append(TimeSeriesPoint(date=d.isoformat(), count=seen.get(d, 0)))
+    return out
+
+
+# ----------------------------------------------------------------- counter timeseries
+# These wrap the aggregate redis counters (SPA boot / login outcomes /
+# rate-limit hits). They return the same shape as the DB-backed series
+# so the SPA's chart helper can render either source identically.
+
+async def _counter_series(redis_client, scope: str, days: int) -> list[TimeSeriesPoint]:
+    days = max(7, min(60, days))
+    rows = await st.series(redis_client, scope, days)
+    return [TimeSeriesPoint(date=d, count=n) for d, n in rows]
+
+
+@router.get("/timeseries/visitors", response_model=list[TimeSeriesPoint])
+async def timeseries_visitors(
+    days: int = 30,
+    _admin: Account = Depends(current_admin),
+    redis_client=Depends(get_redis),
+):
+    """SPA boot pings -- one per /api/v1/config call. Best signal we
+    have for daily visitors without storing any identifier."""
+    return await _counter_series(redis_client, st.SCOPE_BOOT, days)
+
+
+@router.get("/timeseries/login-ok", response_model=list[TimeSeriesPoint])
+async def timeseries_login_ok(
+    days: int = 30,
+    _admin: Account = Depends(current_admin),
+    redis_client=Depends(get_redis),
+):
+    return await _counter_series(redis_client, st.SCOPE_LOGIN_OK, days)
+
+
+@router.get("/timeseries/login-fail", response_model=list[TimeSeriesPoint])
+async def timeseries_login_fail(
+    days: int = 30,
+    _admin: Account = Depends(current_admin),
+    redis_client=Depends(get_redis),
+):
+    return await _counter_series(redis_client, st.SCOPE_LOGIN_FAIL, days)
+
+
+@router.get("/timeseries/rate-limit", response_model=list[TimeSeriesPoint])
+async def timeseries_rate_limit(
+    days: int = 30,
+    _admin: Account = Depends(current_admin),
+    redis_client=Depends(get_redis),
+):
+    return await _counter_series(redis_client, st.SCOPE_RL_HIT, days)
     return out
 
 

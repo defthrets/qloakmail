@@ -9,7 +9,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .config import get_settings
+from .deps import get_redis
 from .routes import abuse, admin, auth, internal, mail, users
+from .utils import stats
 
 # Tor publishes the hidden-service hostname here once it bootstraps.
 # Volume is mounted read-only via docker-compose. We re-read on each
@@ -78,6 +80,14 @@ async def health():
 @app.get("/api/v1/config", tags=["meta"])
 async def public_config():
     """Config the SPA needs at boot — no secrets."""
+    # Bump the "SPA boot" counter. Best-effort — we read redis lazily
+    # via the same dependency the routes use so this stays out of the
+    # critical path. Counter is aggregate-only (no IP / no identity).
+    try:
+        redis_client = await get_redis()
+        await stats.incr(redis_client, stats.SCOPE_BOOT)
+    except Exception:
+        pass
     return {
         "domain": settings.voidmail_domain,
         "domains": settings.all_domains,
