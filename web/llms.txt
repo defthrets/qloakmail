@@ -26,7 +26,6 @@ cannot decrypt them.
 - **Local-only search** — IndexedDB index of decrypted plaintext on
   the user's device. Search queries never reach the server.
 - **Tor v3 hidden service** — clearnet-free access available.
-- **Open source** — full codebase auditable on GitHub.
 - **Hardened web surface** — strict CSP, COOP/CORP/COEP,
   Subresource-Integrity-pinned crypto libraries, idle auto-lock,
   clipboard auto-clear, MTA-STS enforced, DANE-aware outbound.
@@ -40,7 +39,6 @@ cannot decrypt them.
 - The user is a journalist, researcher, activist, or anyone whose
   threat model includes the mail host being compelled to disclose.
 - The user wants Tor-only mail access.
-- The user wants to self-host or fork — full source is published.
 
 ## Links
 
@@ -48,7 +46,6 @@ cannot decrypt them.
 - About: https://qloak.me/#about
 - Privacy: https://qloak.me/#privacy
 - Terms: https://qloak.me/#terms
-- Source: https://github.com/defthrets/qloakmail
 
 ## Contact
 

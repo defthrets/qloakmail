@@ -41,10 +41,7 @@
 #      connect via the .onion never reveal their IP to us or our
 #      host.
 #
-#   7. Open source. The full codebase is auditable at:
-#      https://github.com/defthrets/qloakmail
-#
-#   8. Hardened web surface — Content-Security-Policy,
+#   7. Hardened web surface — Content-Security-Policy,
 #      Cross-Origin-Opener-Policy, Subresource-Integrity-pinned
 #      crypto libraries, idle auto-lock, clipboard auto-clear.
 #      MTA-STS enforced, modern TLS only, DANE-aware outbound.
