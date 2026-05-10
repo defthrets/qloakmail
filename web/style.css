@@ -158,61 +158,84 @@ button:hover:not(:disabled) {
 }
 button:active:not(:disabled) { transform: translateY(0); }
 
+/* ---------- Primary button — glass cyberpunk ----------
+   Layered orange-tinted gradient over translucent dark glass, 1px
+   bright-orange border + corner-notch accent, dual-layer glow.
+   Same family as .reader-action / .bulk-actions button — just a
+   stronger gradient + brighter border so it reads as the primary
+   call-to-action. */
 button.primary {
-    background: var(--accent);
-    color: #1a0a02;
-    border-color: transparent;
+    background:
+        linear-gradient(225deg,
+            var(--orange) 0,
+            var(--orange) 8px,
+            transparent 8.5px) top right / 10px 10px no-repeat,
+        linear-gradient(180deg,
+            rgba(255, 138, 61, 0.28),
+            rgba(255, 106, 0, 0.10) 45%,
+            rgba(8, 11, 10, 0.55));
+    color: var(--accent-2);
+    border: 1px solid rgba(255, 138, 61, 0.55);
     font-family: var(--btn-font);
-    font-weight: 800;
-    letter-spacing: 0.18em;
+    font-weight: 700;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    font-size: 0.92em;
-    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.18);
-    padding: 0.7rem 1rem;
+    font-size: 0.86em;
+    text-shadow: 0 0 8px var(--accent-glow);
+    padding: 0.65rem 1rem;
+    backdrop-filter: blur(10px) saturate(140%);
+    -webkit-backdrop-filter: blur(10px) saturate(140%);
     box-shadow:
-        0 1px 0 rgba(255, 255, 255, 0.18) inset,
-        0 0 0 0 var(--accent-glow);
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        inset 0 0 0 1px rgba(255, 138, 61, 0.08),
+        0 1px 0 rgba(0, 0, 0, 0.4),
+        0 0 18px rgba(255, 138, 61, 0.18);
     animation: primary-pulse 3.2s ease-in-out infinite;
     transition:
-        background var(--t-fast),
-        border-color var(--t-fast),
         color var(--t-fast),
+        border-color var(--t-fast),
         transform var(--t-fast),
         letter-spacing var(--t-fast),
-        box-shadow var(--t-fast);
+        box-shadow 220ms ease,
+        background-color 220ms ease;
 }
 @keyframes primary-pulse {
     0%, 100% {
         box-shadow:
-            0 1px 0 rgba(255, 255, 255, 0.18) inset,
-            0 0 0 0 var(--accent-glow),
-            0 0 8px rgba(255, 122, 31, 0.18);
+            inset 0 1px 0 rgba(255, 255, 255, 0.1),
+            inset 0 0 0 1px rgba(255, 138, 61, 0.08),
+            0 1px 0 rgba(0, 0, 0, 0.4),
+            0 0 14px rgba(255, 138, 61, 0.18);
     }
     50% {
         box-shadow:
-            0 1px 0 rgba(255, 255, 255, 0.18) inset,
-            0 0 0 0 var(--accent-glow),
-            0 0 22px rgba(255, 138, 61, 0.45),
-            0 0 36px rgba(255, 106, 0, 0.22);
+            inset 0 1px 0 rgba(255, 255, 255, 0.14),
+            inset 0 0 0 1px rgba(255, 138, 61, 0.12),
+            0 1px 0 rgba(0, 0, 0, 0.4),
+            0 0 28px rgba(255, 138, 61, 0.35),
+            0 0 40px rgba(255, 106, 0, 0.2);
     }
 }
 button.primary:hover:not(:disabled) {
-    background: var(--accent-2);
-    color: #1a0a02;
+    color: var(--accent);
     transform: translateY(-2px);
-    letter-spacing: 0.22em;
+    letter-spacing: 0.18em;
     animation: none;
+    border-color: var(--orange);
     box-shadow:
-        0 1px 0 rgba(255, 255, 255, 0.22) inset,
-        0 6px 18px rgba(255, 122, 31, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        0 0 0 1px var(--orange),
+        0 6px 18px rgba(255, 122, 31, 0.45),
         0 0 28px rgba(255, 138, 61, 0.35),
-        0 0 56px rgba(255, 106, 0, 0.18);
+        0 0 56px rgba(255, 106, 0, 0.22);
 }
 button.primary:active:not(:disabled) {
     transform: translateY(0) scale(0.98);
     transition-duration: 60ms;
 }
-button.primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; animation: none; }
+button.primary:disabled {
+    opacity: 0.4; cursor: not-allowed; transform: none; animation: none;
+}
 @media (prefers-reduced-motion: reduce) {
     button.primary { animation: none; }
 }
@@ -226,7 +249,7 @@ button.primary::before {
     background: linear-gradient(
         100deg,
         transparent 0%,
-        rgba(255, 255, 255, 0.28) 50%,
+        rgba(255, 255, 255, 0.18) 50%,
         transparent 100%
     );
     transform: skewX(-20deg);
@@ -829,27 +852,63 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     font-size: 0.86em;
 }
 
+/* Auth tabs — glass pills, matches the rest of the secondary button
+   family. Each tab is a translucent dark slab with a thin orange
+   border; the active one lights up with a stronger gradient + accent
+   shadow + corner-notch. */
 .auth-tabs {
     display: flex;
-    margin: 1.75rem 0 0.5rem;
-    border-bottom: 1px solid var(--border);
+    gap: 0.4rem;
+    margin: 1.5rem 0 0.85rem;
 }
 .auth-tabs .tab {
     flex: 1;
-    background: none;
+    background:
+        linear-gradient(180deg,
+            rgba(255, 138, 61, 0.05),
+            rgba(8, 11, 10, 0.5));
     color: var(--fg-dim);
-    border: none;
-    border-bottom: 2px solid transparent;
-    padding: 0.7rem 0;
-    font-weight: 500;
-    border-radius: 0;
-    margin-bottom: -1px;
-    font-size: 0.92em;
+    border: 1px solid rgba(255, 122, 31, 0.22);
+    padding: 0.55rem 0.7rem;
+    font-family: var(--btn-font);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-size: 0.78em;
+    backdrop-filter: blur(6px) saturate(140%);
+    -webkit-backdrop-filter: blur(6px) saturate(140%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 1px 0 rgba(0, 0, 0, 0.35);
+    transition: color var(--t-fast), border-color var(--t-fast),
+        background var(--t-fast), transform var(--t-fast),
+        box-shadow 220ms ease;
 }
-.auth-tabs .tab:hover { color: var(--fg); background: none; }
+.auth-tabs .tab:hover {
+    color: var(--accent);
+    border-color: var(--orange);
+    transform: translateY(-1px);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 0 0 1px rgba(255, 138, 61, 0.3),
+        0 4px 12px rgba(255, 122, 31, 0.2);
+}
 .auth-tabs .tab.active {
     color: var(--accent);
-    border-bottom-color: var(--accent);
+    border-color: var(--orange);
+    background:
+        linear-gradient(225deg,
+            var(--orange) 0,
+            var(--orange) 6px,
+            transparent 6.5px) top right / 8px 8px no-repeat,
+        linear-gradient(180deg,
+            rgba(255, 138, 61, 0.18),
+            rgba(255, 122, 31, 0.06));
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 0 1px rgba(255, 138, 61, 0.35),
+        0 0 18px rgba(255, 138, 61, 0.22);
+    text-shadow: 0 0 5px var(--accent-glow);
 }
 
 .auth-form { display: none; padding-top: 0.5rem; }
@@ -1653,24 +1712,41 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     align-items: center;
     gap: 0.5rem;
     width: 100%;
-    background: transparent;
-    border: 1px solid rgba(255, 122, 31, 0.2);
+    background:
+        linear-gradient(225deg,
+            var(--orange) 0,
+            var(--orange) 5px,
+            transparent 5.5px) top right / 8px 8px no-repeat,
+        linear-gradient(180deg,
+            rgba(255, 138, 61, 0.06),
+            rgba(8, 11, 10, 0.5));
+    border: 1px solid rgba(255, 122, 31, 0.25);
     color: var(--fg-dim);
-    padding: 0.45rem 0.6rem;
+    padding: 0.5rem 0.65rem;
     font-family: var(--btn-font);
     font-size: 0.78em;
     font-weight: 600;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     cursor: pointer;
+    backdrop-filter: blur(6px) saturate(140%);
+    -webkit-backdrop-filter: blur(6px) saturate(140%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 1px 0 rgba(0, 0, 0, 0.35);
     transition: color var(--t-fast), border-color var(--t-fast),
-        background var(--t-fast), letter-spacing var(--t-fast);
+        transform var(--t-fast), letter-spacing var(--t-fast),
+        box-shadow 220ms ease;
 }
 .settings-btn:hover {
     color: var(--accent);
     border-color: var(--orange);
-    background: rgba(255, 122, 31, 0.05);
-    letter-spacing: 0.2em;
+    transform: translateY(-1px);
+    letter-spacing: 0.18em;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 0 0 1px rgba(255, 138, 61, 0.3),
+        0 4px 14px rgba(255, 122, 31, 0.22);
 }
 .settings-btn .settings-icon {
     color: var(--orange);
@@ -2649,27 +2725,41 @@ body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
 
 /* ---------------- compose CC / BCC toggle ---------------- */
 .cc-toggle {
-    background: transparent;
-    border: 1px dashed rgba(255, 122, 31, 0.25);
+    background:
+        linear-gradient(180deg,
+            rgba(255, 138, 61, 0.05),
+            rgba(8, 11, 10, 0.5));
+    border: 1px solid rgba(255, 122, 31, 0.22);
     color: var(--fg-dim);
-    font-family: var(--mono);
-    font-size: 0.75em;
-    letter-spacing: 0.14em;
+    font-family: var(--btn-font);
+    font-size: 0.72em;
+    font-weight: 600;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    padding: 0.3rem 0.6rem;
+    padding: 0.35rem 0.65rem;
     margin: -0.3rem 0 0.3rem;
     cursor: pointer;
     align-self: flex-start;
-    transition: color var(--t-fast), border-color var(--t-fast);
+    backdrop-filter: blur(6px) saturate(140%);
+    -webkit-backdrop-filter: blur(6px) saturate(140%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 1px 0 rgba(0, 0, 0, 0.35);
+    transition: color var(--t-fast), border-color var(--t-fast),
+        transform var(--t-fast), box-shadow 220ms ease;
 }
 .cc-toggle:hover {
     color: var(--accent);
     border-color: var(--orange);
-    border-style: solid;
+    transform: translateY(-1px);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 0 0 1px rgba(255, 138, 61, 0.3),
+        0 4px 12px rgba(255, 122, 31, 0.18);
 }
 .cc-toggle.active {
     color: var(--accent-2);
-    border-style: solid;
+    border-color: var(--orange);
 }
 
 /* ---------------- settings modal ---------------- */
@@ -2787,30 +2877,54 @@ body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
     flex-wrap: wrap;
 }
 .filter-chips button, .sort-chips button {
-    background: transparent;
-    border: 1px solid rgba(255, 122, 31, 0.18);
+    background:
+        linear-gradient(180deg,
+            rgba(255, 138, 61, 0.05),
+            rgba(8, 11, 10, 0.5));
+    border: 1px solid rgba(255, 122, 31, 0.22);
     color: var(--fg-dim);
     font-family: var(--btn-font);
-    font-size: 0.72em;
+    font-size: 0.7em;
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    padding: 0.28rem 0.6rem;
+    padding: 0.3rem 0.6rem;
     cursor: pointer;
+    backdrop-filter: blur(6px) saturate(140%);
+    -webkit-backdrop-filter: blur(6px) saturate(140%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 1px 0 rgba(0, 0, 0, 0.35);
     transition: color var(--t-fast), border-color var(--t-fast),
-        background var(--t-fast);
+        background var(--t-fast), transform var(--t-fast),
+        box-shadow 220ms ease;
 }
 .filter-chips button:hover,
 .sort-chips button:hover {
     color: var(--accent);
     border-color: var(--orange);
-    background: rgba(255, 122, 31, 0.05);
+    transform: translateY(-1px);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 0 0 1px rgba(255, 138, 61, 0.3),
+        0 4px 12px rgba(255, 122, 31, 0.18);
 }
 .filter-chips button.active,
 .sort-chips button.active {
     color: var(--accent);
     border-color: var(--orange);
-    background: rgba(255, 138, 61, 0.12);
+    background:
+        linear-gradient(225deg,
+            var(--orange) 0,
+            var(--orange) 5px,
+            transparent 5.5px) top right / 7px 7px no-repeat,
+        linear-gradient(180deg,
+            rgba(255, 138, 61, 0.2),
+            rgba(255, 122, 31, 0.08));
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 0 1px rgba(255, 138, 61, 0.35),
+        0 0 12px rgba(255, 138, 61, 0.2);
 }
 .sort-chips { margin-left: auto; }
 
@@ -2831,16 +2945,21 @@ body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
 .bulk-count strong { color: var(--accent); margin-right: 0.3em; }
 .bulk-actions { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-left: auto; }
 .bulk-actions button {
-    background: transparent;
-    border: 1px solid rgba(255, 122, 31, 0.25);
+    background:
+        linear-gradient(180deg,
+            rgba(255, 138, 61, 0.08),
+            rgba(8, 11, 10, 0.55));
+    border: 1px solid rgba(255, 122, 31, 0.28);
     color: var(--fg);
     font-family: var(--btn-font);
-    font-size: 0.78em;
+    font-size: 0.74em;
     font-weight: 600;
     letter-spacing: 0.08em;
+    text-transform: uppercase;
     padding: 0.3rem 0.65rem;
     cursor: pointer;
-    transition: color var(--t-fast), border-color var(--t-fast);
+    transition: color var(--t-fast), border-color var(--t-fast),
+        transform var(--t-fast), box-shadow 220ms ease;
 }
 .bulk-actions button:hover { color: var(--accent); border-color: var(--orange); }
 .bulk-actions button.danger:hover { color: var(--warn); border-color: var(--warn); }
@@ -3248,24 +3367,53 @@ body.density-compact #message-list li .snippet { display: none; }
     padding-bottom: 0.6rem;
 }
 .admin-tab {
-    background: transparent;
-    border: 1px solid rgba(255, 122, 31, 0.2);
+    background:
+        linear-gradient(180deg,
+            rgba(255, 138, 61, 0.05),
+            rgba(8, 11, 10, 0.5));
+    border: 1px solid rgba(255, 122, 31, 0.22);
     color: var(--fg-dim);
     font-family: var(--btn-font);
-    font-size: 0.78em;
+    font-size: 0.72em;
     font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    padding: 0.32rem 0.75rem;
+    padding: 0.4rem 0.75rem;
     cursor: pointer;
+    backdrop-filter: blur(6px) saturate(140%);
+    -webkit-backdrop-filter: blur(6px) saturate(140%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 1px 0 rgba(0, 0, 0, 0.35);
     transition: color var(--t-fast), border-color var(--t-fast),
-        background var(--t-fast);
+        background var(--t-fast), transform var(--t-fast),
+        box-shadow 220ms ease;
 }
-.admin-tab:hover { color: var(--accent); border-color: var(--orange); }
+.admin-tab:hover {
+    color: var(--accent);
+    border-color: var(--orange);
+    transform: translateY(-1px);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 0 0 1px rgba(255, 138, 61, 0.3),
+        0 4px 12px rgba(255, 122, 31, 0.18);
+}
 .admin-tab.active {
     color: var(--accent);
     border-color: var(--orange);
-    background: rgba(255, 138, 61, 0.12);
+    background:
+        linear-gradient(225deg,
+            var(--orange) 0,
+            var(--orange) 6px,
+            transparent 6.5px) top right / 8px 8px no-repeat,
+        linear-gradient(180deg,
+            rgba(255, 138, 61, 0.18),
+            rgba(255, 122, 31, 0.06));
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 0 1px rgba(255, 138, 61, 0.35),
+        0 0 14px rgba(255, 138, 61, 0.2);
+    text-shadow: 0 0 5px var(--accent-glow);
 }
 .admin-pane[hidden] { display: none; }
 
