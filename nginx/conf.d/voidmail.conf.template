@@ -115,7 +115,8 @@ server {
     location / { return 301 https://$host$request_uri; }
 }
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    http2 on;
     server_name mta-sts.${VOIDMAIL_DOMAIN};
     ssl_certificate     /etc/letsencrypt/live/${VOIDMAIL_DOMAIN}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/${VOIDMAIL_DOMAIN}/privkey.pem;
@@ -132,7 +133,8 @@ server {
 }
 
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    http2 on;
     server_name ${VOIDMAIL_DOMAIN};
 
     ssl_certificate     /etc/letsencrypt/live/${VOIDMAIL_DOMAIN}/fullchain.pem;
@@ -151,12 +153,11 @@ server {
     ssl_session_timeout 1d;
     ssl_session_tickets off;
 
-    # OCSP stapling — server fetches and attaches OCSP responses so
-    # clients don't leak browsing intent to the CA's OCSP responder.
-    ssl_stapling on;
-    ssl_stapling_verify on;
-    resolver 1.1.1.1 9.9.9.9 valid=300s;
-    resolver_timeout 5s;
+    # OCSP stapling intentionally disabled — Let's Encrypt phased out
+    # OCSP responder URLs from new certs in early 2026, and stapling
+    # against a cert without an OCSP URL is a no-op (and emits a
+    # nginx warning at every reload). Modern revocation checking
+    # happens via browser CRLite / CRLSet, not OCSP.
 
     # ---- Security headers ----
     # HSTS, two-year max-age + includeSubDomains + preload so the
