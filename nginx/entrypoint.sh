@@ -18,7 +18,11 @@ fi
 # Webroot for the ACME challenge (used in prod by certbot).
 mkdir -p /var/www/certbot
 
+# Re-render every container start so envvar changes take effect. Keep the
+# template in place — deleting it on first run made the script crash on
+# every subsequent container restart with "voidmail.conf.template: no
+# such file" (the rendered .conf alone isn't a substitute since we'd
+# never re-render for new env values).
 envsubst '${VOIDMAIL_DOMAIN}' < /etc/nginx/conf.d/voidmail.conf.template \
     > /etc/nginx/conf.d/voidmail.conf
-rm -f /etc/nginx/conf.d/voidmail.conf.template
 rm -f /etc/nginx/conf.d/default.conf || true
