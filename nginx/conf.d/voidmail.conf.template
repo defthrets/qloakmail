@@ -99,7 +99,10 @@ server {
     add_header X-Content-Type-Options nosniff always;
     add_header Referrer-Policy no-referrer always;
     # CSP — strict; SPA is self-hosted, OpenPGP.js is bundled, no inline scripts.
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'" always;
+    # 'wasm-unsafe-eval' is needed for the Argon2id (hash-wasm) password-key
+    # derivation. It's strictly narrower than 'unsafe-eval' — only WebAssembly
+    # is permitted, regular JS eval() is still blocked.
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'" always;
 
     client_max_body_size 30m;
 
