@@ -366,10 +366,11 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
                     period from flicker so they desync.
 */
 .brand-ascii {
+    display: inline-block;
     margin: 0 auto;
     font-family: "Cascadia Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-    font-size: 6.5px;
-    line-height: 7px;
+    font-size: 5.6px;
+    line-height: 6px;
     letter-spacing: 0;
     color: var(--logo);
     text-shadow:
@@ -384,6 +385,15 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
         brand-flicker 9s infinite,
         brand-glitch  7.3s infinite;
     will-change: text-shadow, transform;
+}
+
+/* Compact variant for the mail-view topbar — same FIGlet at ~half scale
+   so it fits inside the 64px topbar without truncating any rows. */
+.brand-ascii--mini {
+    font-size: 3.4px;
+    line-height: 3.8px;
+    margin: 0;
+    padding: 0;
 }
 @keyframes brand-flicker {
     0%, 96.5%, 100% {
@@ -441,7 +451,8 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     .brand-ascii { animation: none; }
 }
 @media (max-width: 480px) {
-    .brand-ascii { font-size: 5px; line-height: 5.5px; }
+    .brand-ascii { font-size: 4.4px; line-height: 4.8px; }
+    .brand-ascii--mini { font-size: 2.8px; line-height: 3.2px; }
 }
 .brand { text-align: center; }
 .brand .tagline {
@@ -451,7 +462,6 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     text-align: center;
 }
 .brand .tagline .who { color: var(--fg); font-weight: 500; }
-.brand-ascii { display: block; }
 
 /* Sign-in duration picker — replaces the old remember-me checkbox.
    Empty value = sessionStorage, the rest persist a decrypted privkey
@@ -955,12 +965,12 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     grid-template-columns: 240px 1fr auto;
     align-items: center;
     gap: 1rem;
-    padding: 0.7rem 1rem;
+    padding: 0.55rem 1rem;
     background: rgba(15, 22, 20, 0.7);
     backdrop-filter: blur(10px) saturate(140%);
     -webkit-backdrop-filter: blur(10px) saturate(140%);
     border-bottom: 1px solid rgba(255, 122, 31, 0.08);
-    height: 56px;
+    height: 80px;
     position: relative;
     z-index: 5;
 }
