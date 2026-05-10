@@ -651,6 +651,46 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     color: var(--fg-muted);
     opacity: 0.78;
 }
+
+/* Small "forgot?" recovery link, sized + toned to match the
+   duration-row label so the two read as a pair. */
+.recovery-row {
+    margin: 0.15rem 0 0.4rem;
+    text-align: right;
+}
+.recovery-link {
+    background: none;
+    border: 0;
+    padding: 0;
+    color: var(--fg-muted);
+    opacity: 0.78;
+    font-family: var(--mono);
+    font-size: 0.7em;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    border-bottom: 1px dotted rgba(255, 122, 31, 0.25);
+    transition:
+        color 160ms ease,
+        opacity 160ms ease,
+        text-shadow 160ms ease,
+        letter-spacing 160ms ease,
+        border-bottom-color 160ms ease;
+}
+.recovery-link:hover {
+    color: var(--accent);
+    opacity: 1;
+    letter-spacing: 0.14em;
+    text-shadow: 0 0 5px var(--accent-glow);
+    border-bottom-color: var(--accent);
+}
+.recovery-link:focus-visible {
+    outline: none;
+    color: var(--accent);
+    opacity: 1;
+    border-bottom-color: var(--accent);
+    box-shadow: 0 1px 0 0 var(--accent);
+}
 .duration-row select {
     flex: 0 0 auto;
     width: auto;

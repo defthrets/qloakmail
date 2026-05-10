@@ -201,12 +201,21 @@ function escapeHtml(s) {
 // ----------------------------------------------------------------- auth tabs
 function bindAuthTabs() {
     $$(".auth-tabs .tab").forEach(btn => {
-        btn.addEventListener("click", () => {
-            $$(".auth-tabs .tab").forEach(b => b.classList.toggle("active", b === btn));
-            const target = btn.dataset.tab;
-            $$(".auth-form").forEach(f => f.classList.toggle("active", f.id === target + "-form"));
-        });
+        btn.addEventListener("click", () => activateAuthTab(btn.dataset.tab));
     });
+    // The recovery flow is no longer a top-level tab — it's surfaced
+    // as a small "Forgot?" link near the duration row.
+    $$(".recovery-link[data-tab]").forEach(btn => {
+        btn.addEventListener("click", () => activateAuthTab(btn.dataset.tab));
+    });
+}
+
+function activateAuthTab(target) {
+    if (!target) return;
+    $$(".auth-tabs .tab").forEach(b =>
+        b.classList.toggle("active", b.dataset.tab === target));
+    $$(".auth-form").forEach(f =>
+        f.classList.toggle("active", f.id === target + "-form"));
 }
 
 // ----------------------------------------------------------------- login (shared)
