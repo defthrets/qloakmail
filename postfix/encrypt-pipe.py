@@ -1,4 +1,4 @@
-"""VoidMail encryption pipe.
+"""QloakMail encryption pipe.
 
 A tiny LMTP server that sits between Postfix (after spam filtering) and
 the on-disk mailstore. For each delivery:

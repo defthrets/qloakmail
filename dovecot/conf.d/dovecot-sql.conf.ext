@@ -1,6 +1,6 @@
-# Dovecot SQL backend — looks up VoidMail accounts in the API's database.
+# Dovecot SQL backend — looks up QloakMail accounts in the API's database.
 #
-# IMAP password auth is intentionally limited: VoidMail's primary auth
+# IMAP password auth is intentionally limited: QloakMail's primary auth
 # path is the SRP webmail. We expose IMAP for power users via app-passwords
 # (not yet implemented — see TODO). For now this config authenticates
 # nobody and only provides the userdb (UID/GID + mail location).

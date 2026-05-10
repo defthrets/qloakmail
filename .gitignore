@@ -24,3 +24,7 @@ postfix/opendkim/keys/
 
 .DS_Store
 Thumbs.db
+
+# Vendored web libraries — fetched by scripts/fetch-web-libs.sh.
+web/lib/*.js
+web/lib/*.wasm

@@ -48,7 +48,7 @@ async function deriveKey(password, params) {
         return hexToBytes(hashHex);
     }
 
-    console.warn("[VoidMail] hash-wasm not available, falling back to PBKDF2 — vendor lib/hash-wasm.umd.min.js for production");
+    console.warn("[QloakMail] hash-wasm not available, falling back to PBKDF2 — vendor lib/hash-wasm.umd.min.js for production");
     const baseKey = await crypto.subtle.importKey(
         "raw", enc, { name: "PBKDF2" }, false, ["deriveBits"]
     );

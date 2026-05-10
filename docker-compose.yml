@@ -1,6 +1,6 @@
 version: "3.9"
 
-# VoidMail - zero-access encrypted email
+# QloakMail - zero-access encrypted email
 # Single-host stack. All services on internal "voidnet" network;
 # only nginx, postfix and dovecot expose ports to the host.
 

@@ -1,4 +1,4 @@
-"""End-to-end smoke test client for VoidMail.
+"""End-to-end smoke test client for QloakMail.
 
 Generates an OpenPGP keypair, computes an SRP-6a verifier, AES-GCM-wraps
 the private key with an Argon2id-derived key from the password, and

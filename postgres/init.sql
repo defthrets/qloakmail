@@ -1,4 +1,4 @@
--- VoidMail schema bootstrap.
+-- QloakMail schema bootstrap.
 -- Loaded by the postgres container on first start.
 -- Holds: user accounts, public keys, encrypted private key blobs,
 -- SRP verifiers, mailbox metadata. NEVER plaintext mail.

@@ -1,8 +1,8 @@
-# VoidMail
+# QloakMail
 
-> Zero-access encrypted email. Working name — replace before public launch.
+> Encrypted email we can't read. <https://qloak.me>
 
-VoidMail is a small-scale, privacy-focused mail platform inspired by Proton Mail.
+QloakMail is a small-scale, privacy-focused mail platform inspired by Proton Mail.
 The server stores **only ciphertext**: incoming mail is encrypted with the
 recipient's public key before it touches the mailstore, and the user's private
 key is held server-side **only as an Argon2id-encrypted blob** that the server
@@ -139,7 +139,7 @@ voidmail/
 
 ## Security threat model
 
-VoidMail protects against:
+QloakMail protects against:
 
 * **Server-side mail-content disclosure.** The server only ever holds
   ciphertext — the encrypt-pipe wraps every inbound RFC822 message in
@@ -159,7 +159,7 @@ VoidMail protects against:
   is exposed in `docker-compose.yml`. Clients that connect via the
   .onion never reveal a clearnet IP to us *or* our host.
 
-VoidMail does **not** protect against:
+QloakMail does **not** protect against:
 
 * **Active server compromise injecting malicious JS into the SPA.** An
   attacker who controls the API can serve a backdoored OpenPGP.js. Pin

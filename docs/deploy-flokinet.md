@@ -1,6 +1,6 @@
-# Deploying VoidMail to FlokiNET Iceland
+# Deploying QloakMail to FlokiNET Iceland
 
-This is the production deployment guide. The privacy claim of VoidMail
+This is the production deployment guide. The privacy claim of QloakMail
 turns on three things, in order of importance:
 
 1. **The application itself doesn't collect IPs, user agents, or access
@@ -333,7 +333,7 @@ Routinely:
 | Cloudflare/registrar | nothing — Njalla holds the domain |
 | Payment trail | nothing — Monero |
 
-The only IP a VoidMail user reveals is to the Tor entry guard (if they
+The only IP a QloakMail user reveals is to the Tor entry guard (if they
 use the .onion) or to nginx (if they use clearnet). Postfix sees the
 *sender's* server IP for inbound mail — that's the SMTP envelope, which
 no MTA can hide.

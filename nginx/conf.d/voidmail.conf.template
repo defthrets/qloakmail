@@ -1,4 +1,4 @@
-# VoidMail reverse proxy.
+# QloakMail reverse proxy.
 # Local dev: HTTP only on :8080.
 # Production: ports 80/443, with cert from /etc/letsencrypt/live/${VOIDMAIL_DOMAIN}/.
 

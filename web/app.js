@@ -1,4 +1,4 @@
-// VoidMail SPA entry. ES module.
+// QloakMail SPA entry. ES module.
 //
 // Auth -> Signup -> Mail. All decryption is local; the server only ever
 // sees ciphertext (mailbox blobs) and the SRP verifier (never the password).
@@ -232,7 +232,7 @@ async function enterMailbox() {
         await Search.open(state.account.account_id);
         await refreshSearchStats();
     } catch (e) {
-        console.warn("[VoidMail] search index unavailable:", e);
+        console.warn("[QloakMail] search index unavailable:", e);
     }
     await loadFolders();
     if (state.folders.length) {
@@ -345,7 +345,7 @@ async function openMessage(id) {
             await Search.indexMessage(id, parsed);
             await refreshSearchStats();
         } catch (e) {
-            console.warn("[VoidMail] indexing failed:", e);
+            console.warn("[QloakMail] indexing failed:", e);
         }
     } catch (e) {
         console.error(e);
@@ -423,7 +423,7 @@ async function runSearch(query) {
     try {
         results = await Search.search(query);
     } catch (e) {
-        console.error("[VoidMail] search failed:", e);
+        console.error("[QloakMail] search failed:", e);
     }
 
     const ul = $("#message-list");
