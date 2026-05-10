@@ -368,19 +368,11 @@ const WEAK_PASSWORDS = new Set([
 ]);
 
 function validatePasswordStrength(pw, email) {
-    if (typeof pw !== "string" || pw.length < 12) {
-        return "Password must be at least 12 characters.";
+    if (typeof pw !== "string" || pw.length < 6) {
+        return "Password must be at least 6 characters.";
     }
     if (pw.length > 256) {
         return "Password is unreasonably long (max 256 chars).";
-    }
-    const classes =
-        (/[a-z]/.test(pw) ? 1 : 0) +
-        (/[A-Z]/.test(pw) ? 1 : 0) +
-        (/[0-9]/.test(pw) ? 1 : 0) +
-        (/[^A-Za-z0-9]/.test(pw) ? 1 : 0);
-    if (classes < 3) {
-        return "Use at least 3 of: lower, upper, digit, symbol.";
     }
     if (WEAK_PASSWORDS.has(pw.toLowerCase())) {
         return "Password is on a well-known weak list. Pick another.";
@@ -391,15 +383,9 @@ function validatePasswordStrength(pw, email) {
             return "Password must not contain your email.";
         }
     }
-    // Final gate: even after meeting the structural rules above, the
-    // password must score at least "Good" (>= 55) on the live meter.
-    // This catches structurally-valid-but-low-entropy passwords like
-    // "Passsword1234" (3 classes, 12 chars, not weak-listed, still
-    // trivial) and anything with long character runs.
-    const { tier } = scorePassword(pw, email);
-    if (tier !== "good" && tier !== "strong") {
-        return "Password is not strong enough — aim for 'Good' or 'Strong' on the meter (more length, more variety, no repetition).";
-    }
+    // No character-class or strength-tier gate. The submit floor is
+    // just 6+ chars plus the weak-list / email-substring sanity
+    // checks; the live meter is now advisory only, not blocking.
     return null;
 }
 
@@ -410,13 +396,13 @@ function validatePasswordStrength(pw, email) {
 // penalises the well-known weak list and email-substring presence.
 function scorePassword(pw, email) {
     if (!pw) return { score: 0, tier: "toolow", label: "Type a password" };
-    if (pw.length < 12) {
-        return { score: Math.round((pw.length / 12) * 20),
+    if (pw.length < 6) {
+        return { score: Math.round((pw.length / 6) * 12),
                  tier: "toolow", label: "Too short" };
     }
     let s = 0;
-    // Length: 12 chars -> 20pts, then +3 per extra char up to 28 chars -> 68pts.
-    s += 20 + Math.min(48, Math.max(0, (pw.length - 12) * 3));
+    // Length: 6 chars -> 12pts, +4 per extra char up to 21 chars -> 72pts.
+    s += 12 + Math.min(60, Math.max(0, (pw.length - 6) * 4));
     // Character-class variety: 6pts each.
     s += (/[a-z]/.test(pw) ? 6 : 0);
     s += (/[A-Z]/.test(pw) ? 6 : 0);
