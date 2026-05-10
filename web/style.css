@@ -15,8 +15,8 @@
     --accent-2:     #a5ffba;
     --accent-soft:  rgba(77, 255, 133, 0.12);
     --accent-glow:  rgba(77, 255, 133, 0.45);
-    --magenta:      #ff2da8;
-    --magenta-glow: rgba(255, 45, 168, 0.5);
+    --orange:      #ff8a3d;
+    --orange-glow: rgba(255, 138, 61, 0.5);
     --cyan:         #00f0ff;
     --warn:         #ff6464;
     --warn-soft:    rgba(255, 100, 100, 0.12);
@@ -268,7 +268,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     -webkit-backdrop-filter: blur(14px) saturate(140%);
     box-shadow:
         0 24px 60px rgba(0, 0, 0, 0.6),
-        0 0 0 1px rgba(255, 45, 168, 0.08),
+        0 0 0 1px rgba(255, 138, 61, 0.08),
         0 0 40px rgba(77, 255, 133, 0.05);
     animation: card-in 380ms cubic-bezier(0.2, 0.8, 0.2, 1);
     position: relative;
@@ -283,13 +283,13 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     );
 }
 .auth-card::before {
-    /* Magenta hairline along the corner notch */
+    /* Orange hairline along the corner notch */
     content: "";
     position: absolute;
     top: 0; right: 0;
     width: 22px; height: 22px;
     background:
-        linear-gradient(225deg, var(--magenta), transparent 60%);
+        linear-gradient(225deg, var(--orange), transparent 60%);
     opacity: 0.55;
     pointer-events: none;
 }
@@ -299,7 +299,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 }
 
 /* Status strip above the brand on auth/unlock cards. Channels the
-   "BBS terminal" feel: greens + magenta brackets, uppercase, spaced. */
+   "BBS terminal" feel: greens + orange brackets, uppercase, spaced. */
 .brand-status {
     display: flex;
     justify-content: center;
@@ -316,7 +316,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     text-shadow: 0 0 6px var(--accent-glow);
     opacity: 0.92;
 }
-.brand-status .bracket { color: var(--magenta); margin: 0 0.35em; text-shadow: 0 0 6px var(--magenta-glow); }
+.brand-status .bracket { color: var(--orange); margin: 0 0.35em; text-shadow: 0 0 6px var(--orange-glow); }
 .brand-status .meta { color: var(--fg-muted); letter-spacing: 0.12em; text-shadow: none; }
 .brand-status .meta-dot {
     color: var(--accent);
@@ -371,14 +371,14 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     87.5% {
         transform: translate(-2px, 1px);
         text-shadow:
-             2px 0 0 var(--magenta),
+             2px 0 0 var(--orange),
             -2px 0 0 var(--cyan),
             0 0 4px var(--accent-glow);
     }
     88% {
         transform: translate(2px, -1px);
         text-shadow:
-            -2px 0 0 var(--magenta),
+            -2px 0 0 var(--orange),
              2px 0 0 var(--cyan),
             0 0 4px var(--accent-glow);
         filter: hue-rotate(8deg);
@@ -386,7 +386,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     88.5% {
         transform: translate(-1px, 0);
         text-shadow:
-             1px 0 0 var(--magenta),
+             1px 0 0 var(--orange),
             -1px 0 0 var(--cyan),
             0 0 6px var(--accent-glow);
     }
@@ -547,8 +547,8 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     align-items: center;
     gap: 0.35em;
 }
-.features-header .bracket { color: var(--magenta); text-shadow: 0 0 6px var(--magenta-glow); }
-.features-header .prompt { color: var(--magenta); margin-right: 0.35em; text-shadow: 0 0 6px var(--magenta-glow); }
+.features-header .bracket { color: var(--orange); text-shadow: 0 0 6px var(--orange-glow); }
+.features-header .prompt { color: var(--orange); margin-right: 0.35em; text-shadow: 0 0 6px var(--orange-glow); }
 .features-header .label { color: var(--fg); letter-spacing: 0.22em; }
 .features-header::after {
     content: "▊";
@@ -588,9 +588,9 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     .features-header::after { animation: none; opacity: 0.7; }
 }
 .features-list .num {
-    color: var(--magenta);
+    color: var(--orange);
     margin-right: 0.55em;
-    text-shadow: 0 0 5px var(--magenta-glow);
+    text-shadow: 0 0 5px var(--orange-glow);
     font-size: 0.92em;
     font-variant-numeric: tabular-nums;
 }
@@ -655,8 +655,8 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 }
 .jurisdiction-list li { color: var(--fg); }
 .jurisdiction-list .key {
-    color: var(--magenta);
-    text-shadow: 0 0 5px var(--magenta-glow);
+    color: var(--orange);
+    text-shadow: 0 0 5px var(--orange-glow);
     font-variant-numeric: tabular-nums;
     margin-right: 0.6em;
     white-space: pre;
@@ -885,7 +885,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     padding: 0.2em 0.5em;
     border: 1px solid rgba(77, 255, 133, 0.18);
 }
-.topbar-status .bracket { color: var(--magenta); text-shadow: 0 0 4px var(--magenta-glow); }
+.topbar-status .bracket { color: var(--orange); text-shadow: 0 0 4px var(--orange-glow); }
 .topbar-status .dot {
     color: var(--accent);
     margin-right: 0.3em;
@@ -976,8 +976,8 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     text-transform: uppercase;
 }
 .compose-btn .compose-prompt {
-    color: var(--magenta);
-    text-shadow: 0 0 6px var(--magenta-glow);
+    color: var(--orange);
+    text-shadow: 0 0 6px var(--orange-glow);
     margin-right: 0.4em;
     font-weight: 700;
 }
@@ -1008,18 +1008,18 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 }
 /* Bracketed folder name — the visual frame is via pseudo-elements
    so the underlying data stays clean ("Inbox"), but the user sees
-   `[ INBOX ]` in the magenta+green dual-tone. */
+   `[ INBOX ]` in the orange+green dual-tone. */
 .folder-list li > span:first-child::before {
     content: "[";
-    color: var(--magenta);
+    color: var(--orange);
     margin-right: 0.45em;
-    text-shadow: 0 0 4px var(--magenta-glow);
+    text-shadow: 0 0 4px var(--orange-glow);
 }
 .folder-list li > span:first-child::after {
     content: "]";
-    color: var(--magenta);
+    color: var(--orange);
     margin-left: 0.4em;
-    text-shadow: 0 0 4px var(--magenta-glow);
+    text-shadow: 0 0 4px var(--orange-glow);
 }
 .folder-list li:hover {
     background: rgba(77, 255, 133, 0.06);
@@ -1152,8 +1152,8 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     text-transform: lowercase;
 }
 #message-list li.locked .enc-tag {
-    color: var(--magenta);
-    text-shadow: 0 0 4px var(--magenta-glow);
+    color: var(--orange);
+    text-shadow: 0 0 4px var(--orange-glow);
     font-size: 0.78em;
     letter-spacing: 0.18em;
     text-transform: uppercase;
@@ -1253,8 +1253,8 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 }
 .reader header .meta strong { color: var(--fg); font-weight: 600; }
 .reader header .meta .field-tag {
-    color: var(--magenta);
-    text-shadow: 0 0 4px var(--magenta-glow);
+    color: var(--orange);
+    text-shadow: 0 0 4px var(--orange-glow);
     margin-right: 0.55em;
     font-size: 0.85em;
     letter-spacing: 0.08em;
@@ -1332,9 +1332,9 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     align-items: center;
     gap: 0.4em;
 }
-.modal-head h3 .bracket { color: var(--magenta); text-shadow: 0 0 5px var(--magenta-glow); }
+.modal-head h3 .bracket { color: var(--orange); text-shadow: 0 0 5px var(--orange-glow); }
 .modal-head h3 .dim { color: var(--fg-muted); }
-.modal-head h3 .prompt { color: var(--magenta); margin-right: 0.25em; text-shadow: 0 0 4px var(--magenta-glow); }
+.modal-head h3 .prompt { color: var(--orange); margin-right: 0.25em; text-shadow: 0 0 4px var(--orange-glow); }
 .modal-head .link {
     font-size: 1.4em;
     padding: 0.05rem 0.55rem;
@@ -1353,8 +1353,8 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     margin-right: 0.5em;
 }
 .compose-card .field-label .bracket {
-    color: var(--magenta);
-    text-shadow: 0 0 4px var(--magenta-glow);
+    color: var(--orange);
+    text-shadow: 0 0 4px var(--orange-glow);
 }
 .compose-card label { display: block; }
 .compose-card label > .field-label + input { margin-top: 0.4rem; }
