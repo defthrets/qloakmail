@@ -424,10 +424,18 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     text-shadow: 0 0 8px rgba(255, 162, 96, 0.6);
 }
 .brand-nav .meta {
+    /* Pinned to the top-left of the auth-card. The card has
+       position: relative, so this anchors to the card regardless of
+       where in the card the nav sits. Removed from flex flow, so the
+       four nav links centre naturally. */
+    position: absolute;
+    top: 0.55rem;
+    left: 0.7rem;
     color: var(--fg-muted);
     letter-spacing: 0.12em;
-    margin-left: auto;
-    font-size: 0.92em;
+    font-size: 0.65em;
+    line-height: 1;
+    z-index: 2;
 }
 .brand-nav .meta-dot {
     color: #4dff85;
