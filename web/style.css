@@ -8,25 +8,30 @@
     --panel-3:      #1b2622;
     --border:       #1c2a25;
     --border-2:     #29403a;
-    --fg:           #e6e8ea;
-    --fg-dim:       #8b9098;
-    --fg-muted:     #5d6168;
+    --fg:           #d8dce0;
+    --fg-dim:       #7a8086;
+    --fg-muted:     #4d5258;
     --accent:       #4dff85;
     --accent-2:     #a5ffba;
     --accent-soft:  rgba(77, 255, 133, 0.12);
     --accent-glow:  rgba(77, 255, 133, 0.45);
-    --warn:         #d2786b;
-    --warn-soft:    rgba(210, 120, 107, 0.12);
-    --ok:           #7faf72;
-    --ok-soft:      rgba(127, 175, 114, 0.12);
-    --shadow-1:     0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-2:     0 8px 24px rgba(0, 0, 0, 0.4);
-    --radius:       6px;
-    --radius-lg:    10px;
-    --sans:         -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif;
-    --mono:         ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-    --t-fast:       120ms ease;
+    --magenta:      #ff2da8;
+    --magenta-glow: rgba(255, 45, 168, 0.5);
+    --cyan:         #00f0ff;
+    --warn:         #ff6464;
+    --warn-soft:    rgba(255, 100, 100, 0.12);
+    --ok:           #4dff85;
+    --ok-soft:      rgba(77, 255, 133, 0.10);
+    --shadow-1:     0 1px 2px rgba(0, 0, 0, 0.5);
+    --shadow-2:     0 8px 24px rgba(0, 0, 0, 0.6);
+    --radius:       0px;        /* no rounded corners — terminal aesthetic */
+    --radius-pill:  2px;
+    --radius-lg:    0px;
+    --sans:         ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --mono:         ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --t-fast:       110ms ease;
     --t-med:        220ms ease;
+    --t-snap:       80ms cubic-bezier(0.2, 0.9, 0.1, 1.4);
 }
 
 * { box-sizing: border-box; }
@@ -70,14 +75,41 @@ body::after {
         180deg,
         transparent 0px,
         transparent 2px,
-        rgba(0, 0, 0, 0.18) 3px,
+        rgba(0, 0, 0, 0.22) 3px,
         transparent 4px
     );
-    opacity: 0.35;
+    opacity: 0.4;
     mix-blend-mode: multiply;
+}
+
+/* Animated scan-line — slow horizontal sweep across the viewport.
+   Real element so it runs at GPU layer separately from the grid. */
+.scan-line {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(77, 255, 133, 0.05) 20%,
+        rgba(77, 255, 133, 0.45) 50%,
+        rgba(77, 255, 133, 0.05) 80%,
+        transparent 100%
+    );
+    box-shadow: 0 0 8px rgba(77, 255, 133, 0.35);
+    opacity: 0.55;
+    pointer-events: none;
+    z-index: 999;
+    animation: scan-sweep 11s linear infinite;
+    will-change: transform;
+}
+@keyframes scan-sweep {
+    0%   { transform: translateY(-4px); }
+    100% { transform: translateY(100vh); }
 }
 @media (prefers-reduced-motion: reduce) {
     body::after { display: none; }
+    .scan-line  { display: none; }
 }
 
 a { color: var(--accent-2); }
@@ -111,12 +143,15 @@ button:active:not(:disabled) { transform: translateY(0); }
 
 button.primary {
     background: var(--accent);
-    color: #051208;
+    color: #021006;
     border-color: transparent;
-    font-weight: 600;
-    letter-spacing: 0.02em;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-size: 0.86em;
+    padding: 0.7rem 1rem;
     box-shadow:
-        0 1px 0 rgba(255, 255, 255, 0.12) inset,
+        0 1px 0 rgba(255, 255, 255, 0.18) inset,
         0 0 0 0 var(--accent-glow);
 }
 button.primary:hover:not(:disabled) {
@@ -230,27 +265,78 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 
 .auth-card {
     width: 100%;
-    max-width: 460px;
-    padding: 2rem 2rem 1.75rem;
-    background: rgba(15, 22, 20, 0.55);
-    border: 1px solid rgba(77, 255, 133, 0.14);
-    border-radius: var(--radius-lg);
+    max-width: 480px;
+    padding: 1.75rem 2rem 1.5rem;
+    background:
+        linear-gradient(180deg, rgba(0,0,0,0.2), transparent 60px),
+        rgba(15, 22, 20, 0.55);
+    border: 1px solid rgba(77, 255, 133, 0.18);
+    border-radius: 0;
     backdrop-filter: blur(14px) saturate(140%);
     -webkit-backdrop-filter: blur(14px) saturate(140%);
     box-shadow:
-        0 24px 60px rgba(0, 0, 0, 0.55),
-        0 0 0 1px rgba(255, 255, 255, 0.02) inset,
-        0 1px 0 rgba(255, 255, 255, 0.05) inset,
-        0 0 40px rgba(77, 255, 133, 0.04);
-    animation: card-in 360ms cubic-bezier(0.2, 0.8, 0.2, 1);
+        0 24px 60px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(255, 45, 168, 0.08),
+        0 0 40px rgba(77, 255, 133, 0.05);
+    animation: card-in 380ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    position: relative;
+    /* Notch the top-right corner — distinctive cyberpunk touch. */
+    clip-path: polygon(
+        0 0,
+        calc(100% - 14px) 0,
+        100% 14px,
+        100% 100%,
+        14px 100%,
+        0 calc(100% - 14px)
+    );
+}
+.auth-card::before {
+    /* Magenta hairline along the corner notch */
+    content: "";
+    position: absolute;
+    top: 0; right: 0;
+    width: 22px; height: 22px;
+    background:
+        linear-gradient(225deg, var(--magenta), transparent 60%);
+    opacity: 0.55;
+    pointer-events: none;
 }
 @keyframes card-in {
-    from { opacity: 0; transform: translateY(8px) scale(0.98); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ASCII wordmark. Sized small so 14 lines × ~60 cols fit the auth card.
-   Glow + flicker gives it the LED-terminal feel. */
+/* Status strip above the brand on auth/unlock cards. Channels the
+   "BBS terminal" feel: greens + magenta brackets, uppercase, spaced. */
+.brand-status {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 0.7em;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 0.85rem;
+    padding-bottom: 0.7rem;
+    border-bottom: 1px dashed rgba(77, 255, 133, 0.18);
+    text-shadow: 0 0 6px var(--accent-glow);
+    opacity: 0.92;
+}
+.brand-status .bracket { color: var(--magenta); margin: 0 0.35em; text-shadow: 0 0 6px var(--magenta-glow); }
+.brand-status .meta { color: var(--fg-muted); letter-spacing: 0.12em; text-shadow: none; }
+.brand-status .meta-dot {
+    color: var(--accent);
+    animation: pulse-dot 2.4s ease-in-out infinite;
+    margin-right: 0.4em;
+}
+
+/* ASCII wordmark. Two animations layered:
+   - brand-flicker: 9s loop with brief opacity dips (LED flicker)
+   - brand-glitch:  7s loop, 88-90% triggers RGB chromatic split +
+                    position jitter (CRT cable bump). Different
+                    period from flicker so they desync.
+*/
 .brand-ascii {
     margin: 0 auto;
     font-family: "Cascadia Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -266,18 +352,62 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     text-align: left;
     padding: 0;
     overflow: hidden;
-    animation: brand-flicker 9s infinite;
+    animation:
+        brand-flicker 9s infinite,
+        brand-glitch  7.3s infinite;
+    will-change: text-shadow, transform;
 }
 @keyframes brand-flicker {
     0%, 96.5%, 100% {
         opacity: 1;
-        text-shadow: 0 0 4px var(--accent-glow), 0 0 12px rgba(77, 255, 133, 0.3);
     }
-    97% { opacity: 0.6; text-shadow: 0 0 8px var(--accent-glow), 0 0 22px rgba(77, 255, 133, 0.5); }
+    97% { opacity: 0.6; }
     97.5% { opacity: 0.95; }
     98%   { opacity: 0.5; }
-    98.5% { opacity: 1; text-shadow: 0 0 6px var(--accent-glow), 0 0 18px rgba(77, 255, 133, 0.4); }
+    98.5% { opacity: 1; }
     99%   { opacity: 0.8; }
+}
+@keyframes brand-glitch {
+    0%, 87%, 91%, 100% {
+        transform: translate(0, 0);
+        text-shadow:
+            0 0 4px var(--accent-glow),
+            0 0 12px rgba(77, 255, 133, 0.3);
+        filter: none;
+    }
+    87.5% {
+        transform: translate(-2px, 1px);
+        text-shadow:
+             2px 0 0 var(--magenta),
+            -2px 0 0 var(--cyan),
+            0 0 4px var(--accent-glow);
+    }
+    88% {
+        transform: translate(2px, -1px);
+        text-shadow:
+            -2px 0 0 var(--magenta),
+             2px 0 0 var(--cyan),
+            0 0 4px var(--accent-glow);
+        filter: hue-rotate(8deg);
+    }
+    88.5% {
+        transform: translate(-1px, 0);
+        text-shadow:
+             1px 0 0 var(--magenta),
+            -1px 0 0 var(--cyan),
+            0 0 6px var(--accent-glow);
+    }
+    89% {
+        transform: translate(0, -1px);
+        clip-path: polygon(0 0, 100% 0, 100% 30%, 0 30%, 0 35%, 100% 35%, 100% 100%, 0 100%);
+    }
+    89.5% {
+        transform: translate(1px, 0);
+        clip-path: none;
+    }
+    90% {
+        transform: translate(0, 0);
+    }
 }
 @media (prefers-reduced-motion: reduce) {
     .brand-ascii { animation: none; }
@@ -368,13 +498,21 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 }
 .features-header {
     color: var(--accent);
-    font-size: 0.92em;
-    letter-spacing: 0.04em;
-    margin-bottom: 0.7rem;
-    text-shadow: 0 0 4px var(--accent-glow);
-    opacity: 0.85;
+    font-size: 0.78em;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px dashed rgba(77, 255, 133, 0.18);
+    text-shadow: 0 0 6px var(--accent-glow);
+    opacity: 0.92;
+    display: flex;
+    align-items: center;
+    gap: 0.35em;
 }
-.features-header .prompt { color: var(--accent-2); margin-right: 0.35em; }
+.features-header .bracket { color: var(--magenta); text-shadow: 0 0 6px var(--magenta-glow); }
+.features-header .prompt { color: var(--magenta); margin-right: 0.35em; text-shadow: 0 0 6px var(--magenta-glow); }
+.features-header .label { color: var(--fg); letter-spacing: 0.22em; }
 .features-header::after {
     content: "▊";
     margin-left: 0.4em;
@@ -412,15 +550,23 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     .features-list li { opacity: 1; transform: none; animation: none; }
     .features-header::after { animation: none; opacity: 0.7; }
 }
+.features-list .num {
+    color: var(--magenta);
+    margin-right: 0.55em;
+    text-shadow: 0 0 5px var(--magenta-glow);
+    font-size: 0.92em;
+    font-variant-numeric: tabular-nums;
+}
 .features-list .check {
     color: var(--accent);
-    margin-right: 0.55em;
+    margin-right: 0.5em;
     text-shadow: 0 0 4px var(--accent-glow);
     font-weight: 600;
 }
 .features-list strong {
     color: var(--fg);
-    font-weight: 600;
+    font-weight: 700;
+    letter-spacing: 0.04em;
 }
 .features-list a {
     color: var(--accent-2);
