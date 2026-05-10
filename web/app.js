@@ -400,7 +400,18 @@ async function handleSignup(form) {
     setStatus(status, "Generating keypair (this can take a few seconds)...");
 
     const fd = new FormData(form);
-    const email = fd.get("email").trim();
+    // Username-only signup: the user picks the local-part, the domain
+    // suffix is locked to the primary configured domain. Strip any
+    // accidental @-suffix the user typed (e.g. pasted full address)
+    // and lowercase so the verifier identity is canonical.
+    const primaryDomain = (state.config?.domain || "qloak.me").toLowerCase();
+    let username = (fd.get("username") || "").trim().toLowerCase();
+    if (username.includes("@")) username = username.split("@")[0];
+    if (!/^[a-z0-9._-]{1,64}$/.test(username)) {
+        setStatus(status, "Username can only contain a-z, 0-9, dot, underscore, or hyphen (1-64 chars).", "err");
+        return;
+    }
+    const email = `${username}@${primaryDomain}`;
     const password = fd.get("password");
     const password2 = fd.get("password2");
     const invite = (fd.get("invite") || "").trim();
@@ -3200,8 +3211,18 @@ async function boot() {
         invite_required: false, captcha_provider: "none",
         onion_address: "",
     }));
-    $("#signup-domain-hint").textContent =
-        "Domain: " + state.config.domains.join(", ");
+    // Lock the signup suffix to the primary domain from /api/v1/config
+    // so dev environments (voidmail.local) and prod (qloak.me) both
+    // render the right "@..." next to the username field.
+    const primaryDomain = state.config.domain || state.config.domains?.[0] || "qloak.me";
+    $("#signup-domain-suffix").textContent = "@" + primaryDomain;
+    if (state.config.domains && state.config.domains.length > 1) {
+        $("#signup-domain-hint").textContent =
+            "Other available: " +
+            state.config.domains.filter(d => d !== primaryDomain).join(", ");
+    } else {
+        $("#signup-domain-hint").textContent = "";
+    }
     bindOnionNotice(state.config.onion_address);
 
     $("#login-form").addEventListener("submit", e => {

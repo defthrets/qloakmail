@@ -288,6 +288,56 @@ label {
 }
 label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-top: 0.25rem; }
 
+/* Signup "username @ qloak.me" composite field. The inner <input> is
+   the editable part; the <span class="username-suffix"> is a non-
+   editable label that visually hangs off the right edge of the field
+   so the user understands they're picking the local-part of an
+   email at qloak.me, not the whole address. */
+.username-input {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    transition:
+        border-color var(--t-fast),
+        box-shadow var(--t-med);
+}
+.username-input:focus-within {
+    border-color: var(--accent);
+    box-shadow:
+        0 0 0 3px rgba(255, 122, 31, 0.12),
+        0 0 14px rgba(255, 122, 31, 0.08) inset;
+}
+.username-input input {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    padding: 0.6rem 0.75rem;
+    color: var(--fg);
+}
+.username-input input:focus {
+    /* Suppress the per-input focus ring -- the wrapper carries the
+       state via :focus-within instead so the suffix participates. */
+    background: transparent;
+    box-shadow: none;
+    border: none;
+    outline: none;
+}
+.username-suffix {
+    flex: 0 0 auto;
+    align-self: center;
+    padding: 0 0.75rem;
+    color: var(--accent-2);
+    font-family: var(--mono);
+    font-size: 0.95em;
+    letter-spacing: 0.04em;
+    border-left: 1px dashed rgba(255, 122, 31, 0.3);
+    user-select: none;
+    pointer-events: none;
+}
+
 /* ---------------- views ---------------- */
 
 .view { display: none; }

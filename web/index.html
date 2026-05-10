@@ -103,8 +103,15 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
         </form>
 
         <form id="signup-form" class="auth-form" autocomplete="off">
-          <label>Email
-            <input type="email" name="email" required>
+          <label>Choose your username
+            <span class="username-input">
+              <input type="text" name="username" required
+                     autocomplete="off" autocapitalize="off"
+                     spellcheck="false" inputmode="email"
+                     pattern="[a-z0-9._-]{1,64}"
+                     placeholder="yourname">
+              <span class="username-suffix" id="signup-domain-suffix">@qloak.me</span>
+            </span>
             <small id="signup-domain-hint"></small>
           </label>
           <label>Password (12+ chars)
@@ -1045,7 +1052,7 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
   -->
   <script type="module"
           src="/app.js"
-          integrity="sha384-t7QJRFj2NXV2ygc+UTdhB8W7Zfi/6lPOBrfwBSu1m8WxuJf1ebmsPMHa+5f5J2qs"
+          integrity="sha384-WCqtbYDrayzurHXiEYIze7uMn34CxmWLWnaFqiNiej/gyFwqL7obyGLyxDFabB12"
           crossorigin="anonymous"></script>
 </body>
 </html>
