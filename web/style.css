@@ -365,6 +365,140 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     margin-right: 0.4em;
 }
 
+/* Top-of-card primary nav — replaces .brand-status on the auth view
+   and on the about/privacy/terms info pages. Same terminal aesthetic
+   but each label is a real <a> with hover lift + active highlight. */
+.brand-nav {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.55rem 0.85rem;
+    font-family: var(--mono);
+    font-size: 0.7em;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin: 0 0 0.85rem;
+    padding-bottom: 0.7rem;
+    border-bottom: 1px dashed rgba(255, 122, 31, 0.18);
+}
+.brand-nav a {
+    color: var(--fg-dim);
+    text-decoration: none;
+    padding: 0.15em 0.1em;
+    transition:
+        color 160ms ease,
+        text-shadow 160ms ease,
+        transform 160ms ease,
+        letter-spacing 160ms ease;
+    will-change: color, text-shadow, transform;
+}
+.brand-nav a:hover {
+    color: var(--accent);
+    text-shadow: 0 0 6px var(--accent-glow);
+    transform: translateY(-1px);
+    letter-spacing: 0.22em;
+}
+.brand-nav a.active {
+    color: var(--accent);
+    text-shadow: 0 0 6px var(--accent-glow);
+}
+.brand-nav a .bracket {
+    color: var(--orange);
+    text-shadow: 0 0 6px var(--orange-glow);
+    margin: 0 0.18em;
+    transition: color 160ms ease, text-shadow 160ms ease;
+}
+.brand-nav a:hover .bracket,
+.brand-nav a.active .bracket {
+    color: var(--accent-2);
+    text-shadow: 0 0 8px rgba(255, 162, 96, 0.6);
+}
+.brand-nav .meta {
+    color: var(--fg-muted);
+    letter-spacing: 0.12em;
+    margin-left: auto;
+    font-size: 0.92em;
+}
+.brand-nav .meta-dot {
+    color: var(--accent);
+    animation: pulse-dot 2.4s ease-in-out infinite;
+    margin-right: 0.4em;
+}
+
+/* Static info pages (about / privacy / terms) — same auth-card shell
+   with a narrow body of formatted text. */
+.info-page {
+    color: var(--fg);
+    font-size: 0.94em;
+    line-height: 1.65;
+}
+.info-page h2 {
+    color: var(--accent);
+    text-shadow: 0 0 6px var(--accent-glow);
+    font-family: var(--mono);
+    font-size: 1.1em;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin: 0.4rem 0 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px dashed rgba(255, 122, 31, 0.18);
+}
+.info-page h2 .bracket { color: var(--orange); text-shadow: 0 0 6px var(--orange-glow); margin: 0 0.18em; }
+.info-page h2 .prompt  { color: var(--orange); text-shadow: 0 0 6px var(--orange-glow); margin: 0 0.3em; }
+.info-page h3 {
+    color: var(--accent-2);
+    font-family: var(--mono);
+    font-size: 0.84em;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin: 1.4rem 0 0.55rem;
+}
+.info-page p { margin: 0 0 0.85rem; color: var(--fg); }
+.info-page ul {
+    margin: 0 0 1rem;
+    padding-left: 1.2em;
+    color: var(--fg);
+}
+.info-page ul li { margin: 0.18em 0; }
+.info-page ul li::marker { color: var(--orange); }
+.info-page strong { color: var(--accent); }
+.info-page em { color: var(--accent-2); font-style: italic; }
+.info-page code {
+    background: rgba(255, 122, 31, 0.08);
+    border: 1px solid rgba(255, 122, 31, 0.18);
+    padding: 0 0.32em;
+    font-size: 0.88em;
+    color: var(--accent-2);
+    font-family: var(--mono);
+}
+.info-page a {
+    color: var(--accent-2);
+    border-bottom: 1px dotted rgba(255, 122, 31, 0.4);
+    text-decoration: none;
+    transition: color 160ms ease, border-bottom-color 160ms ease;
+}
+.info-page a:hover {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+.info-page .info-meta {
+    color: var(--fg-muted);
+    font-family: var(--mono);
+    font-size: 0.78em;
+    letter-spacing: 0.08em;
+    margin-bottom: 1.2rem;
+}
+.info-page .info-back {
+    margin-top: 1.6rem;
+    padding-top: 0.8rem;
+    border-top: 1px dashed rgba(255, 122, 31, 0.18);
+    font-family: var(--mono);
+    font-size: 0.82em;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
 /* ASCII wordmark. Two animations layered:
    - brand-flicker: 9s loop with brief opacity dips (LED flicker)
    - brand-glitch:  7s loop, 88-90% triggers RGB chromatic split +
@@ -668,6 +802,8 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
    .status-track-half halves carry identical content so the translateY
    0 -> -50% loop has no visible seam. */
 .status-scroller {
+    /* Sits at the bottom of the auth-card, sharing the same content
+       width as the form inputs above it. */
     margin: 0.85rem 0 0.6rem;
     background: rgba(8, 11, 10, 0.78);
     border: 1px solid rgba(255, 122, 31, 0.22);

@@ -153,14 +153,16 @@ function classifyStoredSession() {
     return { kind: "unlock", session: sess };
 }
 
+const PRELOGIN_VIEWS = new Set([
+    "auth-view", "unlock-view",
+    "about-view", "privacy-view", "terms-view",
+]);
 function show(viewId) {
     $$(".view").forEach(v => v.classList.toggle("active", v.id === viewId));
-    // Matrix rain lives behind the auth + unlock screens only — once
-    // the user is in their inbox there's enough warm-on-dark already.
-    document.body.classList.toggle(
-        "matrix-on",
-        viewId === "auth-view" || viewId === "unlock-view"
-    );
+    // Matrix rain stays on for the entire pre-login experience —
+    // auth, unlock, and the static info pages — so those pages share
+    // the landing aesthetic. Drops once the user is in their inbox.
+    document.body.classList.toggle("matrix-on", PRELOGIN_VIEWS.has(viewId));
 }
 
 function setStatus(el, text, kind = "") {
@@ -980,16 +982,16 @@ function initMatrix() {
 // isn't in the current view (recovery view + mail view don't render it).
 
 const FEATURES_LOG_LINES = [
-    "scan: probing 8 sealed checks ............ [PASS]",
-    "verify: argon2id wrap factor ............. [OK]",
+    "scan: probing all checks ................. [PASS]",
+    "verify: key wrap integrity ............... [OK]",
     "audit: ciphertext-only mailstore ......... [OK]",
-    "ping:  rotating session HMAC ............. [OK]",
-    "trace: zero log retention .... [CONFIRMED]",
-    "probe: srp-6a verifier integrity ......... [PASS]",
-    "watch: tor v3 hidden service ............. [UP]",
-    "audit: signed openpgp.js fingerprint ..... [MATCH]",
-    "ping:  flokinet iceland .................. [83ms]",
-    "scan:  rspamd outbound rate-limit ........ [ARMED]",
+    "ping:  session token rotation ............ [OK]",
+    "trace: zero log retention ............ [CONFIRMED]",
+    "probe: auth verifier ..................... [PASS]",
+    "watch: hidden service reach .............. [UP]",
+    "audit: client integrity .................. [MATCH]",
+    "ping:  privacy edge node ............ [83ms]",
+    "scan:  outbound rate-limit ............... [ARMED]",
 ];
 
 function startFeaturesLogLoop() {
@@ -1081,6 +1083,38 @@ function bindRipples() {
     }, { capture: false });
 }
 
+// ----------------------------------------------------------------- info-page nav
+//
+// Click handler for the [HOME]/[ABOUT]/[PRIVACY]/[TERMS] strip at the
+// top of the auth card (and the matching nav on each info page, plus
+// the "back to sign in" link inside each page body). All targets are
+// real SPA views — no full reload, no router. Just delegate via
+// data-view attribute and call show().
+//
+// Auth-related views (auth/unlock/recovery-shown) are skipped here so
+// signed-in / mid-flow users aren't booted out of their state by an
+// accidental click.
+function bindBrandNav() {
+    document.body.addEventListener("click", (e) => {
+        const a = e.target.closest("a[data-view]");
+        if (!a) return;
+        const target = a.dataset.view;
+        if (!target) return;
+        const el = document.getElementById(target);
+        if (!el) return;
+        e.preventDefault();
+        show(target);
+        // Update active marker across every brand-nav so the link
+        // matching the new view is highlighted.
+        document.querySelectorAll(".brand-nav a[data-view]").forEach(link => {
+            link.classList.toggle("active", link.dataset.view === target);
+        });
+        // Restart matrix flag — info pages aren't auth-views so the
+        // show() helper already drops the matrix-on class. That's fine.
+        window.scrollTo(0, 0);
+    });
+}
+
 // ----------------------------------------------------------------- onion notice
 function _truncateOnion(addr) {
     // v3 .onion addresses are 62 chars (56 hash + ".onion"). They don't
@@ -1169,6 +1203,7 @@ async function boot() {
     initMatrix();
     startFeaturesLogLoop();
     bindStatusScroller();
+    bindBrandNav();
     // Initial state is auth-view → matrix-on
     document.body.classList.add("matrix-on");
 

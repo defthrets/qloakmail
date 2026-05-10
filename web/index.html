@@ -33,10 +33,13 @@
     <!-- ============== Auth ============== -->
     <section id="auth-view" class="view active">
       <div class="auth-card">
-        <div class="brand-status">
-          <span><span class="bracket">[</span>SECURE<span class="bracket">·</span>AUTH<span class="bracket">]</span></span>
+        <nav class="brand-nav" aria-label="primary">
+          <a href="#home" data-view="auth-view" class="active"><span class="bracket">[</span>HOME<span class="bracket">]</span></a>
+          <a href="#about" data-view="about-view"><span class="bracket">[</span>ABOUT<span class="bracket">]</span></a>
+          <a href="#privacy" data-view="privacy-view"><span class="bracket">[</span>PRIVACY<span class="bracket">]</span></a>
+          <a href="#terms" data-view="terms-view"><span class="bracket">[</span>TERMS<span class="bracket">]</span></a>
           <span class="meta"><span class="meta-dot">●</span>online</span>
-        </div>
+        </nav>
         <header class="brand">
           <pre class="brand-ascii" aria-label="qloak"
 ><span aria-hidden="true">            ..                               ..
@@ -115,37 +118,222 @@ I888  9888    888R   u8888cJ888  9888  9888    888E '888&amp;
           <button type="submit" class="primary">Recover account</button>
           <p class="status" id="recovery-status"></p>
         </form>
-      </div>
-      <div class="status-scroller" aria-hidden="true">
-        <header class="status-head">
-          <span class="status-prefix">[STATUS]</span>
-          <span class="status-prompt">&gt;</span>
-          <span class="status-title">live feed</span>
-          <span class="status-blink">_</span>
-        </header>
-        <div class="status-window">
-          <div class="status-track">
-            <!-- two halves with identical lines so the vertical loop seam
-                 is invisible; populated by bindStatusScroller(). -->
-            <ul class="status-track-half" role="list"></ul>
-            <ul class="status-track-half" role="list"></ul>
+
+        <div class="status-scroller" aria-hidden="true">
+          <header class="status-head">
+            <span class="status-prefix">[STATUS]</span>
+            <span class="status-prompt">&gt;</span>
+            <span class="status-title">live feed</span>
+            <span class="status-blink">_</span>
+          </header>
+          <div class="status-window">
+            <div class="status-track">
+              <!-- two halves with identical lines so the vertical loop seam
+                   is invisible; populated by bindStatusScroller(). -->
+              <ul class="status-track-half" role="list"></ul>
+              <ul class="status-track-half" role="list"></ul>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div id="onion-notice" class="onion-notice" hidden>
-        <span class="onion-dot"></span>
-        <span class="onion-label">Tor users:</span>
-        <button type="button" id="onion-copy" class="onion-address" data-onion=""
-                title="Click to copy. Open in Tor Browser to use the hidden service.">
-          <span id="onion-text">loading...</span>
-          <span class="onion-copy-hint" id="onion-copy-hint">copy</span>
-        </button>
-      </div>
+        <div id="onion-notice" class="onion-notice" hidden>
+          <span class="onion-dot"></span>
+          <span class="onion-label">Tor users:</span>
+          <button type="button" id="onion-copy" class="onion-address" data-onion=""
+                  title="Click to copy. Open in Tor Browser to use the hidden service.">
+            <span id="onion-text">loading...</span>
+            <span class="onion-copy-hint" id="onion-copy-hint">copy</span>
+          </button>
+        </div>
 
-      <footer class="auth-footer">
-        Zero-access. End-to-end encrypted.
-      </footer>
+        <footer class="auth-footer">
+          Zero-access. End-to-end encrypted.
+        </footer>
+      </div>
+    </section>
+
+    <!-- ============== About ============== -->
+    <section id="about-view" class="view">
+      <div class="auth-card">
+        <nav class="brand-nav" aria-label="primary">
+          <a href="#home" data-view="auth-view"><span class="bracket">[</span>HOME<span class="bracket">]</span></a>
+          <a href="#about" data-view="about-view" class="active"><span class="bracket">[</span>ABOUT<span class="bracket">]</span></a>
+          <a href="#privacy" data-view="privacy-view"><span class="bracket">[</span>PRIVACY<span class="bracket">]</span></a>
+          <a href="#terms" data-view="terms-view"><span class="bracket">[</span>TERMS<span class="bracket">]</span></a>
+          <span class="meta"><span class="meta-dot">●</span>online</span>
+        </nav>
+        <article class="info-page">
+          <h2><span class="bracket">[</span>ABOUT<span class="bracket">]</span> <span class="prompt">&gt;</span> qloak</h2>
+          <p>QloakMail is a privacy-first email service built on a single
+          uncompromising idea: <strong>we should not be able to read
+          your mail</strong>. Every message is encrypted end-to-end the
+          moment it arrives, with a key only you control.</p>
+
+          <h3>What that means in practice</h3>
+          <ul>
+            <li>The server stores ciphertext only — never plaintext.</li>
+            <li>Your password and private key never leave your device in
+                a usable form.</li>
+            <li>Search runs entirely in your browser, against an index
+                that lives on your machine.</li>
+            <li>We do not log IPs, user agents, or any identifying
+                metadata about how you use the service.</li>
+          </ul>
+
+          <h3>Who runs it</h3>
+          <p>A small independent team. We pay for hosting and our
+          domain anonymously, and we publish the source so anyone can
+          audit it. We don't take ad money, we don't profile you, and
+          we don't sell aggregated data — there's nothing to sell, by
+          design.</p>
+
+          <p class="info-back">
+            <a href="#home" data-view="auth-view">&laquo; back to sign in</a>
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============== Privacy ============== -->
+    <section id="privacy-view" class="view">
+      <div class="auth-card">
+        <nav class="brand-nav" aria-label="primary">
+          <a href="#home" data-view="auth-view"><span class="bracket">[</span>HOME<span class="bracket">]</span></a>
+          <a href="#about" data-view="about-view"><span class="bracket">[</span>ABOUT<span class="bracket">]</span></a>
+          <a href="#privacy" data-view="privacy-view" class="active"><span class="bracket">[</span>PRIVACY<span class="bracket">]</span></a>
+          <a href="#terms" data-view="terms-view"><span class="bracket">[</span>TERMS<span class="bracket">]</span></a>
+          <span class="meta"><span class="meta-dot">●</span>online</span>
+        </nav>
+        <article class="info-page">
+          <h2><span class="bracket">[</span>PRIVACY<span class="bracket">]</span> <span class="prompt">&gt;</span> policy</h2>
+          <p class="info-meta">Last updated: <strong>10 May 2026</strong></p>
+
+          <h3>What we don't collect</h3>
+          <ul>
+            <li><strong>IP addresses</strong> — never written to a
+                persistent log; transient rate-limit keys are hashed
+                with a per-process secret and discarded on restart.</li>
+            <li><strong>User agents, fingerprints, devices.</strong></li>
+            <li><strong>Message contents.</strong> We can't — they're
+                encrypted to you before they reach our storage.</li>
+            <li><strong>Search queries.</strong> Search runs locally in
+                your browser; queries never reach the server.</li>
+            <li><strong>Behavioural analytics, cookies for tracking,
+                third-party scripts.</strong> None used.</li>
+          </ul>
+
+          <h3>What we keep</h3>
+          <ul>
+            <li>Your <strong>email address</strong>, so we can route
+                mail to you.</li>
+            <li>An <strong>encrypted blob of your private key</strong>
+                — only you can decrypt it, with your password or
+                recovery code.</li>
+            <li>Your <strong>public key</strong>, used to encrypt
+                incoming mail before it touches storage.</li>
+            <li>The minimum routing metadata required to deliver mail
+                (envelope sender / recipient / size / received-at). No
+                MTA can avoid these.</li>
+          </ul>
+
+          <h3>Storage on your device</h3>
+          <p>The webmail uses <code>localStorage</code> /
+          <code>sessionStorage</code> for your session token (and, if
+          you opted in, an encrypted private-key blob bound to a
+          duration), plus an <code>IndexedDB</code> index of decrypted
+          message previews so search works locally. All of this clears
+          on sign-out.</p>
+
+          <h3>Disclosure</h3>
+          <p>We respond to legitimate legal process to the limited
+          extent required by law. The defence is what we don't have:
+          we cannot produce plaintext mail, IP histories, or
+          behavioural profiles, because we never collected them.</p>
+
+          <h3>Contact</h3>
+          <p>Questions or requests:
+            <a href="mailto:privacy@qloak.me">privacy@qloak.me</a>.</p>
+
+          <p class="info-back">
+            <a href="#home" data-view="auth-view">&laquo; back to sign in</a>
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============== Terms ============== -->
+    <section id="terms-view" class="view">
+      <div class="auth-card">
+        <nav class="brand-nav" aria-label="primary">
+          <a href="#home" data-view="auth-view"><span class="bracket">[</span>HOME<span class="bracket">]</span></a>
+          <a href="#about" data-view="about-view"><span class="bracket">[</span>ABOUT<span class="bracket">]</span></a>
+          <a href="#privacy" data-view="privacy-view"><span class="bracket">[</span>PRIVACY<span class="bracket">]</span></a>
+          <a href="#terms" data-view="terms-view" class="active"><span class="bracket">[</span>TERMS<span class="bracket">]</span></a>
+          <span class="meta"><span class="meta-dot">●</span>online</span>
+        </nav>
+        <article class="info-page">
+          <h2><span class="bracket">[</span>TERMS<span class="bracket">]</span> <span class="prompt">&gt;</span> service</h2>
+          <p class="info-meta">Last updated: <strong>10 May 2026</strong></p>
+
+          <h3>1. The service</h3>
+          <p>QloakMail provides encrypted email accounts. By creating
+          an account you agree to use the service in accordance with
+          these terms.</p>
+
+          <h3>2. Your account</h3>
+          <ul>
+            <li>You are responsible for the password and recovery code
+                you set during signup.</li>
+            <li>If you lose <em>both</em>, your account is mathematically
+                unrecoverable. We cannot reset it. This is a feature.</li>
+            <li>Don't share your account. Don't impersonate.</li>
+          </ul>
+
+          <h3>3. Acceptable use</h3>
+          <p>The following are not allowed and may result in account
+          suspension or termination:</p>
+          <ul>
+            <li>Sending spam, phishing or unsolicited bulk mail.</li>
+            <li>Distributing malware or content sexually exploiting
+                minors.</li>
+            <li>Targeted harassment or threats of violence.</li>
+            <li>Activity that knowingly burdens or disrupts the
+                service.</li>
+          </ul>
+          <p>We do not read your mail to enforce this. We act on
+          reports, abuse signals at the SMTP envelope level, and
+          patterns visible to a mail relay (volume, bounce rates,
+          spam scores).</p>
+
+          <h3>4. No warranty</h3>
+          <p>The service is provided "as is", without warranty of any
+          kind. We do our best to keep it running, but we do not
+          guarantee uninterrupted service or that no message will be
+          lost.</p>
+
+          <h3>5. Limitation of liability</h3>
+          <p>To the fullest extent permitted by law, our total liability
+          arising out of the service is limited to the fees you paid us
+          in the 12 months preceding the event.</p>
+
+          <h3>6. Termination</h3>
+          <p>You can delete your account at any time. We can suspend
+          or terminate accounts that violate these terms; we will give
+          notice where possible.</p>
+
+          <h3>7. Changes</h3>
+          <p>We may update these terms. Material changes will be
+          announced via the webmail before taking effect.</p>
+
+          <h3>8. Contact</h3>
+          <p>Questions:
+            <a href="mailto:legal@qloak.me">legal@qloak.me</a>.</p>
+
+          <p class="info-back">
+            <a href="#home" data-view="auth-view">&laquo; back to sign in</a>
+          </p>
+        </article>
+      </div>
     </section>
 
     <!-- ============== Unlock (returning user with stored session) ============== -->
