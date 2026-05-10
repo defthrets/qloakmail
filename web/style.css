@@ -132,135 +132,75 @@ body::after {
 a { color: var(--accent-2); }
 a:hover { color: var(--accent); }
 
-/* ---------------- buttons ---------------- */
+/* ---------------- buttons (flat brutalist) ----------------
+   One family across the whole app: solid panel fill, hard 1px
+   orange border, mono caps. Hover inverts to a filled orange tile.
+   No backdrop-blur, no gradients, no glow, no corner notches.
+   Downstream classes (.reader-action, .bulk-actions button,
+   .auth-tabs .tab, .admin-tab, .filter-chips button, .cc-toggle,
+   .att-download, .banner-action, .reader-close, .settings-btn)
+   inherit from this base and only override what they need. */
 
 button {
-    background: var(--panel-2);
-    color: var(--fg);
-    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--accent);
+    border: 1px solid var(--orange);
     padding: 0.55rem 1rem;
     font: inherit;
-    cursor: pointer;
-    border-radius: var(--radius);
-    position: relative;
-    overflow: hidden;
-    transition:
-        background var(--t-fast),
-        border-color var(--t-fast),
-        color var(--t-fast),
-        transform var(--t-fast),
-        box-shadow var(--t-fast);
-}
-button:hover:not(:disabled) {
-    background: var(--panel-3);
-    border-color: var(--border-2);
-    transform: translateY(-1px);
-}
-button:active:not(:disabled) { transform: translateY(0); }
-
-/* ---------- Primary button — glass cyberpunk ----------
-   Layered orange-tinted gradient over translucent dark glass, 1px
-   bright-orange border + corner-notch accent, dual-layer glow.
-   Same family as .reader-action / .bulk-actions button — just a
-   stronger gradient + brighter border so it reads as the primary
-   call-to-action. */
-button.primary {
-    background:
-        linear-gradient(225deg,
-            var(--orange) 0,
-            var(--orange) 8px,
-            transparent 8.5px) top right / 10px 10px no-repeat,
-        linear-gradient(180deg,
-            rgba(255, 138, 61, 0.28),
-            rgba(255, 106, 0, 0.10) 45%,
-            rgba(8, 11, 10, 0.55));
-    color: var(--accent-2);
-    border: 1px solid rgba(255, 138, 61, 0.55);
     font-family: var(--btn-font);
-    font-weight: 700;
-    letter-spacing: 0.14em;
+    font-weight: 600;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     font-size: 0.86em;
-    text-shadow: 0 0 8px var(--accent-glow);
-    padding: 0.65rem 1rem;
-    backdrop-filter: blur(10px) saturate(140%);
-    -webkit-backdrop-filter: blur(10px) saturate(140%);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.08),
-        inset 0 0 0 1px rgba(255, 138, 61, 0.06),
-        0 1px 0 rgba(0, 0, 0, 0.35),
-        0 0 8px rgba(255, 138, 61, 0.08);
-    animation: primary-pulse 3.2s ease-in-out infinite;
+    cursor: pointer;
+    border-radius: 0;
+    position: relative;
     transition:
+        background var(--t-fast),
         color var(--t-fast),
-        border-color var(--t-fast),
-        transform var(--t-fast),
-        letter-spacing var(--t-fast),
-        box-shadow 220ms ease,
-        background-color 220ms ease;
+        border-color var(--t-fast);
 }
-@keyframes primary-pulse {
-    0%, 100% {
-        box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.08),
-            inset 0 0 0 1px rgba(255, 138, 61, 0.06),
-            0 1px 0 rgba(0, 0, 0, 0.35),
-            0 0 6px rgba(255, 138, 61, 0.08);
-    }
-    50% {
-        box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.12),
-            inset 0 0 0 1px rgba(255, 138, 61, 0.08),
-            0 1px 0 rgba(0, 0, 0, 0.35),
-            0 0 12px rgba(255, 138, 61, 0.14);
-    }
+button:hover:not(:disabled) {
+    background: var(--orange);
+    color: var(--bg);
 }
-button.primary:hover:not(:disabled) {
-    color: var(--accent);
-    transform: translateY(-2px);
-    letter-spacing: 0.18em;
-    animation: none;
-    border-color: var(--orange);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.14),
-        0 0 0 1px var(--orange),
-        0 4px 10px rgba(255, 122, 31, 0.22),
-        0 0 14px rgba(255, 138, 61, 0.16);
+button:active:not(:disabled) {
+    background: var(--accent);
+    color: var(--bg);
 }
-button.primary:active:not(:disabled) {
-    transform: translateY(0) scale(0.98);
-    transition-duration: 60ms;
-}
-button.primary:disabled {
-    opacity: 0.4; cursor: not-allowed; transform: none; animation: none;
-}
-@media (prefers-reduced-motion: reduce) {
-    button.primary { animation: none; }
+button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
 }
 
-/* Diagonal sheen sweep on hover for primary buttons. */
-button.primary::before {
-    content: "";
-    position: absolute;
-    top: 0; bottom: 0; left: -120%;
-    width: 60%;
-    background: linear-gradient(
-        100deg,
-        transparent 0%,
-        rgba(255, 255, 255, 0.18) 50%,
-        transparent 100%
-    );
-    transform: skewX(-20deg);
-    transition: left 0.55s cubic-bezier(0.4, 0, 0.2, 1);
-    pointer-events: none;
+button.primary {
+    background: var(--orange);
+    color: var(--bg);
+    border-color: var(--orange);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    padding: 0.65rem 1rem;
 }
-button.primary:hover:not(:disabled)::before { left: 130%; }
+button.primary:hover:not(:disabled) {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+}
+button.primary:active:not(:disabled) {
+    background: var(--bg);
+    color: var(--orange);
+}
+button.primary:disabled {
+    opacity: 0.35;
+    background: var(--orange);
+    color: var(--bg);
+}
 
 /* Click ripple — element added by JS in addRipples(). */
 .ripple {
     position: absolute;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.4);
+    background: rgba(0, 0, 0, 0.25);
     transform: translate(-50%, -50%) scale(0);
     pointer-events: none;
     animation: ripple-expand 0.55s ease-out forwards;
@@ -270,17 +210,20 @@ button.primary:hover:not(:disabled)::before { left: 130%; }
 }
 
 button.link {
-    background: none; border: none;
+    background: none;
+    border: none;
     color: var(--fg-dim);
     padding: 0.3rem 0.5rem;
     font-weight: 400;
-    border-radius: var(--radius);
-    overflow: visible;
+    text-transform: none;
+    letter-spacing: 0;
+    font-family: var(--sans);
+    font-size: inherit;
 }
 button.link:hover {
-    background: rgba(255, 122, 31, 0.08);
+    background: none;
     color: var(--accent);
-    transform: none;
+    text-decoration: underline;
 }
 
 /* ---------------- inputs ---------------- */
@@ -861,52 +804,19 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
 }
 .auth-tabs .tab {
     flex: 1;
-    background:
-        linear-gradient(180deg,
-            rgba(255, 138, 61, 0.05),
-            rgba(8, 11, 10, 0.5));
-    color: var(--fg-dim);
-    border: 1px solid rgba(255, 122, 31, 0.22);
+    background: var(--panel);
+    color: var(--accent);
+    border: 1px solid var(--orange);
     padding: 0.55rem 0.7rem;
-    font-family: var(--btn-font);
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
     font-size: 0.78em;
-    backdrop-filter: blur(6px) saturate(140%);
-    -webkit-backdrop-filter: blur(6px) saturate(140%);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.05),
-        0 1px 0 rgba(0, 0, 0, 0.35);
-    transition: color var(--t-fast), border-color var(--t-fast),
-        background var(--t-fast), transform var(--t-fast),
-        box-shadow 220ms ease;
 }
 .auth-tabs .tab:hover {
-    color: var(--accent);
-    border-color: var(--orange);
-    transform: translateY(-1px);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.08),
-        0 0 0 1px rgba(255, 138, 61, 0.22),
-        0 3px 7px rgba(255, 122, 31, 0.12);
+    background: var(--orange);
+    color: var(--bg);
 }
 .auth-tabs .tab.active {
-    color: var(--accent);
-    border-color: var(--orange);
-    background:
-        linear-gradient(225deg,
-            var(--orange) 0,
-            var(--orange) 6px,
-            transparent 6.5px) top right / 8px 8px no-repeat,
-        linear-gradient(180deg,
-            rgba(255, 138, 61, 0.18),
-            rgba(255, 122, 31, 0.06));
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.1),
-        0 0 0 1px rgba(255, 138, 61, 0.25),
-        0 0 9px rgba(255, 138, 61, 0.12);
-    text-shadow: 0 0 4px var(--accent-glow);
+    background: var(--orange);
+    color: var(--bg);
 }
 
 .auth-form { display: none; padding-top: 0.5rem; }
@@ -1622,8 +1532,7 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     text-transform: uppercase;
 }
 .compose-btn .compose-prompt {
-    color: var(--orange);
-    text-shadow: 0 0 6px var(--orange-glow);
+    color: inherit;
     margin-right: 0.4em;
     font-weight: 700;
 }
@@ -1710,48 +1619,22 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     align-items: center;
     gap: 0.5rem;
     width: 100%;
-    background:
-        linear-gradient(225deg,
-            var(--orange) 0,
-            var(--orange) 5px,
-            transparent 5.5px) top right / 8px 8px no-repeat,
-        linear-gradient(180deg,
-            rgba(255, 138, 61, 0.06),
-            rgba(8, 11, 10, 0.5));
-    border: 1px solid rgba(255, 122, 31, 0.25);
-    color: var(--fg-dim);
+    background: var(--panel);
+    border: 1px solid var(--orange);
+    color: var(--accent);
     padding: 0.5rem 0.65rem;
-    font-family: var(--btn-font);
     font-size: 0.78em;
-    font-weight: 600;
     letter-spacing: 0.14em;
-    text-transform: uppercase;
-    cursor: pointer;
-    backdrop-filter: blur(6px) saturate(140%);
-    -webkit-backdrop-filter: blur(6px) saturate(140%);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.05),
-        0 1px 0 rgba(0, 0, 0, 0.35);
-    transition: color var(--t-fast), border-color var(--t-fast),
-        transform var(--t-fast), letter-spacing var(--t-fast),
-        box-shadow 220ms ease;
 }
 .settings-btn:hover {
-    color: var(--accent);
-    border-color: var(--orange);
-    transform: translateY(-1px);
-    letter-spacing: 0.18em;
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.08),
-        0 0 0 1px rgba(255, 138, 61, 0.22),
-        0 3px 8px rgba(255, 122, 31, 0.12);
+    background: var(--orange);
+    color: var(--bg);
 }
 .settings-btn .settings-icon {
-    color: var(--orange);
-    text-shadow: 0 0 5px var(--orange-glow);
     font-size: 1em;
     flex: 0 0 auto;
 }
+.settings-btn:hover .settings-icon { color: var(--bg); }
 .onion-hint::before {
     content: "●";
     color: var(--ok);
@@ -2277,13 +2160,9 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
         font-size: 1.4rem;
         line-height: 1;
         font-weight: 700;
-        color: var(--accent);
-        background: rgba(8, 11, 10, 0.7);
-        border: 1px solid rgba(255, 122, 31, 0.25);
         z-index: 2;
         padding: 0;
     }
-    .reader-close:hover { color: var(--accent-2); border-color: var(--orange); }
 
     /* Sidebar opened — absolutely positions over the mail-shell at
        240px and restores all the full-text styles that the rail mode
@@ -2346,8 +2225,8 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     display: none;
     width: 32px;
     height: 32px;
-    background: transparent;
-    border: 1px solid rgba(255, 122, 31, 0.25);
+    background: var(--panel);
+    border: 1px solid var(--orange);
     padding: 0;
     cursor: pointer;
     flex-direction: column;
@@ -2356,13 +2235,14 @@ label small { color: var(--fg-muted); font-size: 0.85em; display: block; margin-
     gap: 4px;
     border-radius: 0;
 }
+.sidebar-toggle:hover { background: var(--orange); }
+.sidebar-toggle:hover .sidebar-toggle-bar { background: var(--bg); }
 .sidebar-toggle .sidebar-toggle-bar {
     display: block;
     width: 16px;
     height: 2px;
-    background: var(--accent);
-    box-shadow: 0 0 4px var(--accent-glow);
-    transition: transform 200ms ease, opacity 200ms ease;
+    background: var(--orange);
+    transition: transform 200ms ease, opacity 200ms ease, background var(--t-fast);
 }
 body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(1) {
     transform: translateY(6px) rotate(45deg);
@@ -2409,39 +2289,14 @@ body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    /* Layered background: orange-tint vertical gradient on top of a
-       diagonal-cut orange triangle in the top-right corner — recreates
-       the auth-card "notched corner" silhouette without using
-       clip-path (which would clip the tooltip ::after as well). */
-    background:
-        linear-gradient(225deg,
-            var(--orange) 0,
-            var(--orange) 6px,
-            transparent 6.5px) top right / 8px 8px no-repeat,
-        linear-gradient(180deg,
-            rgba(255, 138, 61, 0.08),
-            rgba(8, 11, 10, 0.55));
-    border: 1px solid rgba(255, 122, 31, 0.28);
-    color: var(--fg-dim);
-    font-family: var(--btn-font);
+    background: var(--panel);
+    border: 1px solid var(--orange);
+    color: var(--accent);
     font-size: 1.05rem;
-    font-weight: 500;
     line-height: 1;
     padding: 0;
-    cursor: pointer;
     overflow: visible;
-    backdrop-filter: blur(6px) saturate(140%);
-    -webkit-backdrop-filter: blur(6px) saturate(140%);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.06),
-        inset 0 0 0 1px rgba(255, 122, 31, 0.05),
-        0 1px 0 rgba(0, 0, 0, 0.35);
-    transition:
-        color var(--t-fast),
-        border-color var(--t-fast),
-        transform var(--t-fast),
-        box-shadow 220ms ease,
-        background-color 220ms ease;
+    letter-spacing: 0;
 }
 /* Hover tooltip — pure CSS, reads data-label. */
 .reader-action[data-label]:hover::after {
@@ -2450,7 +2305,7 @@ body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
     bottom: calc(100% + 8px);
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(8, 11, 10, 0.96);
+    background: var(--panel);
     border: 1px solid var(--orange);
     color: var(--accent);
     padding: 0.32rem 0.65rem;
@@ -2460,9 +2315,6 @@ body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
     letter-spacing: 0.08em;
     text-transform: uppercase;
     white-space: nowrap;
-    box-shadow:
-        0 4px 14px rgba(255, 122, 31, 0.3),
-        0 0 18px rgba(255, 138, 61, 0.18);
     pointer-events: none;
     z-index: 100;
     animation: tooltip-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -2481,56 +2333,20 @@ body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
    that we've dropped clip-path; the hover lift + glow shadow is
    the new affordance) */
 .reader-action:hover {
-    color: var(--accent);
-    border-color: var(--orange);
-    letter-spacing: 0.18em;
-    transform: translateY(-1px);
-    background:
-        linear-gradient(180deg,
-            rgba(255, 138, 61, 0.14),
-            rgba(255, 122, 31, 0.06));
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.08),
-        0 0 0 1px rgba(255, 138, 61, 0.25),
-        0 3px 8px rgba(255, 122, 31, 0.14),
-        0 0 10px rgba(255, 138, 61, 0.10);
-}
-.reader-action:active {
-    transform: translateY(0) scale(0.98);
-    transition-duration: 60ms;
+    background: var(--orange);
+    color: var(--bg);
 }
 .reader-action.danger {
-    border-color: rgba(255, 100, 100, 0.3);
-    background:
-        linear-gradient(180deg,
-            rgba(255, 100, 100, 0.06),
-            rgba(8, 11, 10, 0.55));
+    border-color: var(--warn);
+    color: var(--warn);
 }
 .reader-action.danger:hover {
-    color: var(--warn);
-    border-color: var(--warn);
-    background:
-        linear-gradient(180deg,
-            rgba(255, 100, 100, 0.18),
-            rgba(255, 100, 100, 0.06));
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.1),
-        0 0 0 1px rgba(255, 100, 100, 0.35),
-        0 4px 14px rgba(255, 100, 100, 0.25),
-        0 0 22px rgba(255, 100, 100, 0.18);
+    background: var(--warn);
+    color: var(--bg);
 }
-/* Active "starred" state — keep the star button glowing while set. */
 .reader-action[data-starred="1"] {
-    color: var(--orange);
-    border-color: var(--orange);
-    background:
-        linear-gradient(180deg,
-            rgba(255, 138, 61, 0.22),
-            rgba(255, 122, 31, 0.1));
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.12),
-        0 0 0 1px rgba(255, 138, 61, 0.4),
-        0 0 18px rgba(255, 138, 61, 0.25);
+    background: var(--orange);
+    color: var(--bg);
 }
 
 @media (max-width: 640px) {
@@ -2636,128 +2452,44 @@ body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
 .bulk-actions button,
 .banner-action,
 .att-download {
-    position: relative;
-    overflow: hidden;
-    backdrop-filter: blur(6px) saturate(140%);
-    -webkit-backdrop-filter: blur(6px) saturate(140%);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.05),
-        0 1px 0 rgba(0, 0, 0, 0.35);
-    transition:
-        color var(--t-fast),
-        border-color var(--t-fast),
-        letter-spacing var(--t-fast),
-        transform var(--t-fast),
-        box-shadow 220ms ease,
-        background 220ms ease;
+    background: var(--panel);
+    color: var(--accent);
+    border: 1px solid var(--orange);
 }
-.bulk-actions button {
-    background:
-        linear-gradient(180deg,
-            rgba(255, 138, 61, 0.08),
-            rgba(8, 11, 10, 0.55));
-    clip-path: polygon(
-        0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 0 100%);
-}
-.bulk-actions button:hover {
-    transform: translateY(-1px);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.1),
-        0 0 0 1px rgba(255, 138, 61, 0.25),
-        0 3px 8px rgba(255, 122, 31, 0.12);
-}
-.banner-action {
-    background:
-        linear-gradient(180deg,
-            rgba(255, 138, 61, 0.18),
-            rgba(255, 122, 31, 0.08));
-    clip-path: polygon(
-        0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 0 100%);
-}
-.banner-action:hover {
-    transform: translateY(-1px);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.1),
-        0 0 0 1px rgba(255, 138, 61, 0.32),
-        0 3px 8px rgba(255, 138, 61, 0.16);
-}
-.att-download {
-    background:
-        linear-gradient(180deg,
-            rgba(8, 11, 10, 0.65),
-            rgba(8, 11, 10, 0.4));
-    clip-path: polygon(
-        0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);
-}
+.bulk-actions button:hover,
+.banner-action:hover,
 .att-download:hover {
-    transform: translateY(-1px);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.06),
-        0 0 0 1px rgba(255, 138, 61, 0.22),
-        0 3px 8px rgba(255, 122, 31, 0.10);
+    background: var(--orange);
+    color: var(--bg);
 }
 
-/* Reader close (×) — small glass button, top right of the popup. */
 .reader-close {
-    background: rgba(8, 11, 10, 0.6);
-    border-color: rgba(255, 122, 31, 0.3);
-    backdrop-filter: blur(6px) saturate(140%);
-    -webkit-backdrop-filter: blur(6px) saturate(140%);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.05),
-        0 1px 0 rgba(0, 0, 0, 0.35);
-    transition:
-        color var(--t-fast),
-        border-color var(--t-fast),
-        background var(--t-fast),
-        transform var(--t-fast),
-        box-shadow 220ms ease;
+    background: var(--panel);
+    color: var(--accent);
+    border: 1px solid var(--orange);
 }
 .reader-close:hover {
-    transform: scale(1.08);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.1),
-        0 0 0 1px rgba(255, 138, 61, 0.28),
-        0 0 10px rgba(255, 138, 61, 0.14);
+    background: var(--orange);
+    color: var(--bg);
 }
 
 /* ---------------- compose CC / BCC toggle ---------------- */
 .cc-toggle {
-    background:
-        linear-gradient(180deg,
-            rgba(255, 138, 61, 0.05),
-            rgba(8, 11, 10, 0.5));
-    border: 1px solid rgba(255, 122, 31, 0.22);
-    color: var(--fg-dim);
-    font-family: var(--btn-font);
+    background: var(--panel);
+    border: 1px solid var(--orange);
+    color: var(--accent);
     font-size: 0.72em;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
     padding: 0.35rem 0.65rem;
     margin: -0.3rem 0 0.3rem;
-    cursor: pointer;
     align-self: flex-start;
-    backdrop-filter: blur(6px) saturate(140%);
-    -webkit-backdrop-filter: blur(6px) saturate(140%);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.05),
-        0 1px 0 rgba(0, 0, 0, 0.35);
-    transition: color var(--t-fast), border-color var(--t-fast),
-        transform var(--t-fast), box-shadow 220ms ease;
 }
 .cc-toggle:hover {
-    color: var(--accent);
-    border-color: var(--orange);
-    transform: translateY(-1px);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.08),
-        0 0 0 1px rgba(255, 138, 61, 0.22),
-        0 3px 7px rgba(255, 122, 31, 0.10);
+    background: var(--orange);
+    color: var(--bg);
 }
 .cc-toggle.active {
-    color: var(--accent-2);
-    border-color: var(--orange);
+    background: var(--orange);
+    color: var(--bg);
 }
 
 /* ---------------- settings modal ---------------- */
@@ -2875,54 +2607,21 @@ body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
     flex-wrap: wrap;
 }
 .filter-chips button, .sort-chips button {
-    background:
-        linear-gradient(180deg,
-            rgba(255, 138, 61, 0.05),
-            rgba(8, 11, 10, 0.5));
-    border: 1px solid rgba(255, 122, 31, 0.22);
-    color: var(--fg-dim);
-    font-family: var(--btn-font);
+    background: var(--panel);
+    border: 1px solid var(--orange);
+    color: var(--accent);
     font-size: 0.7em;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
     padding: 0.3rem 0.6rem;
-    cursor: pointer;
-    backdrop-filter: blur(6px) saturate(140%);
-    -webkit-backdrop-filter: blur(6px) saturate(140%);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.05),
-        0 1px 0 rgba(0, 0, 0, 0.35);
-    transition: color var(--t-fast), border-color var(--t-fast),
-        background var(--t-fast), transform var(--t-fast),
-        box-shadow 220ms ease;
 }
 .filter-chips button:hover,
 .sort-chips button:hover {
-    color: var(--accent);
-    border-color: var(--orange);
-    transform: translateY(-1px);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.08),
-        0 0 0 1px rgba(255, 138, 61, 0.22),
-        0 3px 7px rgba(255, 122, 31, 0.10);
+    background: var(--orange);
+    color: var(--bg);
 }
 .filter-chips button.active,
 .sort-chips button.active {
-    color: var(--accent);
-    border-color: var(--orange);
-    background:
-        linear-gradient(225deg,
-            var(--orange) 0,
-            var(--orange) 5px,
-            transparent 5.5px) top right / 7px 7px no-repeat,
-        linear-gradient(180deg,
-            rgba(255, 138, 61, 0.2),
-            rgba(255, 122, 31, 0.08));
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.1),
-        0 0 0 1px rgba(255, 138, 61, 0.25),
-        0 0 7px rgba(255, 138, 61, 0.12);
+    background: var(--orange);
+    color: var(--bg);
 }
 .sort-chips { margin-left: auto; }
 
@@ -2943,24 +2642,19 @@ body.sidebar-open .sidebar-toggle .sidebar-toggle-bar:nth-child(3) {
 .bulk-count strong { color: var(--accent); margin-right: 0.3em; }
 .bulk-actions { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-left: auto; }
 .bulk-actions button {
-    background:
-        linear-gradient(180deg,
-            rgba(255, 138, 61, 0.08),
-            rgba(8, 11, 10, 0.55));
-    border: 1px solid rgba(255, 122, 31, 0.28);
-    color: var(--fg);
-    font-family: var(--btn-font);
     font-size: 0.74em;
-    font-weight: 600;
     letter-spacing: 0.08em;
-    text-transform: uppercase;
     padding: 0.3rem 0.65rem;
-    cursor: pointer;
-    transition: color var(--t-fast), border-color var(--t-fast),
-        transform var(--t-fast), box-shadow 220ms ease;
 }
-.bulk-actions button:hover { color: var(--accent); border-color: var(--orange); }
-.bulk-actions button.danger:hover { color: var(--warn); border-color: var(--warn); }
+.bulk-actions button.danger {
+    border-color: var(--warn);
+    color: var(--warn);
+}
+.bulk-actions button.danger:hover {
+    background: var(--warn);
+    color: var(--bg);
+    border-color: var(--warn);
+}
 
 /* ---------------- list rows: checkbox + star + avatar ---------------- */
 #message-list li {
@@ -3261,20 +2955,9 @@ body.density-compact #message-list li .snippet { display: none; }
 }
 .remote-image-banner .banner-action {
     margin-left: auto;
-    background: transparent;
-    border: 1px solid rgba(255, 122, 31, 0.3);
-    color: var(--accent);
-    font-family: var(--btn-font);
     font-size: 0.78em;
-    font-weight: 600;
-    padding: 0.3rem 0.65rem;
-    cursor: pointer;
     letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-.remote-image-banner .banner-action:hover {
-    background: rgba(255, 138, 61, 0.12);
-    border-color: var(--orange);
+    padding: 0.3rem 0.65rem;
 }
 
 /* ---------------- attachments list ---------------- */
@@ -3315,39 +2998,29 @@ body.density-compact #message-list li .snippet { display: none; }
     align-items: center;
     width: 100%;
     text-align: left;
-    background: rgba(8, 11, 10, 0.5);
-    border: 1px solid rgba(255, 122, 31, 0.22);
-    color: var(--fg);
-    font-family: var(--btn-font);
     font-size: 0.85em;
-    font-weight: 500;
     padding: 0.5rem 0.8rem;
-    cursor: pointer;
-    transition: border-color var(--t-fast), background var(--t-fast);
-}
-.att-download:hover {
-    border-color: var(--orange);
-    background: rgba(255, 122, 31, 0.06);
+    letter-spacing: 0.06em;
+    text-transform: none;
 }
 .att-icon {
-    color: var(--orange);
-    text-shadow: 0 0 4px var(--orange-glow);
     font-size: 1.1em;
     text-align: center;
 }
 .att-name {
-    color: var(--accent);
-    text-shadow: 0 0 4px var(--accent-glow);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     min-width: 0;
 }
 .att-meta {
-    color: var(--fg-muted);
     font-size: 0.85em;
     letter-spacing: 0.06em;
+    opacity: 0.7;
 }
+.att-download:hover .att-icon,
+.att-download:hover .att-name,
+.att-download:hover .att-meta { color: inherit; }
 
 /* ---------------- admin panel ---------------- */
 .admin-card {
@@ -3365,53 +3038,20 @@ body.density-compact #message-list li .snippet { display: none; }
     padding-bottom: 0.6rem;
 }
 .admin-tab {
-    background:
-        linear-gradient(180deg,
-            rgba(255, 138, 61, 0.05),
-            rgba(8, 11, 10, 0.5));
-    border: 1px solid rgba(255, 122, 31, 0.22);
-    color: var(--fg-dim);
-    font-family: var(--btn-font);
+    background: var(--panel);
+    border: 1px solid var(--orange);
+    color: var(--accent);
     font-size: 0.72em;
-    font-weight: 600;
     letter-spacing: 0.12em;
-    text-transform: uppercase;
     padding: 0.4rem 0.75rem;
-    cursor: pointer;
-    backdrop-filter: blur(6px) saturate(140%);
-    -webkit-backdrop-filter: blur(6px) saturate(140%);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.05),
-        0 1px 0 rgba(0, 0, 0, 0.35);
-    transition: color var(--t-fast), border-color var(--t-fast),
-        background var(--t-fast), transform var(--t-fast),
-        box-shadow 220ms ease;
 }
 .admin-tab:hover {
-    color: var(--accent);
-    border-color: var(--orange);
-    transform: translateY(-1px);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.08),
-        0 0 0 1px rgba(255, 138, 61, 0.22),
-        0 3px 7px rgba(255, 122, 31, 0.10);
+    background: var(--orange);
+    color: var(--bg);
 }
 .admin-tab.active {
-    color: var(--accent);
-    border-color: var(--orange);
-    background:
-        linear-gradient(225deg,
-            var(--orange) 0,
-            var(--orange) 6px,
-            transparent 6.5px) top right / 8px 8px no-repeat,
-        linear-gradient(180deg,
-            rgba(255, 138, 61, 0.18),
-            rgba(255, 122, 31, 0.06));
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.1),
-        0 0 0 1px rgba(255, 138, 61, 0.25),
-        0 0 8px rgba(255, 138, 61, 0.12);
-    text-shadow: 0 0 4px var(--accent-glow);
+    background: var(--orange);
+    color: var(--bg);
 }
 .admin-pane[hidden] { display: none; }
 
