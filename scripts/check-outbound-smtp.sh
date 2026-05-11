@@ -49,11 +49,13 @@ probe() {
     if [ -n "$HAS_NC" ] && [ -n "$TIMEOUT_BIN" ]; then
         # nc -z fails fast on a closed/firewalled port; with -w we cap
         # the wait. -v prints "open" / "refused" on stderr.
-        if docker exec "$CTR" sh -c "$TIMEOUT_BIN 8 $HAS_NC -zvw 5 $host $port" >/dev/null 2>&1; then
+        # --kill-after gives the inner nc a hard SIGKILL if SIGTERM
+        # doesn't drop it (some nc builds hang on dropped-SYN paths).
+        if docker exec "$CTR" sh -c "$TIMEOUT_BIN -k 2 4 $HAS_NC -zvw 3 $host $port" >/dev/null 2>&1; then
             # Connected -- now read the SMTP banner to prove it's
             # really an MTA on the other side (not a captive portal).
             banner=$(docker exec "$CTR" sh -c \
-                "$TIMEOUT_BIN 8 sh -c 'exec 3<>/dev/tcp/$host/$port; echo QUIT >&3; head -n1 <&3'" 2>/dev/null \
+                "$TIMEOUT_BIN -k 2 4 sh -c 'exec 3<>/dev/tcp/$host/$port; echo QUIT >&3; head -n1 <&3'" 2>/dev/null \
                 | tr -d '\r\n' | cut -c1-72)
             if [ -n "$banner" ]; then
                 echo "OPEN -- banner: \"$banner\""
