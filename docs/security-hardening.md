@@ -14,7 +14,7 @@ adoption is fine.
 ### MTA-STS
 
 ```
-mta-sts.qloak.me.         IN A     82.221.101.24
+mta-sts.qloak.me.         IN A     <VPS_IP>
 mta-sts.qloak.me.         IN AAAA  <ipv6 if any>
 _mta-sts.qloak.me.        IN TXT   "v=STSv1; id=2026051001"
 _smtp._tls.qloak.me.      IN TXT   "v=TLSRPTv1; rua=mailto:tls-reports@qloak.me"
