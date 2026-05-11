@@ -31,6 +31,8 @@ function randomBytes(n) {
     return out;
 }
 
+// REVIEW [LOW]: Missing try/catch — malformed base64 or hash-wasm crash
+// will propagate uncaught. Wrap in try/catch with descriptive error.
 async function deriveKey(password, params) {
     const salt = b64decode(params.salt_b64);
     const enc = new TextEncoder().encode(password);

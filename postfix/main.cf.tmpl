@@ -116,6 +116,10 @@ non_smtpd_milters = $smtpd_milters
 
 # Trust the docker network so the API container can submit on 587 without
 # auth. Production should require sasl auth on submission.
+# REVIEW [HIGH]: 172.16.0.0/12 includes Docker's default bridge (172.17.0.0/16).
+# ANY container on the host can submit mail without auth — if compromised,
+# this becomes an open relay. For production: use only the exact Docker
+# network CIDR (e.g. 172.20.0.0/16) and enforce SASL on submission port.
 mynetworks = 127.0.0.0/8 [::1]/128 172.16.0.0/12 10.0.0.0/8 192.168.0.0/16
 
 # Outbound from this MTA — direct to MX of recipients.

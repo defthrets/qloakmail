@@ -94,6 +94,9 @@ CREATE TABLE IF NOT EXISTS invite_codes (
 );
 
 -- ---------- abuse reports ----------
+-- REVIEW [MEDIUM]: reported_email / reporter_email are not FK-constrained.
+-- Orphaned records if account deleted. Consider FK to accounts(id) with
+-- ON DELETE SET NULL, or add unique constraint + app-side validation.
 CREATE TABLE IF NOT EXISTS abuse_reports (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     reported_email  CITEXT,

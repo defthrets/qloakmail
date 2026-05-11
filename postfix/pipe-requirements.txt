@@ -1,3 +1,5 @@
+# REVIEW [MEDIUM]: Versions pinned but no hash verification.
+# Add --generate-hashes before production deployment.
 aiosmtpd==1.4.6
 httpx==0.28.1
 pgpy==0.6.0

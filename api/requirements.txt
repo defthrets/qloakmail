@@ -1,3 +1,6 @@
+# REVIEW [MEDIUM]: Versions pinned but no hash verification.
+# Before release: pip-compile --generate-hashes requirements.in > requirements.txt
+# This prevents supply-chain attacks via package substitution.
 fastapi==0.115.5
 uvicorn[standard]==0.32.1
 pydantic==2.10.3

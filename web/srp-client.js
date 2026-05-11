@@ -76,6 +76,11 @@ async function sha256(...chunks) {
     return new Uint8Array(digest);
 }
 
+// REVIEW [HIGH]: Early-return on length mismatch leaks buffer size via timing.
+// Attacker can determine buffer length difference. Replace with:
+//   let r = a.length ^ b.length;
+//   for (let i = 0; i < Math.min(a.length, b.length); i++) r |= a[i] ^ b[i];
+//   return r === 0;
 function constantTimeEqual(a, b) {
     if (a.length !== b.length) return false;
     let r = 0;

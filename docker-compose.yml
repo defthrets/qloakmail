@@ -5,6 +5,9 @@
 # Cap docker log retention so request/connection logs don't accumulate
 # indefinitely on disk. 10 MB x 3 files = 30 MB max per container.
 # Anything older is dropped.
+# REVIEW [MEDIUM]: 30 MB total may fill quickly under inbound mail load.
+# Rotations may lose security events. Consider: journald driver with
+# centralized logging (Loki, ELK), or increase to 100m/10 files.
 x-logging: &default-logging
   driver: json-file
   options:

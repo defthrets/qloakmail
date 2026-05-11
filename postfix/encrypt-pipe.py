@@ -147,6 +147,9 @@ def _maildir_for(email: str) -> Path:
 
 def _maildir_filename(size: int) -> str:
     # Maildir naming: time.Pid.host,S=size:2,
+    # REVIEW [LOW]: Timestamp + size in filename leaks metadata
+    # (when mail arrived, message size) via filesystem listing.
+    # Consider: uuid.uuid4().hex for random filenames.
     return f"{int(time.time())}.P{os.getpid()}.voidmail,S={size}"
 
 
