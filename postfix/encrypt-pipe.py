@@ -55,11 +55,22 @@ if extra:
     DOMAINS.update(d.strip().lower() for d in extra.split(",") if d.strip())
 
 
-_pubkey_cache: dict[str, tuple[float, pgpy.PGPKey]] = {}
-_PUBKEY_TTL = 300.0
+from collections import OrderedDict
 
+_pubkey_cache: OrderedDict[str, tuple[float, pgpy.PGPKey]] = OrderedDict()
+_PUBKEY_TTL = 300.0
+_PUBKEY_CACHE_MAX = 5000  # LRU bound — prevent unbounded growth
+
+
+def _evict_stale() -> None:
+    """Remove expired cache entries. Called before each fetch to keep memory bounded."""
+    now = time.time()
+    expired = [e for e, (expiry, _) in _pubkey_cache.items() if expiry < now]
+    for e in expired:
+        _pubkey_cache.pop(e)
 
 async def _fetch_pubkey(client: httpx.AsyncClient, email: str) -> Optional[pgpy.PGPKey]:
+    _evict_stale()
     cached = _pubkey_cache.get(email)
     if cached and cached[0] > time.time():
         return cached[1]
@@ -75,6 +86,8 @@ async def _fetch_pubkey(client: httpx.AsyncClient, email: str) -> Optional[pgpy.
         armored = r.json()["pubkey_armored"]
         key, _ = pgpy.PGPKey.from_blob(armored)
         _pubkey_cache[email] = (time.time() + _PUBKEY_TTL, key)
+        if len(_pubkey_cache) > _PUBKEY_CACHE_MAX:
+            _pubkey_cache.popitem(last=True)
         return key
     except Exception as e:
         log.exception("pubkey lookup failed: %s", e)
