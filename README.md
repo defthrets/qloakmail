@@ -171,4 +171,3 @@ voidmail/
 TBD before public release.
 
 ---
-*Co-authored by Clawd <clawd@qloak.me>
