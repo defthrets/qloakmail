@@ -315,24 +315,48 @@ async def recovery_login(
     if not account or account.status != "active":
         # don't leak existence
         raise HTTPException(status.HTTP_404_NOT_FOUND, "no such account")
+    # Issue one-time recovery token for /auth/reset-password
+    recovery_token = secrets.token_hex(32)
+    await redis_client.setex(f"recovery:{req.email}", 900, recovery_token)  # 15 min TTL
     return schemas.RecoveryLoginResponse(
         encrypted_privkey_recovery=base64.b64encode(account.encrypted_privkey_recovery).decode(),
         argon2_params=schemas.Argon2Params(**account.argon2_params),
         pubkey_armored=account.pubkey_armored,
+        recovery_token=recovery_token,
     )
 
 
 class ResetPasswordRequest(schemas.RegisterRequest):
     """Same shape as register, minus invite code (account already exists).
-    Replaces SRP verifier and both encrypted privkey blobs."""
-    pass
+    Replaces SRP verifier and both encrypted privkey blobs.
+    Requires a one-time recovery token obtained from /auth/recovery."""
+    recovery_token: str | None = None
 
 
 @router.post("/reset-password")
 async def reset_password(
     req: ResetPasswordRequest,
+    request: Request,
     session: AsyncSession = Depends(get_session),
+    redis_client: aioredis.Redis = Depends(get_redis),
 ):
+    client_ip = request.client.host if request.client else ""
+    # Rate limit: 3 attempts per IP per hour
+    allowed, _ = await rl_hit(
+        redis_client, rate_limit_key(request, "reset-pw"),
+        limit=3, window_seconds=3600,
+    )
+    if not allowed:
+        await stats.incr(redis_client, stats.SCOPE_RL_HIT)
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "rate limit")
+    # Require recovery token from /auth/recovery
+    if not req.recovery_token:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "recovery token required")
+    token_key = f"recovery:{req.email}"
+    stored = await redis_client.get(token_key)
+    if not stored or stored.decode() != req.recovery_token:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "invalid or expired recovery token")
+    await redis_client.delete(token_key)  # single-use
     res = await session.execute(select(Account).where(Account.email == req.email))
     account = res.scalar_one_or_none()
     if not account:
