@@ -107,6 +107,7 @@ class RecoveryLoginResponse(BaseModel):
     encrypted_privkey_recovery: str   # base64
     argon2_params: Argon2Params
     pubkey_armored: str
+    recovery_token: str               # one-time token for /auth/reset-password
 
 
 # ---------- account ----------
